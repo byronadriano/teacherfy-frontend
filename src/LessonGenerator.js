@@ -10,7 +10,7 @@ const LessonGenerator = () => {
 
         try {
             // Make a request to your backend API
-            const response = await fetch("teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net", {
+            const response = await fetch("https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net/generate", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -19,7 +19,10 @@ const LessonGenerator = () => {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to generate the presentation. Please try again.");
+                // Log the response for debugging
+                const errorData = await response.json();
+                console.error("Backend Error:", errorData);
+                throw new Error(errorData.error || "Failed to generate the presentation. Please try again.");
             }
 
             // Trigger download of the PowerPoint file
@@ -32,6 +35,7 @@ const LessonGenerator = () => {
             link.click();
             document.body.removeChild(link);
         } catch (err) {
+            console.error("Frontend Error:", err); // Log the error for debugging
             setError(err.message);
         }
     };
