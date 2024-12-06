@@ -1,3 +1,0 @@
-hyperdiv
-openai
-requests
