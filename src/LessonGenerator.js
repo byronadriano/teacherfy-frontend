@@ -10,7 +10,7 @@ const LessonGenerator = () => {
 
         try {
             // Make a request to your backend API
-            const response = await fetch("https://red-mud-08643bc1e.4.azurestaticapps.net", {
+            const response = await fetch("teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
