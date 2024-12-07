@@ -29,7 +29,6 @@ const Chat = () => {
   const [numSlides, setNumSlides] = useState(3);
 
   const [messages, setMessages] = useState([]);
-  const [threadId, setThreadId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [finalOutline, setFinalOutline] = useState("");
   const [outlineFinalized, setOutlineFinalized] = useState(false);
@@ -39,65 +38,53 @@ const Chat = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
   useEffect(scrollToBottom, [messages]);
 
-  // Create a new thread on mount
-  useEffect(() => {
-    const createThread = async () => {
-      try {
-        const { data } = await axios.get("https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net/thread");
-        setThreadId(data.threadId);
-      } catch (error) {
-        console.error("Error creating thread:", error);
-      }
-    };
-    createThread();
-  }, []);
+  // Set your backend base URL
+  // If running locally: "http://localhost:3000"
+  // If deployed: "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"
+  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"; // update this to your actual backend URL if deployed
 
-  const sendMessage = async (userMessage) => {
-    if (!threadId) return;
-    setIsLoading(true);
-
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    try {
-      const { data } = await axios.post("https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net/message", {
-        message: userMessage,
-        threadId,
-      });
-
-      const botResponses = data.messages.filter((m) => m !== userMessage);
-      botResponses.forEach((botResponse) => {
-        setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
-      });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "Sorry, there was an error processing your message." },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateOutline = () => {
+  const handleGenerateOutline = async () => {
     if (!gradeLevel || !subjectFocus) {
       alert("Please select both a grade and a subject before generating the outline.");
       return;
     }
 
-    const initialPrompt = `
-Teacherfy.ai - Lesson Generator
+    setIsLoading(true);
+    try {
+      const requestBody = {
+        grade_level: gradeLevel,
+        subject_focus: subjectFocus,
+        custom_prompt: customPrompt,
+        num_slides: numSlides,
+      };
 
-Please create a lesson outline for:
-Grade: ${gradeLevel}
-Subject: ${subjectFocus}
-${customPrompt ? `Additional instructions: ${customPrompt}` : ""}
-Number of Slides: ${numSlides}
-    `;
+      // Call the /outline endpoint
+      const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
 
-    sendMessage(initialPrompt);
+      // Data should have { messages: [outline_text] }
+      const botResponses = data.messages || [];
+
+      // Add a user message indicating we asked for an outline
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: `Generate an outline for a ${gradeLevel} ${subjectFocus} lesson.` }
+      ]);
+
+      // Add the bot's outline response
+      botResponses.forEach((botResponse) => {
+        setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
+      });
+    } catch (error) {
+      console.error("Error generating outline:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", content: "Sorry, there was an error generating the outline." },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const finalizeOutline = () => {
@@ -106,6 +93,7 @@ Number of Slides: ${numSlides}
       alert("No outline from the assistant to finalize yet.");
       return;
     }
+    // Take the last bot message as the final outline
     const lastBotMessage = botMessages[botMessages.length - 1].content;
     setFinalOutline(lastBotMessage);
     setOutlineFinalized(true);
@@ -114,7 +102,7 @@ Number of Slides: ${numSlides}
 
   const generatePresentation = async () => {
     try {
-      const response = await fetch("https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net/generate", {
+      const response = await fetch(`${BASE_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
