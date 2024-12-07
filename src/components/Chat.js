@@ -43,33 +43,31 @@ const Chat = () => {
   // Update BASE_URL based on your environment
   // For local testing: "http://localhost:3000"
   // For production (example):
-  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
+  const BASE_URL = "teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
   const handleGenerateOutline = async () => {
     if (!gradeLevel || !subjectFocus) {
       alert("Please select both a grade and a subject before generating the outline.");
       return;
     }
-
+  
     setIsLoading(true);
     try {
       const requestBody = {
         grade_level: gradeLevel,
         subject_focus: subjectFocus,
         custom_prompt: customPrompt,
-        num_slides: numSlides,
+        num_slides: Number(numSlides),  // Ensure it's a number
       };
-
+  
       const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
       const botResponses = data.messages || [];
-
-      // Add user message to show we requested an outline
+  
       setMessages((prev) => [
         ...prev,
         { role: "user", content: `Generate an outline for a ${gradeLevel} ${subjectFocus} lesson.` }
       ]);
-
-      // Add bot responses
+  
       botResponses.forEach((botResponse) => {
         setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
       });
@@ -83,6 +81,7 @@ const Chat = () => {
       setIsLoading(false);
     }
   };
+  
 
   const finalizeOutline = () => {
     const botMessages = messages.filter((msg) => msg.role === "bot");
