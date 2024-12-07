@@ -43,7 +43,7 @@ const Chat = () => {
   // Update BASE_URL based on your environment
   // For local testing: "http://localhost:3000"
   // For production (example):
-  const BASE_URL = "teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
+  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
   const handleGenerateOutline = async () => {
     if (!gradeLevel || !subjectFocus) {
@@ -73,9 +73,13 @@ const Chat = () => {
       });
     } catch (error) {
       console.error("Error generating outline:", error);
+      
+      // Extract meaningful error message
+      const errorMessage = error.response?.data?.error || "Sorry, there was an error generating the outline.";
+      
       setMessages((prev) => [
         ...prev,
-        { role: "bot", content: "Sorry, there was an error generating the outline." },
+        { role: "bot", content: errorMessage },
       ]);
     } finally {
       setIsLoading(false);
@@ -233,8 +237,9 @@ const Chat = () => {
         </div>
 
         <button className="generate-button" onClick={handleGenerateOutline} disabled={isLoading || outlineFinalized}>
-          Generate Outline
+          {isLoading ? "Generating..." : "Generate Outline"}
         </button>
+
       </div>
 
       <div className="assistant-chat-section">
