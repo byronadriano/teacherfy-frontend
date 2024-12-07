@@ -1,0 +1,228 @@
+.chat-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+    font-family: sans-serif;
+    color: #333;
+  }
+  
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .chat-logo {
+    width: 50px;
+    height: 50px;
+  }
+  
+  h1 {
+    font-size: 1.8em;
+    margin: 0;
+  }
+  
+  .instructions {
+    width: 100%;
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .instructions p {
+    margin: 0 0 10px 0;
+  }
+  
+  .instructions ol {
+    margin: 0 0 10px 20px;
+  }
+  
+  .controls-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 100%;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  
+  .input-card {
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    min-width: 250px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: relative;
+    min-height: 100px;
+  }
+  
+  .large-card textarea {
+    height: 150px;
+    resize: vertical;
+    margin-top: 8px;
+  }
+  
+  .input-card label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: inline-block;
+  }
+  
+  .input-card textarea,
+  .input-card input[type="number"] {
+    width: 100%;
+    padding: 5px;
+    font-size: 14px;
+  }
+  
+  .generate-button {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 12px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    height: fit-content;
+    align-self: center;
+  }
+  
+  .generate-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Hover containers */
+  .hover-container {
+    position: relative;
+    display: inline-block; /* Important for stable dropdown alignment */
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 5px;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .hover-label {
+    font-weight: bold;
+    padding: 5px 0;
+  }
+  
+  .hover-container:hover .hover-content {
+    display: block;
+  }
+  
+  .hover-content {
+    display: none;
+    position: absolute;
+    top: 100%; /* Directly below the label area */
+    left: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    border-radius: 5px;
+    min-width: 180px;
+  }
+  
+  .option-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .option-label input {
+    margin-right: 5px;
+  }
+  
+  .assistant-chat-section {
+    width: 100%;
+  }
+  
+  .assistant-chat-section h2 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+  }
+  
+  .chat-instructions {
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #555;
+  }
+  
+  .chat-container {
+    width: 100%;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  
+  .messages-container {
+    height: 300px;
+    overflow-y: auto;
+    background: #fafafa;
+    padding: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .messages-container .user {
+    text-align: right;
+    color: blue;
+  }
+  
+  .messages-container .bot {
+    text-align: left;
+    color: green;
+  }
+  
+  .finalize-buttons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .finalize-buttons button {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    background: #007bff;
+    color: #fff;
+    border-radius: 5px;
+  }
+  
+  .finalize-buttons button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .controls-section {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .input-card {
+      min-width: unset;
+      width: 100%;
+    }
+  
+    .large-card textarea {
+      height: 200px;
+    }
+  }
+  

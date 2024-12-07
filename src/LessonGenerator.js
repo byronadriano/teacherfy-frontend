@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import Logo from './assets/Teacherfyoai.png'; // Import the logo
+import Logo from './assets/Teacherfyoai.png';
 
-const LessonGenerator = () => {
+const LessonGenerator = ({ outline }) => {
     const [lessonTopic, setLessonTopic] = useState("");
     const [district, setDistrict] = useState("");
     const [gradeLevel, setGradeLevel] = useState("");
@@ -26,6 +26,8 @@ const LessonGenerator = () => {
                     subject_focus: subjectFocus,
                     custom_prompt: customPrompt,
                     num_slides: Number(numSlides),
+                    // Now we also include the finalized outline from the chat:
+                    lesson_outline: outline
                 }),
             });
 
@@ -107,6 +109,15 @@ const LessonGenerator = () => {
                         max="10"
                     />
                 </div>
+
+                {/* Displaying the finalized outline if available */}
+                {outline && (
+                    <div className="form-group">
+                        <label>Finalized Outline:</label>
+                        <pre>{outline}</pre>
+                    </div>
+                )}
+
                 <button className="generate-button" onClick={handleGenerate}>
                     Generate Presentation
                 </button>

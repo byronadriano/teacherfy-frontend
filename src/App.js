@@ -1,8 +1,8 @@
 import React from "react";
-import LessonGenerator from "./LessonGenerator";
+import Chat from "./components/Chat";
 
 function App() {
-    return <LessonGenerator />;
+  return <Chat />;
 }
 
 export default App;
