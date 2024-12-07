@@ -40,10 +40,10 @@ const Chat = () => {
   };
   useEffect(scrollToBottom, [messages]);
 
-  // Set your backend base URL
-  // If running locally: "http://localhost:3000"
-  // If deployed: "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"
-  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"; // update this to your actual backend URL if deployed
+  // Update BASE_URL based on your environment
+  // For local testing: "http://localhost:3000"
+  // For production (example):
+  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
   const handleGenerateOutline = async () => {
     if (!gradeLevel || !subjectFocus) {
@@ -60,19 +60,16 @@ const Chat = () => {
         num_slides: numSlides,
       };
 
-      // Call the /outline endpoint
       const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
-
-      // Data should have { messages: [outline_text] }
       const botResponses = data.messages || [];
 
-      // Add a user message indicating we asked for an outline
+      // Add user message to show we requested an outline
       setMessages((prev) => [
         ...prev,
         { role: "user", content: `Generate an outline for a ${gradeLevel} ${subjectFocus} lesson.` }
       ]);
 
-      // Add the bot's outline response
+      // Add bot responses
       botResponses.forEach((botResponse) => {
         setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
       });
@@ -93,7 +90,6 @@ const Chat = () => {
       alert("No outline from the assistant to finalize yet.");
       return;
     }
-    // Take the last bot message as the final outline
     const lastBotMessage = botMessages[botMessages.length - 1].content;
     setFinalOutline(lastBotMessage);
     setOutlineFinalized(true);
