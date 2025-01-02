@@ -70,11 +70,31 @@ const Chat = () => {
 
     setIsLoading(true);
     try {
+      const fullPrompt = `
+        Grade Level: ${gradeLevel}
+        Subject: ${subjectFocus}
+        Topic: ${lessonTopic || 'Not specified'}
+        District: ${district || 'Not specified'}
+        Number of Slides: ${numSlides}
+        
+        Additional Requirements:
+        ${customPrompt || 'None'}
+        
+        Please create a detailed lesson outline with exactly ${numSlides} slides, including:
+        - Clear learning objectives
+        - Key concepts and vocabulary
+        - Student activities and engagement opportunities
+        - Assessment strategies
+        Each slide should have a clear title and detailed content.
+      `.trim();
+
       const requestBody = {
         grade_level: gradeLevel,
         subject_focus: subjectFocus,
-        custom_prompt: customPrompt,
-        num_slides: Number(numSlides),
+        lesson_topic: lessonTopic || '',
+        district: district || '',
+        custom_prompt: fullPrompt,
+        num_slides: Math.min(Math.max(Number(numSlides) || 3, 1), 10),
       };
 
       const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
@@ -82,7 +102,7 @@ const Chat = () => {
 
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: `Generate an outline for a ${gradeLevel} ${subjectFocus} lesson.` },
+        { role: "user", content: fullPrompt },
       ]);
 
       botResponses.forEach((botResponse) => {
