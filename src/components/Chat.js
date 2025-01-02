@@ -17,6 +17,8 @@ import {
   InputLabel,
   Snackbar,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -57,6 +59,8 @@ const Chat = () => {
   const [finalOutline, setFinalOutline] = useState("");
   const [outlineModalOpen, setOutlineModalOpen] = useState(false);
   const [outlineConfirmed, setOutlineConfirmed] = useState(false);
+  const [outlineStructure, setOutlineStructure] = useState(null);
+  const [viewMode, setViewMode] = useState('outline');
 
   const messagesEndRef = useRef(null);
   const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
@@ -86,6 +90,7 @@ const Chat = () => {
         - Student activities and engagement opportunities
         - Assessment strategies
         Each slide should have a clear title and detailed content.
+        Consider using two-column layouts for comparisons or parallel concepts.
       `.trim();
 
       const requestBody = {
@@ -99,6 +104,7 @@ const Chat = () => {
 
       const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
       const botResponses = data.messages || [];
+      setOutlineStructure(data.structured_content);
 
       setMessages((prev) => [
         ...prev,
@@ -123,14 +129,51 @@ const Chat = () => {
     }
   };
 
-  const handleConfirmOutline = () => {
-    setFinalOutline(outlineToConfirm);
-    setOutlineConfirmed(true);
-    setOutlineModalOpen(false);
-  };
+  const renderStructuredOutline = () => {
+    if (!outlineStructure) return null;
 
-  const handleCloseModal = () => setOutlineModalOpen(false);
-  const handleSnackbarClose = () => setError("");
+    return outlineStructure.map((slide, index) => (
+      <Box key={index} sx={{ mb: 2, p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
+        <Typography variant="h6" sx={{ color: "#1976d2" }}>
+          {slide.title}
+        </Typography>
+        {slide.layout !== "TITLE_CONTENT" && (
+          <Typography variant="caption" sx={{ color: "#666" }}>
+            Layout: {slide.layout}
+          </Typography>
+        )}
+        {slide.main_content?.length > 0 && (
+          <Box sx={{ mt: 1 }}>
+            {slide.main_content.map((content, idx) => (
+              <Typography key={idx}>{content}</Typography>
+            ))}
+          </Box>
+        )}
+        {(slide.bullets?.length > 0 || slide.left_column?.length > 0) && (
+          <Box sx={{ mt: 1 }}>
+            {slide.layout === "TWO_COLUMN" ? (
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  {slide.left_column?.map((bullet, idx) => (
+                    <Typography key={idx}>• {bullet}</Typography>
+                  ))}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  {slide.right_column?.map((bullet, idx) => (
+                    <Typography key={idx}>• {bullet}</Typography>
+                  ))}
+                </Box>
+              </Box>
+            ) : (
+              slide.bullets?.map((bullet, idx) => (
+                <Typography key={idx}>• {bullet}</Typography>
+              ))
+            )}
+          </Box>
+        )}
+      </Box>
+    ));
+  };
 
   const generatePresentation = async () => {
     try {
@@ -145,6 +188,7 @@ const Chat = () => {
           custom_prompt: customPrompt,
           num_slides: Number(numSlides),
           lesson_outline: finalOutline,
+          structured_content: outlineStructure
         }),
       });
 
@@ -162,6 +206,15 @@ const Chat = () => {
       setError(err.message);
     }
   };
+
+  const handleConfirmOutline = () => {
+    setFinalOutline(outlineToConfirm);
+    setOutlineConfirmed(true);
+    setOutlineModalOpen(false);
+  };
+
+  const handleCloseModal = () => setOutlineModalOpen(false);
+  const handleSnackbarClose = () => setError("");
 
   const loadExample = () => {
     setGradeLevel("4th grade");
@@ -184,6 +237,8 @@ const Chat = () => {
     setMessages([]);
     setOutlineConfirmed(false);
     setFinalOutline("");
+    setOutlineStructure(null);
+    setViewMode('outline');
   };
 
   const canGenerateOutline = gradeLevel && subjectFocus;
@@ -282,14 +337,22 @@ const Chat = () => {
         </Button>
       </Box>
 
-      {/* Outline */}
+      {/* Outline Section */}
       <Box sx={{ backgroundColor: "#ffffff", p: 3, borderRadius: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1 }}>
-          Final Outline
+          Lesson Outline
         </Typography>
+        
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          <Tabs value={viewMode} onChange={(e, newValue) => setViewMode(newValue)}>
+            <Tab label="Outline" value="outline" />
+            <Tab label="Structured View" value="structured" disabled={!outlineStructure} />
+          </Tabs>
+        </Box>
+
         <Box
           sx={{
-            maxHeight: 300,
+            maxHeight: 500,
             overflowY: "auto",
             border: "1px solid #aaa",
             padding: 2,
@@ -298,17 +361,21 @@ const Chat = () => {
             backgroundColor: "#f4f2ef",
           }}
         >
-          {outlineConfirmed ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalOutline}</ReactMarkdown>
+          {viewMode === 'outline' ? (
+            outlineConfirmed ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalOutline}</ReactMarkdown>
+            ) : (
+              <>
+                {messages.map((msg, i) => (
+                  <Typography key={i} sx={{ marginBottom: 1, whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
+                    <strong>{msg.role}:</strong> {msg.content}
+                  </Typography>
+                ))}
+                <div ref={messagesEndRef} />
+              </>
+            )
           ) : (
-            <>
-              {messages.map((msg, i) => (
-                <Typography key={i} sx={{ marginBottom: 1, whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
-                  <strong>{msg.role}:</strong> {msg.content}
-                </Typography>
-              ))}
-              <div ref={messagesEndRef} />
-            </>
+            renderStructuredOutline()
           )}
         </Box>
 
@@ -331,7 +398,7 @@ const Chat = () => {
           </DialogContentText>
           <Box sx={{ marginTop: 2 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{outlineToConfirm}</ReactMarkdown>
-          </Box>
+            </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal} color="inherit">
