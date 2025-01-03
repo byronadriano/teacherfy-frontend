@@ -5,11 +5,6 @@ import {
   Typography,
   TextField,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   CircularProgress,
   MenuItem,
   FormControl,
@@ -17,178 +12,240 @@ import {
   InputLabel,
   Snackbar,
   Alert,
-  Tabs,
-  Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Collapse,
+  IconButton,
+  Paper,
+  Tooltip,
 } from "@mui/material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ClearIcon from "@mui/icons-material/Clear";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import DownloadIcon from "@mui/icons-material/Download";
 
 import Logo from "../assets/Teacherfyoai.png";
 
-const gradeOptions = [
-  "Preschool", "Kindergarten", "1st grade", "2nd grade", "3rd grade", "4th grade",
-  "5th grade", "6th grade", "7th grade", "8th grade", "9th grade", "10th grade",
-  "11th grade", "12th grade",
-];
+// Constants
+const FORM_OPTIONS = {
+  grades: [
+    "Preschool", "Kindergarten", "1st grade", "2nd grade", "3rd grade", "4th grade",
+    "5th grade", "6th grade", "7th grade", "8th grade", "9th grade", "10th grade",
+    "11th grade", "12th grade",
+  ],
+  subjects: [
+    "Arts & music",
+    "English language arts",
+    "Holidays/seasonal",
+    "Math",
+    "Science",
+    "Social studies",
+    "Specialty",
+    "World languages",
+  ],
+};
 
-const subjectOptions = [
-  "Arts & music",
-  "English language arts",
-  "Holidays/seasonal",
-  "Math",
-  "Science",
-  "Social studies",
-  "Specialty",
-  "World languages",
-];
+const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
 const Chat = () => {
-  const [lessonTopic, setLessonTopic] = useState("");
-  const [district, setDistrict] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
-  const [subjectFocus, setSubjectFocus] = useState("");
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [numSlides, setNumSlides] = useState(3);
+  // Form States
+  const [formState, setFormState] = useState({
+    lessonTopic: "",
+    district: "",
+    gradeLevel: "",
+    subjectFocus: "",
+    customPrompt: "",
+    numSlides: 3,
+  });
 
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  // UI Control States
+  const [uiState, setUiState] = useState({
+    isLoading: false,
+    error: "",
+    outlineModalOpen: false,
+    outlineConfirmed: false,
+    isFormExpanded: true,
+    regenerationCount: 0,
+    modifiedPrompt: "",
+  });
 
-  const [outlineToConfirm, setOutlineToConfirm] = useState("");
-  const [finalOutline, setFinalOutline] = useState("");
-  const [outlineModalOpen, setOutlineModalOpen] = useState(false);
-  const [outlineConfirmed, setOutlineConfirmed] = useState(false);
-  const [outlineStructure, setOutlineStructure] = useState(null);
-  const [viewMode, setViewMode] = useState('outline');
+  // Content States
+  const [contentState, setContentState] = useState({
+    outlineToConfirm: "",
+    finalOutline: "",
+  });
 
   const messagesEndRef = useRef(null);
-  const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [contentState.outlineToConfirm]);
 
+  // Form Handlers
+  const handleFormChange = (field) => (event) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+  };
+
+  // Load Example Handler
+  const loadExample = () => {
+    setFormState({
+      gradeLevel: "4th grade",
+      subjectFocus: "Math",
+      lessonTopic: "Equivalent Fractions",
+      district: "Denver Public Schools",
+      customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate interactive checks for understanding and collaborative learning opportunities.",
+      numSlides: 5,
+    });
+  };
+
+  // Clear All Handler
+  const clearAll = () => {
+    setFormState({
+      lessonTopic: "",
+      district: "",
+      gradeLevel: "",
+      subjectFocus: "",
+      customPrompt: "",
+      numSlides: 3,
+    });
+    setUiState(prev => ({
+      ...prev,
+      regenerationCount: 0,
+      modifiedPrompt: "",
+      outlineConfirmed: false,
+    }));
+    setContentState({
+      outlineToConfirm: "",
+      finalOutline: "",
+    });
+  };
+
+  // Generate Outline Handler
   const handleGenerateOutline = async () => {
-    if (!gradeLevel || !subjectFocus) return;
+    if (!formState.gradeLevel || !formState.subjectFocus) return;
 
-    setIsLoading(true);
+    setUiState(prev => ({ ...prev, isLoading: true }));
     try {
       const fullPrompt = `
-        Grade Level: ${gradeLevel}
-        Subject: ${subjectFocus}
-        Topic: ${lessonTopic || 'Not specified'}
-        District: ${district || 'Not specified'}
-        Number of Slides: ${numSlides}
+        Grade Level: ${formState.gradeLevel}
+        Subject: ${formState.subjectFocus}
+        Topic: ${formState.lessonTopic || 'Not specified'}
+        District: ${formState.district || 'Not specified'}
+        Number of Slides: ${formState.numSlides}
         
         Additional Requirements:
-        ${customPrompt || 'None'}
+        ${formState.customPrompt || 'None'}
         
-        Please create a detailed lesson outline with exactly ${numSlides} slides, including:
-        - Clear learning objectives
-        - Key concepts and vocabulary
-        - Student activities and engagement opportunities
-        - Assessment strategies
-        Each slide should have a clear title and detailed content.
-        Consider using two-column layouts for comparisons or parallel concepts.
+        Please create an engaging lesson outline with exactly ${formState.numSlides} slides.
+        Format each point in a direct teaching style, as if speaking to students:
+        - Start each concept with "•" followed by a teaching point, explanation, or example
+        - Use clear, student-friendly language
+        - Include direct explanations and examples rather than descriptions of what to teach
+        - Make the content interactive and engaging
+        - Include real-world examples and analogies
+        
+        Example format for content:
+        •Equivalent fractions: These are fractions that look different but have the same value
+        •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
+        •Let's look at ½ and 2/4 - they're equivalent because...
+
+        Each slide should:
+        - Teach directly to students
+        - Include concrete examples
+        - Use student-friendly language
+        - Focus on one clear concept
+        - Build understanding progressively
       `.trim();
 
-      const requestBody = {
-        grade_level: gradeLevel,
-        subject_focus: subjectFocus,
-        lesson_topic: lessonTopic || '',
-        district: district || '',
+      const { data } = await axios.post(`${BASE_URL}/outline`, {
+        grade_level: formState.gradeLevel,
+        subject_focus: formState.subjectFocus,
+        lesson_topic: formState.lessonTopic || '',
+        district: formState.district || '',
         custom_prompt: fullPrompt,
-        num_slides: Math.min(Math.max(Number(numSlides) || 3, 1), 10),
-      };
-
-      const { data } = await axios.post(`${BASE_URL}/outline`, requestBody);
-      const botResponses = data.messages || [];
-      setOutlineStructure(data.structured_content);
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: fullPrompt },
-      ]);
-
-      botResponses.forEach((botResponse) => {
-        setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
+        num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10),
       });
 
-      if (botResponses.length > 0) {
-        const lastBotMessage = botResponses[botResponses.length - 1];
-        setOutlineToConfirm(lastBotMessage);
-        setOutlineModalOpen(true);
-      }
+      setContentState(prev => ({
+        ...prev,
+        outlineToConfirm: data.messages[0] || ""
+      }));
+      setUiState(prev => ({
+        ...prev,
+        outlineModalOpen: true
+      }));
     } catch (error) {
-      console.error("Error generating outline:", error);
-      const errorMessage = error.response?.data?.error || "Sorry, there was an error generating the outline.";
-      setError(errorMessage);
+      setUiState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Error generating outline."
+      }));
     } finally {
-      setIsLoading(false);
+      setUiState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
-  const renderStructuredOutline = () => {
-    if (!outlineStructure) return null;
+  // Regeneration Handler
+  const handleRegenerateOutline = async () => {
+    if (uiState.regenerationCount >= 3) {
+      setUiState(prev => ({
+        ...prev,
+        error: "Maximum regeneration attempts (3) reached."
+      }));
+      return;
+    }
 
-    return outlineStructure.map((slide, index) => (
-      <Box key={index} sx={{ mb: 2, p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
-        <Typography variant="h6" sx={{ color: "#1976d2" }}>
-          {slide.title}
-        </Typography>
-        {slide.layout !== "TITLE_CONTENT" && (
-          <Typography variant="caption" sx={{ color: "#666" }}>
-            Layout: {slide.layout}
-          </Typography>
-        )}
-        {slide.main_content?.length > 0 && (
-          <Box sx={{ mt: 1 }}>
-            {slide.main_content.map((content, idx) => (
-              <Typography key={idx}>{content}</Typography>
-            ))}
-          </Box>
-        )}
-        {(slide.bullets?.length > 0 || slide.left_column?.length > 0) && (
-          <Box sx={{ mt: 1 }}>
-            {slide.layout === "TWO_COLUMN" ? (
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                  {slide.left_column?.map((bullet, idx) => (
-                    <Typography key={idx}>• {bullet}</Typography>
-                  ))}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  {slide.right_column?.map((bullet, idx) => (
-                    <Typography key={idx}>• {bullet}</Typography>
-                  ))}
-                </Box>
-              </Box>
-            ) : (
-              slide.bullets?.map((bullet, idx) => (
-                <Typography key={idx}>• {bullet}</Typography>
-              ))
-            )}
-          </Box>
-        )}
-      </Box>
-    ));
+    setUiState(prev => ({
+      ...prev,
+      regenerationCount: prev.regenerationCount + 1,
+      isLoading: true
+    }));
+
+    try {
+      const { data } = await axios.post(`${BASE_URL}/outline`, {
+        ...formState,
+        custom_prompt: uiState.modifiedPrompt
+      });
+
+      setContentState(prev => ({
+        ...prev,
+        outlineToConfirm: data.messages[0] || ""
+      }));
+      setUiState(prev => ({
+        ...prev,
+        modifiedPrompt: ""
+      }));
+    } catch (error) {
+      setUiState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Error regenerating outline."
+      }));
+    } finally {
+      setUiState(prev => ({ ...prev, isLoading: false }));
+    }
   };
 
+  // Generate Presentation Handler
   const generatePresentation = async () => {
+    setUiState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await fetch(`${BASE_URL}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lesson_topic: lessonTopic,
-          district: district,
-          grade_level: gradeLevel,
-          subject_focus: subjectFocus,
-          custom_prompt: customPrompt,
-          num_slides: Number(numSlides),
-          lesson_outline: finalOutline,
-          structured_content: outlineStructure
+          lesson_outline: contentState.finalOutline,
+          lesson_topic: formState.lessonTopic,
+          district: formState.district,
+          grade_level: formState.gradeLevel,
+          subject_focus: formState.subjectFocus,
+          custom_prompt: formState.customPrompt,
+          num_slides: Number(formState.numSlides)
         }),
       });
 
@@ -198,224 +255,285 @@ const Chat = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${lessonTopic || "lesson"}_lesson.pptx`);
+      link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url); // Clean up
     } catch (err) {
-      setError(err.message);
+      setUiState(prev => ({
+        ...prev,
+        error: err.message || "Error generating presentation"
+      }));
+    } finally {
+      setUiState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
-  const handleConfirmOutline = () => {
-    setFinalOutline(outlineToConfirm);
-    setOutlineConfirmed(true);
-    setOutlineModalOpen(false);
-  };
-
-  const handleCloseModal = () => setOutlineModalOpen(false);
-  const handleSnackbarClose = () => setError("");
-
-  const loadExample = () => {
-    setGradeLevel("4th grade");
-    setSubjectFocus("Math");
-    setLessonTopic("Equivalent Fractions");
-    setDistrict("Denver Public Schools");
-    setCustomPrompt(
-      "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention"
-    );
-    setNumSlides(5);
-  };
-
-  const clearInputs = () => {
-    setGradeLevel("");
-    setSubjectFocus("");
-    setLessonTopic("");
-    setDistrict("");
-    setCustomPrompt("");
-    setNumSlides(3);
-    setMessages([]);
-    setOutlineConfirmed(false);
-    setFinalOutline("");
-    setOutlineStructure(null);
-    setViewMode('outline');
-  };
-
-  const canGenerateOutline = gradeLevel && subjectFocus;
+  // Confirmation Modal Component
+  const ConfirmationModal = () => (
+    <Dialog 
+      open={uiState.outlineModalOpen} 
+      onClose={() => setUiState(prev => ({ ...prev, outlineModalOpen: false }))}
+      maxWidth="md" 
+      fullWidth
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Review and Modify Outline
+          {uiState.regenerationCount > 0 && (
+            <Typography variant="subtitle2" color="text.secondary">
+              Regeneration attempts: {uiState.regenerationCount}/3
+            </Typography>
+          )}
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Generated Outline:
+          </Typography>
+          <Paper sx={{ 
+            p: 2, 
+            maxHeight: "400px", 
+            overflowY: "auto",
+            backgroundColor: "#fafafa" 
+          }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {contentState.outlineToConfirm}
+            </ReactMarkdown>
+          </Paper>
+        </Box>
+        
+        {uiState.regenerationCount < 3 && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Want to modify the outline? Add your requirements:
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              variant="outlined"
+              value={uiState.modifiedPrompt}
+              onChange={(e) => setUiState(prev => ({ 
+                ...prev, 
+                modifiedPrompt: e.target.value 
+              }))}
+              placeholder="Enter additional requirements or modifications..."
+            />
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          onClick={() => setUiState(prev => ({ ...prev, outlineModalOpen: false }))}
+          color="inherit"
+        >
+          Cancel
+        </Button>
+        {uiState.regenerationCount < 3 && (
+          <Button 
+            onClick={handleRegenerateOutline}
+            color="primary"
+            disabled={!uiState.modifiedPrompt.trim() || uiState.isLoading}
+          >
+            {uiState.isLoading ? <CircularProgress size={24} /> : "Regenerate Outline"}
+          </Button>
+        )}
+        <Button 
+          onClick={() => {
+            setContentState(prev => ({ ...prev, finalOutline: contentState.outlineToConfirm }));
+            setUiState(prev => ({ 
+              ...prev, 
+              outlineConfirmed: true,
+              outlineModalOpen: false
+            }));
+          }}
+          variant="contained" 
+          color="primary"
+        >
+          Finalize Outline
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   return (
-    <Box sx={{ backgroundColor: "#e5e2dd", minHeight: "100vh", px: { xs: 2, md: 4 }, py: 4 }}>
-      {/* Logo */}
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
-        <img src={Logo} alt="Teacherfy Logo" style={{ height: 200 }} />
-      </Box>
+    <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100vh", p: 4 }}>
+      <Box sx={{ maxWidth: 1200, mx: "auto" }}>
+        {/* Logo Section */}
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
+          <img src={Logo} alt="Teacherfy Logo" style={{ height: 180 }} />
+        </Box>
 
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: "bold" }}>
-        </Typography>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button color="inherit" onClick={clearInputs} startIcon={<ClearIcon />}>
-            Clear Inputs
+        {/* Header Controls */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mb: 3 }}>
+          <Button color="inherit" onClick={clearAll} startIcon={<ClearIcon />}>
+            Clear All
           </Button>
           <Button color="inherit" onClick={loadExample}>
             Load Example
           </Button>
         </Box>
-      </Box>
 
-      {/* Form */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, backgroundColor: "#ffffff", p: 3, borderRadius: 2, mb: 4 }}>
-        <FormControl variant="filled" sx={{ minWidth: 200 }}>
-          <InputLabel>Grade Level *</InputLabel>
-          <Select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)}>
-            {gradeOptions.map((g) => (
-              <MenuItem key={g} value={g}>
-                {g}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {/* Main Content Area */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {/* Form Section */}
+          <Collapse in={!uiState.outlineConfirmed || uiState.isFormExpanded}>
+            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Grade Level *</InputLabel>
+                  <Select
+                    value={formState.gradeLevel}
+                    onChange={handleFormChange("gradeLevel")}
+                    label="Grade Level *"
+                  >
+                    {FORM_OPTIONS.grades.map((grade) => (
+                      <MenuItem key={grade} value={grade}>{grade}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-        <FormControl variant="filled" sx={{ minWidth: 200 }}>
-          <InputLabel>Subject *</InputLabel>
-          <Select value={subjectFocus} onChange={(e) => setSubjectFocus(e.target.value)}>
-            {subjectOptions.map((s) => (
-              <MenuItem key={s} value={s}>
-                {s}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Subject *</InputLabel>
+                  <Select
+                    value={formState.subjectFocus}
+                    onChange={handleFormChange("subjectFocus")}
+                    label="Subject *"
+                  >
+                    {FORM_OPTIONS.subjects.map((subject) => (
+                      <MenuItem key={subject} value={subject}>{subject}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-        <TextField
-          variant="filled"
-          label="Lesson Topic"
-          placeholder="e.g. Equivalent Fractions"
-          value={lessonTopic}
-          onChange={(e) => setLessonTopic(e.target.value)}
-          fullWidth
-        />
+                <TextField
+                  label="Lesson Topic"
+                  value={formState.lessonTopic}
+                  onChange={handleFormChange("lessonTopic")}
+                  placeholder="e.g. Equivalent Fractions"
+                  fullWidth
+                />
 
-        <TextField
-          variant="filled"
-          label="District"
-          placeholder="e.g. Denver Public Schools"
-          value={district}
-          onChange={(e) => setDistrict(e.target.value)}
-          fullWidth
-        />
+                <TextField
+                  label="District"
+                  value={formState.district}
+                  onChange={handleFormChange("district")}
+                  placeholder="e.g. Denver Public Schools"
+                  fullWidth
+                />
 
-        <TextField
-          variant="filled"
-          label="Additional Criteria / Prompt"
-          placeholder="Add more detail..."
-          value={customPrompt}
-          onChange={(e) => setCustomPrompt(e.target.value)}
-          multiline
-          rows={3}
-          fullWidth
-        />
+                <TextField
+                  label="Additional Requirements"
+                  multiline
+                  rows={3}
+                  value={formState.customPrompt}
+                  onChange={handleFormChange("customPrompt")}
+                  placeholder="Add specific requirements..."
+                  fullWidth
+                />
 
-        <TextField
-          variant="filled"
-          type="number"
-          label="Number of Slides (1-10)"
-          value={numSlides}
-          onChange={(e) => setNumSlides(e.target.value)}
-          inputProps={{ min: 1, max: 10 }}
-          sx={{ maxWidth: 200 }}
-        />
+                <TextField
+                  label="Number of Slides"
+                  type="number"
+                  value={formState.numSlides}
+                  onChange={handleFormChange("numSlides")}
+                  inputProps={{ min: 1, max: 10 }}
+                  sx={{ width: 200 }}
+                />
 
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleGenerateOutline}
-          disabled={!canGenerateOutline || isLoading || outlineConfirmed}
-        >
-          {isLoading ? <CircularProgress size={24} color="inherit" /> : "Generate Outline"}
-        </Button>
-      </Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleGenerateOutline}
+                  disabled={!formState.gradeLevel || !formState.subjectFocus || uiState.isLoading}
+                >
+                  {uiState.isLoading ? <CircularProgress size={24} /> : "Generate Outline"}
+                </Button>
+              </Box>
+            </Paper>
+          </Collapse>
 
-      {/* Outline Section */}
-      <Box sx={{ backgroundColor: "#ffffff", p: 3, borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1 }}>
-          Lesson Outline
-        </Typography>
-        
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-          <Tabs value={viewMode} onChange={(e, newValue) => setViewMode(newValue)}>
-            <Tab label="Outline" value="outline" />
-            <Tab label="Structured View" value="structured" disabled={!outlineStructure} />
-          </Tabs>
-        </Box>
+          {/* Outline Display */}
+          {uiState.outlineConfirmed && (
+            <Paper elevation={3} sx={{ p: 3 }}>
+              <Box sx={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center", 
+                mb: 2 
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                  Lesson Outline
+                </Typography>
+                <Tooltip title={uiState.isFormExpanded ? "Collapse Form" : "Expand Form"}>
+                  <IconButton
+                    onClick={() => setUiState(prev => ({ 
+                      ...prev, 
+                      isFormExpanded: !prev.isFormExpanded 
+                    }))}
+                  >
+                    {uiState.isFormExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
 
-        <Box
-          sx={{
-            maxHeight: 500,
-            overflowY: "auto",
-            border: "1px solid #aaa",
-            padding: 2,
-            marginBottom: 2,
-            borderRadius: 1,
-            backgroundColor: "#f4f2ef",
-          }}
-        >
-          {viewMode === 'outline' ? (
-            outlineConfirmed ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalOutline}</ReactMarkdown>
-            ) : (
-              <>
-                {messages.map((msg, i) => (
-                  <Typography key={i} sx={{ marginBottom: 1, whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
-                    <strong>{msg.role}:</strong> {msg.content}
-                  </Typography>
-                ))}
-                <div ref={messagesEndRef} />
-              </>
-            )
-          ) : (
-            renderStructuredOutline()
+              <Box sx={{
+                maxHeight: 500,
+                overflowY: "auto",
+                border: "1px solid #e0e0e0",
+                borderRadius: 1,
+                p: 2,
+                mb: 3,
+                backgroundColor: "#fafafa"
+              }}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {contentState.finalOutline}
+                </ReactMarkdown>
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={generatePresentation}
+                  startIcon={<DownloadIcon />}
+                  disabled={uiState.isLoading}
+                >
+                  {uiState.isLoading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    "Download Presentation"
+                  )}
+                </Button>
+              </Box>
+            </Paper>
           )}
+
+          {/* Confirmation Modal */}
+          <ConfirmationModal />
+
+          {/* Error Snackbar */}
+          <Snackbar 
+            open={!!uiState.error} 
+            autoHideDuration={6000} 
+            onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
+          >
+            <Alert 
+              onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
+              severity="error" 
+              sx={{ width: "100%" }}
+            >
+              {uiState.error}
+            </Alert>
+          </Snackbar>
+
+          {/* Scroll Reference */}
+          <div ref={messagesEndRef} />
         </Box>
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={generatePresentation}
-          disabled={!outlineConfirmed}
-        >
-          Download Presentation
-        </Button>
       </Box>
-
-      {/* Modal */}
-      <Dialog open={outlineModalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
-        <DialogTitle>Confirm Outline</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Review the generated outline. Confirm to enable the "Generate Presentation" option.
-          </DialogContentText>
-          <Box sx={{ marginTop: 2 }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{outlineToConfirm}</ReactMarkdown>
-            </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleConfirmOutline} variant="contained" color="primary">
-            Confirm Outline
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleSnackbarClose}>
-        <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: "100%" }}>
-          {error}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
