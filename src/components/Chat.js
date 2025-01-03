@@ -144,7 +144,7 @@ const Chat = () => {
         ${formState.customPrompt || 'None'}
         
         Please create an engaging lesson outline with exactly ${formState.numSlides} slides.
-        Format each point in a direct teaching style, as if speaking to students:
+        Format each point in a direct teaching style, as if speaking to students directly:
         - Start each concept with "•" followed by a teaching point, explanation, or example
         - Use clear, student-friendly language
         - Include direct explanations and examples rather than descriptions of what to teach
