@@ -131,74 +131,44 @@ const Chat = () => {
 
   const renderStructuredOutline = () => {
     if (!outlineStructure) return null;
-  
+
     return outlineStructure.map((slide, index) => (
       <Box key={index} sx={{ mb: 2, p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
         <Typography variant="h6" sx={{ color: "#1976d2" }}>
           {slide.title}
         </Typography>
-        
         {slide.layout !== "TITLE_CONTENT" && (
           <Typography variant="caption" sx={{ color: "#666" }}>
             Layout: {slide.layout}
           </Typography>
         )}
-  
-        {/* Content Section */}
-        {slide.content?.length > 0 && (
+        {slide.main_content?.length > 0 && (
           <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle1" sx={{ color: "#333", fontWeight: "bold" }}>
-              Content:
-            </Typography>
-            {slide.content.map((content, idx) => (
+            {slide.main_content.map((content, idx) => (
               <Typography key={idx}>{content}</Typography>
             ))}
           </Box>
         )}
-  
-        {/* Teacher Notes Section */}
-        {slide.teacher_notes?.length > 0 && (
+        {(slide.bullets?.length > 0 || slide.left_column?.length > 0) && (
           <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle1" sx={{ color: "#333", fontWeight: "bold" }}>
-              Teacher Notes:
-            </Typography>
-            {slide.teacher_notes.map((note, idx) => (
-              <Typography key={idx}>• {note}</Typography>
-            ))}
-          </Box>
-        )}
-  
-        {/* Visual Elements Section */}
-        {slide.visual_elements?.length > 0 && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle1" sx={{ color: "#333", fontWeight: "bold" }}>
-              Visual Elements:
-            </Typography>
-            {slide.visual_elements.map((visual, idx) => (
-              <Typography key={idx}>• {visual}</Typography>
-            ))}
-          </Box>
-        )}
-  
-        {/* Two Column Layout */}
-        {slide.layout === "TWO_COLUMN" && (
-          <Box sx={{ mt: 1, display: "flex", gap: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ color: "#333", fontWeight: "bold" }}>
-                Left Column:
-              </Typography>
-              {slide.left_column?.map((item, idx) => (
-                <Typography key={idx}>• {item}</Typography>
-              ))}
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ color: "#333", fontWeight: "bold" }}>
-                Right Column:
-              </Typography>
-              {slide.right_column?.map((item, idx) => (
-                <Typography key={idx}>• {item}</Typography>
-              ))}
-            </Box>
+            {slide.layout === "TWO_COLUMN" ? (
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  {slide.left_column?.map((bullet, idx) => (
+                    <Typography key={idx}>• {bullet}</Typography>
+                  ))}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  {slide.right_column?.map((bullet, idx) => (
+                    <Typography key={idx}>• {bullet}</Typography>
+                  ))}
+                </Box>
+              </Box>
+            ) : (
+              slide.bullets?.map((bullet, idx) => (
+                <Typography key={idx}>• {bullet}</Typography>
+              ))
+            )}
           </Box>
         )}
       </Box>
@@ -218,7 +188,7 @@ const Chat = () => {
           custom_prompt: customPrompt,
           num_slides: Number(numSlides),
           lesson_outline: finalOutline,
-          structured_content: outlineStructure  // Add this line
+          structured_content: outlineStructure
         }),
       });
 
