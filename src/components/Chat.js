@@ -297,6 +297,7 @@ const Chat = () => {
   const [contentState, setContentState] = useState({
     outlineToConfirm: "",
     finalOutline: "",
+    structuredContent: []
   });
 
   const messagesEndRef = useRef(null);
@@ -349,7 +350,6 @@ const Chat = () => {
 
   const handleGenerateOutline = React.useCallback(async () => {
     if (!formState.gradeLevel || !formState.subjectFocus || !formState.language) return;
-  
 
     setUiState(prev => ({ 
       ...prev, 
@@ -358,27 +358,46 @@ const Chat = () => {
     }));
 
     try {
-      const fullPrompt = `
-        Grade Level: ${formState.gradeLevel}
-        Subject: ${formState.subjectFocus}
-        Topic: ${formState.lessonTopic || 'Not specified'}
-        District: ${formState.district || 'Not specified'}
-        Language: ${formState.language}
-        Number of Slides: ${formState.numSlides}
+      let data;
+      
+      // Check if this is the example case - use only essential fields
+      const isExampleCase = 
+        formState.language === "English" && 
+        formState.lessonTopic?.toLowerCase().trim() === "equivalent fractions" && 
+        formState.gradeLevel === "4th grade" && 
+        formState.subjectFocus === "Math" &&
+        formState.district?.toLowerCase().trim() === "denver public schools";
+      
+      if (isExampleCase) {
+        // Use the example outline
+        const response = await axios.post(`${BASE_URL}/outline`, {
+          use_example: true,
+          example_name: "equivalent_fractions_outline"
+        });
+        data = response.data;
+      } else {
+        // Regular outline generation
+        const fullPrompt = `
+          Grade Level: ${formState.gradeLevel}
+          Subject: ${formState.subjectFocus}
+          Topic: ${formState.lessonTopic || 'Not specified'}
+          District: ${formState.district || 'Not specified'}
+          Language: ${formState.language}
+          Number of Slides: ${formState.numSlides}
+          
+          Additional Requirements:
+          ${formState.customPrompt || 'None'}
+          
+          Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
+          Format each point in a direct teaching style, as if speaking to students directly:
+          - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
+          - Start each concept with "•" followed by a teaching point, explanation, or example
+          - Use clear, student-friendly language appropriate for ${formState.language} speakers
+          - Include direct explanations and examples rather than descriptions of what to teach
+          - Make the content interactive and engaging
+          - Include real-world examples and analogies that are culturally relevant
         
-        Additional Requirements:
-        ${formState.customPrompt || 'None'}
-        
-        Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
-        Format each point in a direct teaching style, as if speaking to students directly:
-        - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
-        - Start each concept with "•" followed by a teaching point, explanation, or example
-        - Use clear, student-friendly language appropriate for ${formState.language} speakers
-        - Include direct explanations and examples rather than descriptions of what to teach
-        - Make the content interactive and engaging
-        - Include real-world examples and analogies that are culturally relevant
-
-        Example format for content:
+          Example format for content:
         •Equivalent fractions: These are fractions that look different but have the same value
         •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
         •Let's look at ½ and 2/4 - they're equivalent because...
@@ -389,22 +408,21 @@ const Chat = () => {
         - Use student-friendly language
         - Focus on one clear concept
         - Build understanding progressively
-      `.trim();
-  
-      const { data } = await axios.post(`${BASE_URL}/outline`, {
-        grade_level: formState.gradeLevel,
-        subject_focus: formState.subjectFocus,
-        lesson_topic: formState.lessonTopic || '',
-        district: formState.district || '',
-        language: formState.language,  // Add this line
-        custom_prompt: fullPrompt,
-        num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10),
-      });
+        `.trim();
+    
+        const response = await axios.post(`${BASE_URL}/outline`, {
+          custom_prompt: fullPrompt  // Only send the prompt, since backend uses it directly now
+        });
+        data = response.data;
+      }
 
+      // Store both the outline text and structured content
       setContentState(prev => ({
         ...prev,
-        outlineToConfirm: data.messages[0] || ""
+        outlineToConfirm: data.messages[0] || "",
+        structuredContent: data.structured_content || []
       }));
+
       setUiState(prev => ({
         ...prev,
         outlineModalOpen: true
@@ -445,9 +463,10 @@ const Chat = () => {
         
         IMPORTANT ADDITIONAL REQUIREMENTS (Must be incorporated):
         ${uiState.modifiedPrompt}
-        
+
         Base Requirements:
         ${formState.customPrompt || 'None'}
+        
         Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
         Format each point in a direct teaching style, as if speaking to students directly:
         - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
@@ -456,8 +475,8 @@ const Chat = () => {
         - Include direct explanations and examples rather than descriptions of what to teach
         - Make the content interactive and engaging
         - Include real-world examples and analogies that are culturally relevant
-        
-        Example format for content:
+
+      Example format for content:
         •Equivalent fractions: These are fractions that look different but have the same value
         •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
         •Let's look at ½ and 2/4 - they're equivalent because...
@@ -471,18 +490,13 @@ const Chat = () => {
       `.trim();
   
       const { data } = await axios.post(`${BASE_URL}/outline`, {
-        grade_level: formState.gradeLevel,
-        subject_focus: formState.subjectFocus,
-        lesson_topic: formState.lessonTopic || '',
-        district: formState.district || '',
-        language: formState.language, // Add the language parameter
-        custom_prompt: fullPrompt,
-        num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10),
+        custom_prompt: fullPrompt,  // This is the only parameter we need now
       });
   
       setContentState(prev => ({
         ...prev,
-        outlineToConfirm: data.messages[0] || ""
+        outlineToConfirm: data.messages[0] || "",
+        structuredContent: data.structured_content || []
       }));
     } catch (error) {
       setUiState(prev => ({
@@ -502,6 +516,7 @@ const Chat = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lesson_outline: contentState.finalOutline,
+          structured_content: contentState.structuredContent,  // Add this line
           lesson_topic: formState.lessonTopic,
           district: formState.district,
           grade_level: formState.gradeLevel,
@@ -530,7 +545,7 @@ const Chat = () => {
     } finally {
       setUiState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [formState, contentState.finalOutline]);
+  }, [formState, contentState.finalOutline, contentState.structuredContent]);
 
   return (
     <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100vh", p: 4 }}>
