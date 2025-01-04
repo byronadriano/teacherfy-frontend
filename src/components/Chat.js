@@ -319,7 +319,7 @@ const Chat = () => {
       lessonTopic: "Equivalent Fractions",
       district: "Denver Public Schools",
       language: "English",  // Add this line
-      customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary...",
+      customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention",
       numSlides: 5,
     });
   }, []);
@@ -377,7 +377,18 @@ const Chat = () => {
         - Include direct explanations and examples rather than descriptions of what to teach
         - Make the content interactive and engaging
         - Include real-world examples and analogies that are culturally relevant
-        ...
+
+        Example format for content:
+        •Equivalent fractions: These are fractions that look different but have the same value
+        •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
+        •Let's look at ½ and 2/4 - they're equivalent because...
+      
+        Each slide should:
+        - Teach directly to students in ${formState.language}
+        - Include concrete examples
+        - Use student-friendly language
+        - Focus on one clear concept
+        - Build understanding progressively
       `.trim();
   
       const { data } = await axios.post(`${BASE_URL}/outline`, {
@@ -437,14 +448,14 @@ const Chat = () => {
         
         Base Requirements:
         ${formState.customPrompt || 'None'}
-        Format each point in a direct teaching style, as if speaking to students directly in ${formState.language}:
+        Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
+        Format each point in a direct teaching style, as if speaking to students directly:
         - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
         - Start each concept with "•" followed by a teaching point, explanation, or example
         - Use clear, student-friendly language appropriate for ${formState.language} speakers
         - Include direct explanations and examples rather than descriptions of what to teach
         - Make the content interactive and engaging
         - Include real-world examples and analogies that are culturally relevant
-        - Ensure all content is properly presented in ${formState.language}
         
         Example format for content:
         •Equivalent fractions: These are fractions that look different but have the same value
