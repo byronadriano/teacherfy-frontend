@@ -432,23 +432,17 @@ const ConfirmationModal = memo(({
   );
 });
 
-// 4. Define your helper function BEFORE the effect
-const isExampleConfiguration = (formState) => {
-  return (
-    formState.gradeLevel === "4th grade" &&
-    formState.subjectFocus === "Math" &&
-    formState.lessonTopic === "Equivalent Fractions" &&
-    formState.district === "Denver Public Schools" &&
-    formState.language === "English" &&
-    formState.customPrompt === 
-      "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention" &&
-    formState.numSlides === 5
-  );
-};
-
 const Chat = () => {
+  const [formState, setFormState] = useState({
+    lessonTopic: "",
+    district: "",
+    gradeLevel: "",
+    subjectFocus: "",
+    language: "",  // Add this line
+    customPrompt: "",
+    numSlides: 3,
+  });
 
-  // 1. Define UI state first
   const [uiState, setUiState] = useState({
     isLoading: false,
     error: "",
@@ -457,47 +451,14 @@ const Chat = () => {
     isFormExpanded: true,
     regenerationCount: 0,
     modifiedPrompt: "",
-    generateOutlineClicked: false
+    generateOutlineClicked: false,  // Add this line
   });
 
-  // 2. Define form state
-  const [formState, setFormState] = useState({
-    lessonTopic: "",
-    district: "",
-    gradeLevel: "",
-    subjectFocus: "",
-    language: "",
-    customPrompt: "",
-    numSlides: 3
-  });
-
-  // 3. Define content state
   const [contentState, setContentState] = useState({
     outlineToConfirm: "",
     finalOutline: "",
     structuredContent: []
   });
-
-
-  // 5. Now you can safely reference formState, uiState, and isExampleConfiguration
-  useEffect(() => {
-    // If we previously had the outline confirmed from the example
-    // but now the form no longer matches the exact example inputs,
-    // clear the final outline so we don’t keep using the example version.
-    if (uiState.outlineConfirmed && !isExampleConfiguration(formState)) {
-      setUiState((prev) => ({
-        ...prev,
-        outlineConfirmed: false
-      }));
-      setContentState((prev) => ({
-        ...prev,
-        outlineToConfirm: "",
-        finalOutline: "",
-        structuredContent: []
-      }));
-    }
-    // Make sure these are all in the dependency array
-  }, [uiState.outlineConfirmed, formState]);
 
   const messagesEndRef = useRef(null);
 
@@ -565,8 +526,18 @@ const Chat = () => {
       structuredContent: [], // Add this
     });
   }, []);
-
-
+    // Check if this is the exact example configuration
+  const isExampleConfiguration = (formState) => {
+    return (
+      formState.gradeLevel === "4th grade" &&
+      formState.subjectFocus === "Math" &&
+      formState.lessonTopic === "Equivalent Fractions" &&
+      formState.district === "Denver Public Schools" &&
+      formState.language === "English" &&
+      formState.customPrompt === "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention" &&
+      formState.numSlides === 5
+    );
+  };
   
   const handleGenerateOutline = React.useCallback(async () => {
     if (!formState.gradeLevel || !formState.subjectFocus || !formState.language || !formState.lessonTopic) return;
@@ -580,9 +551,6 @@ const Chat = () => {
   
     try {
       let data;
-      console.log("DEBUG: formState is =>", formState);
-      console.log("DEBUG: isExampleConfiguration =>", isExampleConfiguration(formState));
-
       if (isExampleConfiguration(formState)) {
         // Use the predefined example outline directly
         const { structured_content } = EXAMPLE_OUTLINE;
@@ -870,8 +838,6 @@ const Chat = () => {
                     "Download Presentation"
                   )}
                 </Button>
-
-                {/* Added placeholder button */}
                 <Button
                   variant="outlined"
                   disabled
@@ -879,7 +845,6 @@ const Chat = () => {
                   Open in Google Slides (Coming Soon)
                 </Button>
               </Box>
-
             </Paper>
           )}
 
