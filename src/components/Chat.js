@@ -13,6 +13,12 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DownloadIcon from "@mui/icons-material/Download";
 import Logo from "../assets/Teacherfyoai.png";
+import { 
+  formatOutlineForDisplay, 
+  parseOutlineToStructured, 
+  generateRegenerationPrompt,
+  OUTLINE_PROMPT_TEMPLATE  // Add this
+} from './OutlineFormatter';
 
 const FORM_OPTIONS = {
   grades: [
@@ -39,6 +45,142 @@ const FORM_OPTIONS = {
 };
 
 const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
+
+// Function to generate the complete prompt
+const generateFullPrompt = (formState) => {
+  return OUTLINE_PROMPT_TEMPLATE
+    .replace('{numSlides}', formState.numSlides)
+    .replace('{language}', formState.language)
+    .replace('{gradeLevel}', formState.gradeLevel)
+    .replace('{subject}', formState.subjectFocus)
+    .replace('{topic}', formState.lessonTopic || 'Not specified')
+    .replace('{district}', formState.district || 'Not specified')
+    .replace('{customPrompt}', formState.customPrompt || 'None');
+};
+
+export const EXAMPLE_OUTLINE = {
+  "messages": [
+    "Slide 1: Let's Explore Equivalent Fractions!\nContent:\n- Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix.\n- Students will be able to explain why different fractions can show the same amount using pictures and numbers.\n\nTeacher Notes:\n- Begin with students sharing their experiences with fractions in their daily lives\n- Use culturally relevant examples from Denver communities\n\nVisual Elements:\n- Interactive display showing local treats divided into equivalent parts\n- Student-friendly vocabulary cards with pictures"
+  ],
+  "structured_content": [
+    {
+      "title": "Let's Explore Equivalent Fractions!",
+      "layout": "TITLE_AND_CONTENT",
+      "content": [
+        "Today we're going on a fraction adventure!",
+        "- Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix",
+        "- Students will be able to explain why different fractions can show the same amount using pictures and numbers",
+        "- Let's start by thinking about times when we share things equally!"
+      ],
+      "teacher_notes": [
+        "Begin with students sharing their experiences with fractions in their daily lives",
+        "Use culturally relevant examples from Denver communities",
+        "Encourage bilingual students to share fraction terms in their home language"
+      ],
+      "visual_elements": [
+        "Interactive display showing local treats divided into equivalent parts",
+        "Student-friendly vocabulary cards with pictures"
+      ],
+      "left_column": [],
+      "right_column": []
+    },
+    {
+      "title": "What Are Equivalent Fractions?",
+      "layout": "TITLE_AND_CONTENT",
+      "content": [
+        "Let's learn our fraction vocabulary!",
+        "- Imagine sharing a breakfast burrito with your friend - you can cut it in half (1/2) or into four equal pieces and take two (2/4). You get the same amount!",
+        "- The top number (numerator) tells us how many pieces we have",
+        "- The bottom number (denominator) tells us how many total equal pieces",
+        "- When fractions show the same amount, we call them equivalent"
+      ],
+      "teacher_notes": [
+        "Use local food examples familiar to Denver students",
+        "Connect math vocabulary to real experiences",
+        "Encourage students to create their own examples"
+      ],
+      "visual_elements": [
+        "Animation of a burrito being cut into different equivalent portions",
+        "Interactive fraction wall labeled in English and Spanish",
+        "Hands-on fraction strips for each student"
+      ],
+      "left_column": [],
+      "right_column": []
+    },
+    {
+      "title": "Finding Equivalent Fractions Together",
+      "layout": "TWO_COLUMNS",
+      "content": [],
+      "teacher_notes": [
+        "Use Rocky Mountain National Park trail maps for real-world connections",
+        "Encourage peer discussion in preferred language",
+        "Model think-aloud strategy"
+      ],
+      "visual_elements": [
+        "Trail map showing different fraction representations",
+        "Digital manipulatives for student exploration"
+      ],
+      "left_column": [
+        "Let's practice together!",
+        "- When we multiply 1/2 by 2/2, we get 2/4",
+        "- It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!",
+        "- Your turn: Try finding an equivalent fraction for 2/3"
+      ],
+      "right_column": [
+        "Check your understanding:",
+        "- Use your fraction strips to show how 1/2 = 2/4",
+        "- Draw a picture to prove your answer",
+        "- Share your strategy with your partner"
+      ]
+    },
+    {
+      "title": "Your Turn to Create!",
+      "layout": "TITLE_AND_CONTENT",
+      "content": [
+        "Time to become fraction experts!",
+        "- Work with your partner to create equivalent fraction cards",
+        "- Use different colors to show equal parts",
+        "- Challenge: Can you find three different fractions that equal 1/2?",
+        "- Bonus: Create a story problem using equivalent fractions and your favorite Denver activity"
+      ],
+      "teacher_notes": [
+        "Provide bilingual instruction cards",
+        "Allow student choice in examples",
+        "Support native language use in discussions"
+      ],
+      "visual_elements": [
+        "Sample fraction cards with local themes",
+        "Student workspace organization guide",
+        "Visual success criteria"
+      ],
+      "left_column": [],
+      "right_column": []
+    },
+    {
+      "title": "Show What You Know!",
+      "layout": "TITLE_AND_CONTENT",
+      "content": [
+        "Let's celebrate what we learned!",
+        "- Create three equivalent fractions for 3/4",
+        "- Draw a picture showing how you know they're equal",
+        "- Write a story about using equivalent fractions in your neighborhood",
+        "- Share your favorite way to remember equivalent fractions"
+      ],
+      "teacher_notes": [
+        "Provide multiple ways to demonstrate understanding",
+        "Accept explanations in English or home language",
+        "Use exit ticket responses to plan next lesson"
+      ],
+      "visual_elements": [
+        "Culturally responsive exit ticket template",
+        "Digital portfolio upload guide",
+        "Self-assessment checklist in multiple languages"
+      ],
+      "left_column": [],
+      "right_column": []
+    }
+  ]
+};
 
 const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGenerateOutline }) => (
   <Paper elevation={3} sx={{ mb: 3 }}>
@@ -187,6 +329,27 @@ const ConfirmationModal = memo(({
     handleRegenerateOutline();
   };
 
+  const handleFinalize = () => {
+    if (!contentState.structuredContent?.length) {
+      setUiState(prev => ({
+        ...prev,
+        error: "No valid outline content to finalize"
+      }));
+      return;
+    }
+    
+    setContentState(prev => ({ 
+      ...prev, 
+      finalOutline: contentState.outlineToConfirm,
+      structuredContent: contentState.structuredContent
+    }));
+    setUiState(prev => ({ 
+      ...prev, 
+      outlineConfirmed: true,
+      outlineModalOpen: false
+    }));
+  };
+
   return (
     <Dialog 
       open={uiState.outlineModalOpen} 
@@ -255,14 +418,7 @@ const ConfirmationModal = memo(({
           </Button>
         )}
         <Button 
-          onClick={() => {
-            setContentState(prev => ({ ...prev, finalOutline: contentState.outlineToConfirm }));
-            setUiState(prev => ({ 
-              ...prev, 
-              outlineConfirmed: true,
-              outlineModalOpen: false
-            }));
-          }}
+          onClick={handleFinalize}
           variant="contained" 
           color="primary"
         >
@@ -314,15 +470,31 @@ const Chat = () => {
   }, []);
 
   const loadExample = React.useCallback(() => {
+    // Set form state
     setFormState({
       gradeLevel: "4th grade",
       subjectFocus: "Math",
       lessonTopic: "Equivalent Fractions",
       district: "Denver Public Schools",
-      language: "English",  // Add this line
+      language: "English",
       customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention",
       numSlides: 5,
     });
+  
+    // Set the predefined outline directly from our example
+    const { structured_content } = EXAMPLE_OUTLINE;
+    const displayMarkdown = formatOutlineForDisplay(structured_content);
+    
+    setContentState({
+      outlineToConfirm: displayMarkdown,
+      finalOutline: displayMarkdown,
+      structuredContent: structured_content
+    });
+  
+    setUiState(prev => ({
+      ...prev,
+      outlineConfirmed: true
+    }));
   }, []);
 
   const clearAll = React.useCallback(() => {
@@ -345,88 +517,47 @@ const Chat = () => {
     setContentState({
       outlineToConfirm: "",
       finalOutline: "",
+      structuredContent: [], // Add this
     });
   }, []);
 
   const handleGenerateOutline = React.useCallback(async () => {
     if (!formState.gradeLevel || !formState.subjectFocus || !formState.language) return;
-
+  
     setUiState(prev => ({ 
       ...prev, 
       isLoading: true,
       isFormExpanded: false
     }));
-
+  
     try {
-      let data;
+      const fullPrompt = generateFullPrompt(formState);
       
-      // Check if this is the example case - use only essential fields
-      const isExampleCase = 
-        formState.language === "English" && 
-        formState.lessonTopic?.toLowerCase().trim() === "equivalent fractions" && 
-        formState.gradeLevel === "4th grade" && 
-        formState.subjectFocus === "Math" &&
-        formState.district?.toLowerCase().trim() === "denver public schools";
-      
-      if (isExampleCase) {
-        // Use the example outline
-        const response = await axios.post(`${BASE_URL}/outline`, {
-          use_example: true,
-          example_name: "equivalent_fractions_outline"
-        });
-        data = response.data;
-      } else {
-        // Regular outline generation
-        const fullPrompt = `
-          Grade Level: ${formState.gradeLevel}
-          Subject: ${formState.subjectFocus}
-          Topic: ${formState.lessonTopic || 'Not specified'}
-          District: ${formState.district || 'Not specified'}
-          Language: ${formState.language}
-          Number of Slides: ${formState.numSlides}
-          
-          Additional Requirements:
-          ${formState.customPrompt || 'None'}
-          
-          Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
-          Format each point in a direct teaching style, as if speaking to students directly:
-          - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
-          - Start each concept with "•" followed by a teaching point, explanation, or example
-          - Use clear, student-friendly language appropriate for ${formState.language} speakers
-          - Include direct explanations and examples rather than descriptions of what to teach
-          - Make the content interactive and engaging
-          - Include real-world examples and analogies that are culturally relevant
-        
-          Example format for content:
-        •Equivalent fractions: These are fractions that look different but have the same value
-        •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
-        •Let's look at ½ and 2/4 - they're equivalent because...
-      
-        Each slide should:
-        - Teach directly to students in ${formState.language}
-        - Include concrete examples
-        - Use student-friendly language
-        - Focus on one clear concept
-        - Build understanding progressively
-        `.trim();
+      const { data } = await axios.post(`${BASE_URL}/outline`, {
+        custom_prompt: fullPrompt
+      });
     
-        const response = await axios.post(`${BASE_URL}/outline`, {
-          custom_prompt: fullPrompt  // Only send the prompt, since backend uses it directly now
-        });
-        data = response.data;
+      try {
+        const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
+        const displayMarkdown = formatOutlineForDisplay(structuredContent);
+    
+        setContentState(prev => ({
+          ...prev,
+          outlineToConfirm: displayMarkdown,
+          structuredContent: structuredContent
+        }));
+    
+        setUiState(prev => ({
+          ...prev,
+          outlineModalOpen: true
+        }));
+      } catch (parsingError) {
+        setUiState(prev => ({
+          ...prev,
+          error: "Failed to process the outline format. Please try again."
+        }));
+        return;
       }
-
-      // Store both the outline text and structured content
-      setContentState(prev => ({
-        ...prev,
-        outlineToConfirm: data.messages[0] || "",
-        structuredContent: data.structured_content || []
-      }));
-
-      setUiState(prev => ({
-        ...prev,
-        outlineModalOpen: true
-      }));
     } catch (error) {
       setUiState(prev => ({
         ...prev,
@@ -436,7 +567,7 @@ const Chat = () => {
       setUiState(prev => ({ ...prev, isLoading: false }));
     }
   }, [formState]);
-
+  
   const handleRegenerateOutline = React.useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
       setUiState(prev => ({
@@ -453,51 +584,28 @@ const Chat = () => {
     }));
   
     try {
-      const fullPrompt = `
-        Grade Level: ${formState.gradeLevel}
-        Subject: ${formState.subjectFocus}
-        Topic: ${formState.lessonTopic || 'Not specified'}
-        District: ${formState.district || 'Not specified'}
-        Language: ${formState.language}
-        Number of Slides: ${formState.numSlides}
-        
-        IMPORTANT ADDITIONAL REQUIREMENTS (Must be incorporated):
-        ${uiState.modifiedPrompt}
-
-        Base Requirements:
-        ${formState.customPrompt || 'None'}
-        
-        Please create an engaging lesson outline in ${formState.language} with exactly ${formState.numSlides} slides.
-        Format each point in a direct teaching style, as if speaking to students directly:
-        - The first slide should introduce the topic and set the stage for the learning objective using this as a sentence frame: "Students will be able to... "
-        - Start each concept with "•" followed by a teaching point, explanation, or example
-        - Use clear, student-friendly language appropriate for ${formState.language} speakers
-        - Include direct explanations and examples rather than descriptions of what to teach
-        - Make the content interactive and engaging
-        - Include real-world examples and analogies that are culturally relevant
-
-      Example format for content:
-        •Equivalent fractions: These are fractions that look different but have the same value
-        •Think of it like sharing a pizza: cutting it into 2 pieces or 4 pieces still gives you the same amount when you take half
-        •Let's look at ½ and 2/4 - they're equivalent because...
-      
-        Each slide should:
-        - Teach directly to students in ${formState.language}
-        - Include concrete examples
-        - Use student-friendly language
-        - Focus on one clear concept
-        - Build understanding progressively
-      `.trim();
-  
+      const regenerationPrompt = generateRegenerationPrompt(formState, uiState.modifiedPrompt);
+    
       const { data } = await axios.post(`${BASE_URL}/outline`, {
-        custom_prompt: fullPrompt,  // This is the only parameter we need now
+        custom_prompt: regenerationPrompt,
       });
-  
-      setContentState(prev => ({
-        ...prev,
-        outlineToConfirm: data.messages[0] || "",
-        structuredContent: data.structured_content || []
-      }));
+    
+      try {
+        const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
+        const displayMarkdown = formatOutlineForDisplay(structuredContent);
+    
+        setContentState(prev => ({
+          ...prev,
+          outlineToConfirm: displayMarkdown,
+          structuredContent: structuredContent
+        }));
+      } catch (parsingError) {
+        setUiState(prev => ({
+          ...prev,
+          error: "Failed to process the outline format. Please try again."
+        }));
+        return;
+      }
     } catch (error) {
       setUiState(prev => ({
         ...prev,
@@ -507,7 +615,7 @@ const Chat = () => {
       setUiState(prev => ({ ...prev, isLoading: false }));
     }
   }, [formState, uiState.regenerationCount, uiState.modifiedPrompt]);
-  
+
   const generatePresentation = React.useCallback(async () => {
     setUiState(prev => ({ ...prev, isLoading: true }));
     try {
@@ -654,5 +762,6 @@ const Chat = () => {
     </Box>
   );
 };
+
 
 export default Chat;
