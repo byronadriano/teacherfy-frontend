@@ -1,63 +1,75 @@
 // OutlineFormatter.js
 
 export const OUTLINE_PROMPT_TEMPLATE = `
-Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}.
+CRITICAL REQUIREMENTS TO ADDRESS FIRST:
+{custom_prompt}
 
-Please structure each slide with:
-1. Title: Clear, descriptive title in {language}.
-2. Content: Main teaching points in {language}.
-    - Include direct explanations and examples rather than descriptions of what to teach.
-    - Include concrete examples that are age-appropriate and relatable.
-    - Use student-friendly {gradeLevel} language with clear, simple explanations.
-    - Build understanding progressively, linking new concepts to prior knowledge.
-    - Note: Use two-column layouts for comparisons or parallel concepts.
-    - Note: Slide 1 should include a paragraph about the lesson objective in the form, "Students will be able to ..." in {language}.
-3. Teacher Notes: Practical, Ready-to-Implement Classroom Strategies
-    - Provide SPECIFIC, MINIMAL-PREP engagement techniques
-    - Include EXACT language for instructions
-    - Create READY-TO-USE assessment methods
-    - Offer IMMEDIATE differentiation strategies
+Based on these requirements, create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}.
 
-4. Visual Elements: Turn-Key Visual Supports
-    - Provide EXACT visual aid descriptions
-    - Include SPECIFIC creation instructions
-    - Suggest NO-PREP or LOW-PREP visual resources
-    - Recommend QUICK interactive activities
+Essential Guidelines:
+1. ALL content must directly align with and implement the above requirements
+2. Every slide should explicitly support these specified needs
+3. Examples and activities should be chosen to reinforce these priorities
+
+Structure each slide with:
+1. Title: Clear, descriptive title in {language} that connects to core requirements.
+2. Content: Main teaching points in {language} that implement key requirements.
+    - Provide direct explanations and concrete examples that align with specified needs
+    - Use student-friendly {gradeLevel} language while meeting stated requirements
+    - Ensure examples are age-appropriate, relatable, and support core objectives
+    - Build understanding progressively, connecting new concepts to requirements
+    - Note: Use two-column layouts for comparisons when it serves requirements
+    - Note: Slide 1's objective must align with both requirements and standards
+
+3. Teacher Notes: Practical Implementation Strategies (in English) that support requirements
+    - SPECIFIC engagement techniques that reinforce key requirements
+    - EXACT instructional language that supports stated needs
+    - READY-TO-USE assessment methods aligned to requirements
+    - IMMEDIATE differentiation strategies that meet specified goals
+
+4. Visual Elements: Supporting Visual Resources (in English) chosen for requirements
+    - EXACT visual aids that reinforce key concepts
+    - SPECIFIC creation instructions aligned to needs
+    - NO-PREP or LOW-PREP resources that support goals
+    - QUICK interactive activities that implement requirements
 
 Format each slide as:
 
-Slide X: [Title]
+Slide X: [Title - Connected to Requirements]
 Content:
-- [Main teaching points]
+- [Main teaching points implementing requirements]
 
 Teacher Notes:
-- ENGAGEMENT: [Specific 3-5 minute activity with word-for-word instructions]
-- ASSESSMENT: [Exact assessment method with scoring/evaluation guide]
-- DIFFERENTIATION: [Specific strategy with implementation steps]
+- ENGAGEMENT: [Specific 3-5 minute activity supporting requirements]
+- ASSESSMENT: [Exact method aligned with core objectives]
+- DIFFERENTIATION: [Strategy implementing key requirements]
 
 Visual Elements:
-- [Exact visual aid with creation instructions]
-- [Specific interactive activity with step-by-step guide]
+- [Visual aid supporting stated needs]
+- [Interactive activity reinforcing requirements]
 
-[Repeat for remaining slides with appropriate titles]
+[Repeat for remaining slides, maintaining focus on requirements]
 
-Additional requirements:
-{custom_prompt}
+Implementation Guidelines:
+- Every component must explicitly support the critical requirements
+- All activities and examples should directly implement stated needs
+- Ensure consistent alignment between requirements and instruction
+- Maintain focus on key objectives throughout the lesson
 
 Crucial Guidance for Teacher Notes:
-- EVERY note must be IMMEDIATELY implementable
-- Provide EXACT language teachers can use
-- Include SPECIFIC time allocations
-- Give PRECISE step-by-step instructions
-- Minimize additional preparation time
-- Ensure strategies work for ALL students
+- ALL notes must be IMMEDIATELY implementable while meeting requirements
+- Provide EXACT language aligned with stated needs
+- Include SPECIFIC time allocations that work within constraints
+- Give PRECISE step-by-step instructions supporting objectives
+- Minimize prep time while maintaining requirement alignment
+- Ensure strategies work for ALL students while meeting goals
 
-Each slide should:
-- Teach directly to students in {language}.
-- Ensure all content under "Content" is in {language}, while "Title," "Teacher Notes," and "Visual Elements" remain in English.
-- Use age-appropriate language for {gradeLevel} students.
-- If using technical terms, provide clear explanations.
-- Include key vocabulary terms with explanations if needed.
+Each slide must:
+- Teach directly to students in {language}
+- Keep content in {language}, with English for structural elements
+- Use age-appropriate language for {gradeLevel} students
+- Explain technical terms clearly while supporting requirements
+- Include key vocabulary that aligns with stated objectives
 `;
 
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
@@ -69,17 +81,31 @@ export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
     .replace('{topic}', formState.lessonTopic || 'Not specified')
     .replace('{district}', formState.district || 'Not specified')
     .replace('{custom_prompt}', `
-ORIGINAL REQUIREMENTS:
+PRIMARY REQUIREMENTS TO ADDRESS:
 ${formState.customPrompt || 'None'}
 
-CRITICAL ADDITIONAL REQUIREMENTS TO PRIORITIZE:
+ADDITIONAL CRITICAL REQUIREMENTS:
 ${modifiedPrompt}
 
-IMPLEMENTATION INSTRUCTIONS:
-- CAREFULLY and THOROUGHLY incorporate the ADDITIONAL REQUIREMENTS
-- Ensure these new requirements are CENTRAL to the lesson outline
-- Modify the existing outline to FULLY ADDRESS the additional specifications
-- If the additional requirements suggest changes to content, approach, or examples, IMPLEMENT THEM COMPREHENSIVELY
+INTEGRATION INSTRUCTIONS:
+1. Start by fully understanding both sets of requirements
+2. Identify any potential conflicts or overlaps
+3. Prioritize requirements in this order:
+   - Additional critical requirements (newest guidance)
+   - Primary requirements (original custom prompt)
+   - Standard lesson structure and format
+4. Ensure EVERY component of the lesson plan:
+   - Explicitly addresses additional requirements
+   - Maintains alignment with original requirements
+   - Follows standard lesson structure
+5. When modifying content:
+   - Make comprehensive changes to fully implement new requirements
+   - Preserve original requirements where compatible
+   - Adapt examples and activities to serve both sets of needs
+6. Review final outline to verify:
+   - Complete implementation of additional requirements
+   - Maintenance of original requirements
+   - Coherent integration of all elements
 `)
 };
 
