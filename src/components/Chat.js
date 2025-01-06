@@ -17,7 +17,7 @@ import {
   formatOutlineForDisplay, 
   parseOutlineToStructured, 
   generateRegenerationPrompt,
-  OUTLINE_PROMPT_TEMPLATE  // Add this
+  generateFullPrompt
 } from './OutlineFormatter';
 
 const FORM_OPTIONS = {
@@ -45,18 +45,6 @@ const FORM_OPTIONS = {
 };
 
 const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
-
-// Function to generate the complete prompt
-const generateFullPrompt = (formState) => {
-  return OUTLINE_PROMPT_TEMPLATE
-    .replace('{numSlides}', formState.numSlides)
-    .replace('{language}', formState.language)
-    .replace('{gradeLevel}', formState.gradeLevel)
-    .replace('{subject}', formState.subjectFocus)
-    .replace('{topic}', formState.lessonTopic || 'Not specified')
-    .replace('{district}', formState.district || 'Not specified')
-    .replace('{customPrompt}', formState.customPrompt || 'None');
-};
 
 export const EXAMPLE_OUTLINE = {
   "messages": [
@@ -297,9 +285,11 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
             onClick={onGenerateOutline}
             disabled={
               !formState.gradeLevel || 
-              !formState.subjectFocus || 
+              !formState.subjectFocus ||
+              !formState.language ||
+              !formState.lessonTopic ||
               uiState.isLoading || 
-              uiState.generateOutlineClicked  // Disable after generate outline is clicked
+              uiState.generateOutlineClicked
             }
           >
             Generate Outline
@@ -356,12 +346,14 @@ const ConfirmationModal = memo(({
   };
 
   return (
-    <Dialog 
-      open={uiState.outlineModalOpen} 
-      onClose={() => setUiState(prev => ({ ...prev, outlineModalOpen: false }))}
-      maxWidth="md" 
-      fullWidth
-    >
+      <Dialog 
+        open={uiState.outlineModalOpen} 
+        onClose={() => setUiState(prev => ({ 
+          ...prev, 
+          outlineModalOpen: false,
+          generateOutlineClicked: false  // Allow generating again
+        }))}
+      >
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Review and Modify Outline
@@ -408,7 +400,11 @@ const ConfirmationModal = memo(({
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
         <Button 
-          onClick={() => setUiState(prev => ({ ...prev, outlineModalOpen: false }))}
+          onClick={() => setUiState(prev => ({ 
+            ...prev, 
+            outlineModalOpen: false,
+            generateOutlineClicked: false
+          }))}
           color="inherit"
         >
           Cancel
@@ -426,6 +422,7 @@ const ConfirmationModal = memo(({
           onClick={handleFinalize}
           variant="contained" 
           color="primary"
+          disabled={uiState.isLoading}
         >
           Finalize Outline
         </Button>
@@ -530,7 +527,7 @@ const Chat = () => {
   }, []);
 
   const handleGenerateOutline = React.useCallback(async () => {
-    if (!formState.gradeLevel || !formState.subjectFocus || !formState.language) return;
+    if (!formState.gradeLevel || !formState.subjectFocus || !formState.language || !formState.lessonTopic) return;
     
     setUiState(prev => ({ 
       ...prev, 
@@ -552,11 +549,13 @@ const Chat = () => {
       if (isExampleConfiguration) {
         // Use the predefined example outline directly
         const { structured_content } = EXAMPLE_OUTLINE;
-        const displayMarkdown = formatOutlineForDisplay(structured_content);
-  
+        
         setContentState(prev => ({
           ...prev,
-          outlineToConfirm: displayMarkdown,
+          outlineToConfirm: formatOutlineForDisplay(
+            structured_content, 
+            EXAMPLE_OUTLINE.messages[0]
+          ),
           structuredContent: structured_content
         }));
   
@@ -569,16 +568,24 @@ const Chat = () => {
         const fullPrompt = generateFullPrompt(formState);
         
         const response = await axios.post(`${BASE_URL}/outline`, {
-          custom_prompt: fullPrompt
+          grade_level: formState.gradeLevel,
+          subject_focus: formState.subjectFocus,
+          lesson_topic: formState.lessonTopic,
+          district: formState.district,
+          language: formState.language,
+          custom_prompt: fullPrompt,
+          num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
         });
         data = response.data;
       
         const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
-        const displayMarkdown = formatOutlineForDisplay(structuredContent);
-    
+        
         setContentState(prev => ({
           ...prev,
-          outlineToConfirm: displayMarkdown,
+          outlineToConfirm: formatOutlineForDisplay(
+            structuredContent, 
+            data.messages[0]
+          ),
           structuredContent: structuredContent
         }));
     
@@ -619,7 +626,14 @@ const Chat = () => {
       const regenerationPrompt = generateRegenerationPrompt(formState, uiState.modifiedPrompt);
     
       const { data } = await axios.post(`${BASE_URL}/outline`, {
-        custom_prompt: regenerationPrompt,
+        grade_level: formState.gradeLevel,
+        subject_focus: formState.subjectFocus,
+        lesson_topic: formState.lessonTopic,
+        district: formState.district,
+        language: formState.language,
+        custom_prompt: formState.customPrompt,
+        regeneration_prompt: regenerationPrompt,
+        num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
       });
     
       try {
@@ -649,6 +663,14 @@ const Chat = () => {
   }, [formState, uiState.regenerationCount, uiState.modifiedPrompt]);
 
   const generatePresentation = React.useCallback(async () => {
+    if (!contentState.finalOutline || !contentState.structuredContent?.length) {
+      setUiState(prev => ({
+        ...prev,
+        error: "Please finalize the outline before generating presentation"
+      }));
+      return;
+    }
+    
     setUiState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await fetch(`${BASE_URL}/generate`, {

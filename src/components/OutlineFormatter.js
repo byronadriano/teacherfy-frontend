@@ -1,5 +1,4 @@
 // OutlineFormatter.js
-
 export const OUTLINE_PROMPT_TEMPLATE = `
 CRITICAL REQUIREMENTS TO ADDRESS FIRST:
 THIS LESSON MUST BE SPECIFICALLY ABOUT: {topic}
@@ -9,19 +8,20 @@ Additional Requirements:
 Based on these requirements, create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}.
 
 Essential Guidelines:
-1. ALL content must directly align with teaching {topic} and implement the above requirements
-2. Every slide should explicitly focus on aspects of {topic} and support these specified needs
-3. Examples and activities should be chosen to reinforce understanding of {topic} and these priorities
+1. ALL content must directly align with and implement the above requirements
+2. Every slide should explicitly support these specified needs
+3. Examples and activities should be chosen to reinforce these priorities
 
 Structure each slide with:
-1. Title: Clear, descriptive title in {language} that connects to {topic} and core requirements.
-2. Content: Main teaching points in {language} about {topic} that implement key requirements.
-    - Provide direct explanations and concrete examples about {topic} that align with specified needs
+1. Title: Clear, descriptive title in {language} that connects to core requirements.
+2. Content: Main teaching points in {language} that implement key requirements.
+    - Provide direct explanations and concrete examples that align with specified needs
     - Use student-friendly {gradeLevel} language while meeting stated requirements
-    - Ensure examples are age-appropriate, relatable, and support understanding of {topic}
-    - Build understanding of {topic} progressively, connecting new concepts to requirements
-    - Note: Use two-column layouts for comparisons when it serves understanding of {topic}
-    - Note: Slide 1's objective must clearly state what students will learn about {topic}
+    - Ensure examples are age-appropriate, relatable, and support core objectives
+    - Build understanding progressively, connecting new concepts to requirements
+    - Note: Use two-column layouts for comparisons when it serves requirements
+    - Note: Slide 1's objective must align with both requirements and standards
+
 3. Teacher Notes: Practical Implementation Strategies (in English) that support requirements
     - SPECIFIC engagement techniques that reinforce key requirements
     - EXACT instructional language that supports stated needs
@@ -73,15 +73,26 @@ Each slide must:
 - Include key vocabulary that aligns with stated objectives
 `;
 
+export const generateFullPrompt = (formState) => {
+  return OUTLINE_PROMPT_TEMPLATE
+    .replace(/{topic}/g, formState.lessonTopic || 'Not specified')
+    .replace(/{language}/g, formState.language)
+    .replace(/{gradeLevel}/g, formState.gradeLevel)
+    .replace(/{subject}/g, formState.subjectFocus)
+    .replace(/{district}/g, formState.district || 'Not specified')
+    .replace(/{numSlides}/g, formState.numSlides)
+    .replace(/{custom_prompt}/g, formState.customPrompt || 'None');
+};
+
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
   return OUTLINE_PROMPT_TEMPLATE
-    .replace('{numSlides}', formState.numSlides)
-    .replace('{language}', formState.language)
-    .replace('{gradeLevel}', formState.gradeLevel)
-    .replace('{subject}', formState.subjectFocus)
-    .replace('{topic}', formState.lessonTopic || 'Not specified')
-    .replace('{district}', formState.district || 'Not specified')
-    .replace('{custom_prompt}', `
+    .replace(/{numSlides}/g, formState.numSlides)
+    .replace(/{language}/g, formState.language)
+    .replace(/{gradeLevel}/g, formState.gradeLevel)
+    .replace(/{subject}/g, formState.subjectFocus)
+    .replace(/{topic}/g, formState.lessonTopic || 'Not specified')
+    .replace(/{district}/g, formState.district || 'Not specified')
+    .replace(/{custom_prompt}/g, `
 PRIMARY REQUIREMENTS TO ADDRESS:
 ${formState.customPrompt || 'None'}
 
@@ -187,8 +198,18 @@ export const parseOutlineToStructured = (outlineText, numSlides) => {
   return structuredSlides;
 };
 
-export const formatOutlineForDisplay = (structuredContent) => {
+export const formatOutlineForDisplay = (structuredContent, rawOutlineText) => {
+  // Find where the slides actually start
+  const slidesStartIndex = rawOutlineText.indexOf('Slide 1:');
   let markdownOutput = '';
+
+  if (slidesStartIndex !== -1) {
+    const preambleText = rawOutlineText.substring(0, slidesStartIndex).trim();
+    
+    if (preambleText) {
+      markdownOutput += `> ${preambleText}\n\n---\n\n`;
+    }
+  }
   
   structuredContent.forEach((slide, index) => {
     markdownOutput += `Slide ${index + 1}: ${slide.title}\n\n`;
