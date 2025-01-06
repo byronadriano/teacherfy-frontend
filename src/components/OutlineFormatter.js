@@ -1,69 +1,54 @@
 // OutlineFormatter.js
 export const OUTLINE_PROMPT_TEMPLATE = `
-CRITICAL REQUIREMENTS TO ADDRESS FIRST:
-THIS LESSON MUST BE SPECIFICALLY ABOUT: {topic}
+CRITICAL REQUIREMENTS:
+THIS LESSON MUST BE ABOUT: {topic}
 Additional Requirements:
 {custom_prompt}
 
-Based on these requirements, create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}.
+Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}. Each slide must adhere to the following structure:
 
-Essential Guidelines:
-1. ALL content must directly align with and implement the above requirements
-2. Every slide should explicitly support these specified needs
-3. Examples and activities should be chosen to reinforce these priorities
-
-Structure each slide with:
-1. Title: Clear, descriptive title in {language} that connects to core requirements.
-2. Content: Main teaching points in {language} that implement key requirements.
-    - Include direct explanations and examples rather than descriptions of what to teach.
-    - Include concrete examples that are age-appropriate and relatable.
-    - Use student-friendly {gradeLevel} language with clear, simple explanations.
-    - Build understanding progressively, connecting new concepts to requirements
-    - Note: Use two-column layouts for comparisons when it serves requirements
-    - Note: Slide 1 should include a paragraph about the lesson objective in the form, "Students will be able to ..." in {language}.
-3. Teacher Notes: Practical, Ready-to-Implement Classroom Strategies (in English)
-    - Provide SPECIFIC, MINIMAL-PREP engagement techniques
-    - Include EXACT language for instructions
-    - Create READY-TO-USE assessment methods
-    - Offer IMMEDIATE differentiation strategies
-4. Visual Elements: Supporting Visual Resources (in English) chosen for requirements
-    - Provide EXACT visual aid descriptions
-    - Include SPECIFIC creation instructions
-    - Suggest NO-PREP or LOW-PREP visual reso
+1. **Title**: Clear and concise, written in {language}, directly tied to the lesson's objectives.
+2. **Content**: Main teaching points in {language} that fully address the topic.
+    - The content should directly provide the exact teaching points, examples, and activities, rather than describe them vaguely
+    - Use precise, age-appropriate language for {gradeLevel}.
+    - Progressively build understanding by linking new concepts to prior knowledge.
+    - Utilize two-column layouts where comparisons or parallels enhance clarity.
+    - **Slide 1 Note**: Include the lesson objective in the format: "Students will be able to ..." in {language}.
+3. **Teacher Notes**: Ready-to-implement strategies (in English).
+    - Include minimal-prep engagement activities with specific instructions.
+    - Provide precise assessment methods aligned with objectives.
+    - Suggest practical differentiation strategies for diverse learning needs.
+4. **Visual Elements**: Supporting resources (in English).
+    - Describe relevant visuals or aids.
+    - Suggest no-prep or low-prep resources where feasible.
 
 Format each slide as:
 
-Slide X: [Title - Connected to Requirements]
+Slide X: [Title]
 Content:
-- [Main teaching points implementing requirements]
+- [Exact teaching points and examples in {language}]
 
 Teacher Notes:
-- ENGAGEMENT: [Specific 3-5 minute activity supporting requirements]
-- ASSESSMENT: [Exact method aligned with core objectives]
-- DIFFERENTIATION: [Strategy implementing key requirements]
+- ENGAGEMENT: [Activity idea with step-by-step guidance]
+- ASSESSMENT: [Exact method to measure understanding]
+- DIFFERENTIATION: [Specific examples for diverse needs]
 
 Visual Elements:
-- [Visual aid supporting stated needs]
-- [Interactive activity reinforcing requirements]
+- [Descriptions of visual aids or interactive activities]
 
 [Repeat for remaining slides, maintaining focus on requirements]
 
 Implementation Guidelines:
-- Every component must explicitly support the critical requirements
-- All activities and examples should directly implement stated needs
-- Ensure consistent alignment between requirements and instruction
-- Maintain focus on key objectives throughout the lesson
+- Every slide must explicitly address the critical requirements.
+- Examples and activities must directly align with the learning objectives.
+- Ensure consistent alignment between objectives, teaching points, and supporting materials.
+- Avoid redundancy by using concise, precise, and actionable language.
+- Focus on creating content that is immediately usable by educators.
 
-Crucial Guidance for Teacher Notes:
-- ALL notes must be IMMEDIATELY implementable
-- Include SPECIFIC time allocations that work within constraints
-- Give PRECISE step-by-step instructions supporting objectives
-
-Crucial Guidance for Content:
-- Teach directly to students in {language}
-- Use age-appropriate language for {gradeLevel} students
-- Explain technical terms clearly while supporting requirements
-- Include key vocabulary that aligns with stated objectives
+Additional Notes:
+- All "Content" must be written in {language}, while "Teacher Notes" and "Visual Elements" should remain in English.
+- Provide exact examples, questions, and activities to minimize ambiguity and maximize usability.
+- Prioritize specificity and practicality to reduce teacher preparation time.
 `;
 
 export const generateFullPrompt = (formState) => {
