@@ -295,7 +295,12 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
             variant="contained"
             color="primary"
             onClick={onGenerateOutline}
-            disabled={!formState.gradeLevel || !formState.subjectFocus || uiState.isLoading || uiState.outlineModalOpen}
+            disabled={
+              !formState.gradeLevel || 
+              !formState.subjectFocus || 
+              uiState.isLoading || 
+              uiState.generateOutlineClicked  // Disable after generate outline is clicked
+            }
           >
             Generate Outline
           </Button>
@@ -448,6 +453,7 @@ const Chat = () => {
     isFormExpanded: true,
     regenerationCount: 0,
     modifiedPrompt: "",
+    generateOutlineClicked: false,  // Add this line
   });
 
   const [contentState, setContentState] = useState({
@@ -481,20 +487,22 @@ const Chat = () => {
       numSlides: 5,
     });
   
-    // Set the predefined outline directly from our example
-    const { structured_content } = EXAMPLE_OUTLINE;
-    const displayMarkdown = formatOutlineForDisplay(structured_content);
-    
-    setContentState({
-      outlineToConfirm: displayMarkdown,
-      finalOutline: displayMarkdown,
-      structuredContent: structured_content
-    });
-  
+    // Reset UI state, keeping form expanded
     setUiState(prev => ({
       ...prev,
-      outlineConfirmed: true
+      isFormExpanded: true,  // Keep form expanded
+      outlineModalOpen: false,
+      outlineConfirmed: false,
+      generateOutlineClicked: false,  // Reset generate outline clicked
+      regenerationCount: 0
     }));
+  
+    // Clear previous content
+    setContentState({
+      outlineToConfirm: "",
+      finalOutline: "",
+      structuredContent: []
+    });
   }, []);
 
   const clearAll = React.useCallback(() => {
@@ -523,21 +531,48 @@ const Chat = () => {
 
   const handleGenerateOutline = React.useCallback(async () => {
     if (!formState.gradeLevel || !formState.subjectFocus || !formState.language) return;
-  
+    
     setUiState(prev => ({ 
       ...prev, 
       isLoading: true,
-      isFormExpanded: false
+      isFormExpanded: false,
+      generateOutlineClicked: true
     }));
   
+    // Check if this is the exact example configuration
+    const isExampleConfiguration = 
+      formState.gradeLevel === "4th grade" &&
+      formState.subjectFocus === "Math" &&
+      formState.lessonTopic === "Equivalent Fractions" &&
+      formState.district === "Denver Public Schools" &&
+      formState.language === "English";
+  
     try {
-      const fullPrompt = generateFullPrompt(formState);
+      let data;
+      if (isExampleConfiguration) {
+        // Use the predefined example outline directly
+        const { structured_content } = EXAMPLE_OUTLINE;
+        const displayMarkdown = formatOutlineForDisplay(structured_content);
+  
+        setContentState(prev => ({
+          ...prev,
+          outlineToConfirm: displayMarkdown,
+          structuredContent: structured_content
+        }));
+  
+        setUiState(prev => ({
+          ...prev,
+          outlineModalOpen: true
+        }));
+      } else {
+        // Existing API call for non-example outlines
+        const fullPrompt = generateFullPrompt(formState);
+        
+        const response = await axios.post(`${BASE_URL}/outline`, {
+          custom_prompt: fullPrompt
+        });
+        data = response.data;
       
-      const { data } = await axios.post(`${BASE_URL}/outline`, {
-        custom_prompt: fullPrompt
-      });
-    
-      try {
         const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
         const displayMarkdown = formatOutlineForDisplay(structuredContent);
     
@@ -551,12 +586,6 @@ const Chat = () => {
           ...prev,
           outlineModalOpen: true
         }));
-      } catch (parsingError) {
-        setUiState(prev => ({
-          ...prev,
-          error: "Failed to process the outline format. Please try again."
-        }));
-        return;
       }
     } catch (error) {
       setUiState(prev => ({
@@ -564,7 +593,10 @@ const Chat = () => {
         error: error.response?.data?.error || "Error generating outline."
       }));
     } finally {
-      setUiState(prev => ({ ...prev, isLoading: false }));
+      setUiState(prev => ({ 
+        ...prev, 
+        isLoading: false
+      }));
     }
   }, [formState]);
   

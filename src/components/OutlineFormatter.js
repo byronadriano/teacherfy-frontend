@@ -7,13 +7,22 @@ Please structure each slide with:
 1. Title: Clear, descriptive title in {language}.
 2. Content: Main teaching points in {language}.
     - Include direct explanations and examples rather than descriptions of what to teach.
-    - Include concrete examples.
-    - Use student-friendly {gradeLevel} language.
-    - Build understanding progressively.
+    - Include concrete examples that are age-appropriate and relatable.
+    - Use student-friendly {gradeLevel} language with clear, simple explanations.
+    - Build understanding progressively, linking new concepts to prior knowledge.
     - Note: Use two-column layouts for comparisons or parallel concepts.
     - Note: Slide 1 should include a paragraph about the lesson objective in the form, "Students will be able to ..." in {language}.
-3. Teacher Notes: Instructions or tips (prefixed with 'TEACHER NOTE:') in English.
-4. Visual Elements: Any diagrams/images needed (prefixed with 'VISUAL:') in English.
+3. Teacher Notes: Practical, Ready-to-Implement Classroom Strategies
+    - Provide SPECIFIC, MINIMAL-PREP engagement techniques
+    - Include EXACT language for instructions
+    - Create READY-TO-USE assessment methods
+    - Offer IMMEDIATE differentiation strategies
+
+4. Visual Elements: Turn-Key Visual Supports
+    - Provide EXACT visual aid descriptions
+    - Include SPECIFIC creation instructions
+    - Suggest NO-PREP or LOW-PREP visual resources
+    - Recommend QUICK interactive activities
 
 Format each slide as:
 
@@ -22,15 +31,26 @@ Content:
 - [Main teaching points]
 
 Teacher Notes:
-- [Instructions or tips]
+- ENGAGEMENT: [Specific 3-5 minute activity with word-for-word instructions]
+- ASSESSMENT: [Exact assessment method with scoring/evaluation guide]
+- DIFFERENTIATION: [Specific strategy with implementation steps]
 
 Visual Elements:
-- [Descriptions of visuals needed]
+- [Exact visual aid with creation instructions]
+- [Specific interactive activity with step-by-step guide]
 
 [Repeat for remaining slides with appropriate titles]
 
 Additional requirements:
 {custom_prompt}
+
+Crucial Guidance for Teacher Notes:
+- EVERY note must be IMMEDIATELY implementable
+- Provide EXACT language teachers can use
+- Include SPECIFIC time allocations
+- Give PRECISE step-by-step instructions
+- Minimize additional preparation time
+- Ensure strategies work for ALL students
 
 Each slide should:
 - Teach directly to students in {language}.
@@ -38,54 +58,29 @@ Each slide should:
 - Use age-appropriate language for {gradeLevel} students.
 - If using technical terms, provide clear explanations.
 - Include key vocabulary terms with explanations if needed.
-
 `;
 
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
-  const basePrompt = `
-Create a detailed ${formState.numSlides}-slide lesson outline in ${formState.language} for a ${formState.gradeLevel} ${formState.subjectFocus} lesson on ${formState.lessonTopic || 'Not specified'} for ${formState.district || 'Not specified'}.
-
-IMPORTANT MODIFICATIONS REQUESTED:
-${modifiedPrompt}
-
-Please structure each slide with:
-1. Title: Clear, descriptive title ${formState.language}..
-2. Content: Main teaching points in ${formState.language}.
-    - Include direct explanations and examples rather than descriptions of what to teach.
-    - Include concrete examples.
-    - Use student-friendly ${formState.gradeLevel} language.
-    - Build understanding progressively.
-    - Note: Use two-column layouts for comparisons or parallel concepts.
-    - Note: Slide 1 should include a paragraph about the lesson objective in the form, "Students will be able to ..."
-3. Teacher Notes: Instructions or tips (prefixed with 'TEACHER NOTE:') in English.
-4. Visual Elements: Any diagrams/images needed (prefixed with 'VISUAL:') in English.
-
-**Format each slide as:**
-
-Slide X: [Title]
-Content:
-- [Main teaching points]
-
-Teacher Notes:
-- [Instructions or tips]
-
-Visual Elements:
-- [Descriptions of visuals needed]
-
-[Repeat for remaining slides with appropriate titles]
-
-**Additional requirements:**
+  return OUTLINE_PROMPT_TEMPLATE
+    .replace('{numSlides}', formState.numSlides)
+    .replace('{language}', formState.language)
+    .replace('{gradeLevel}', formState.gradeLevel)
+    .replace('{subject}', formState.subjectFocus)
+    .replace('{topic}', formState.lessonTopic || 'Not specified')
+    .replace('{district}', formState.district || 'Not specified')
+    .replace('{custom_prompt}', `
+ORIGINAL REQUIREMENTS:
 ${formState.customPrompt || 'None'}
 
-**Each slide should:**
-- Teach directly to students in ${formState.language}.
-- Ensure all content under "Content" is in ${formState.language}, while "Teacher Notes" and "Visual Elements" remain in English.
-- Use age-appropriate language for ${formState.gradeLevel} students.
-- If using technical terms, provide clear explanations.
-- Include key vocabulary terms with explanations if needed.
-`;
+CRITICAL ADDITIONAL REQUIREMENTS TO PRIORITIZE:
+${modifiedPrompt}
 
-  return basePrompt.trim();
+IMPLEMENTATION INSTRUCTIONS:
+- CAREFULLY and THOROUGHLY incorporate the ADDITIONAL REQUIREMENTS
+- Ensure these new requirements are CENTRAL to the lesson outline
+- Modify the existing outline to FULLY ADDRESS the additional specifications
+- If the additional requirements suggest changes to content, approach, or examples, IMPLEMENT THEM COMPREHENSIVELY
+`)
 };
 
 const extractBulletPoints = (text) => {
@@ -107,6 +102,8 @@ const extractBulletPoints = (text) => {
 
 export const parseOutlineToStructured = (outlineText, numSlides) => {
   // More robust parsing that handles variations in formatting
+  console.log("Raw Outline Text:", outlineText);
+
   const slides = outlineText.split(/(?=Slide \d+:)/i).filter(Boolean);
   const structuredSlides = [];
 
