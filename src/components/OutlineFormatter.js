@@ -7,14 +7,14 @@ Additional Requirements:
 
 Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}. Each slide must adhere to the following structure:
 
-1. **Title**: Clear and concise, written in {language}, directly tied to the lesson's objectives.
-2. **Content**: Main teaching points in {language} that fully address the topic.
+1. Title: Clear and concise, written in {language}, directly tied to the lesson's objectives.
+2. Content: Main teaching points in {language} that fully address the topic.
     - The content should directly provide the exact teaching points, examples, and activities, rather than describe them vaguely
     - Use precise, age-appropriate language for {gradeLevel}.
     - Progressively build understanding by linking new concepts to prior knowledge.
     - Utilize two-column layouts where comparisons or parallels enhance clarity.
-    - **Slide 1 Note**: Include the lesson objective in the format: "Students will be able to ..." in {language}.
-3. **Teacher Notes**: Ready-to-implement strategies (in English).
+    - Slide 1 Note: Include the lesson objective in the format: "Students will be able to ..." in {language}.
+3. Teacher Notes: Ready-to-implement strategies (in English).
     - Include minimal-prep engagement activities with specific instructions.
     - Provide precise assessment methods aligned with objectives.
     - Suggest practical differentiation strategies for diverse learning needs.
