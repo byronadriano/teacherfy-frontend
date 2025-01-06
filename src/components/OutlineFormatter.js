@@ -5,51 +5,63 @@ THIS LESSON MUST BE ABOUT: {topic}
 Additional Requirements:
 {custom_prompt}
 
-Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}. Each slide must adhere to the following structure:
+Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district} in SIMPLE MARKDOWN OR REGULAR TEXT. Each slide must be immediately usable with minimal teacher preparation. Ensure that **each slide** follows the structure below and includes **actual examples or problems** where relevant.
 
-1. Title: Clear and concise, written in {language}, directly tied to the lesson's objectives.
-2. Content: Main teaching points in {language} that fully address the topic.
-    - The content should directly provide the exact teaching points, examples, and activities, rather than describe them vaguely
-    - Use precise, age-appropriate language for {gradeLevel}.
-    - Progressively build understanding by linking new concepts to prior knowledge.
-    - Utilize two-column layouts where comparisons or parallels enhance clarity.
-    - Slide 1 Note: Include the lesson objective in the format: "Students will be able to ..." in {language}.
-3. Teacher Notes: Ready-to-implement strategies (in English).
-    - Include minimal-prep engagement activities with specific instructions.
-    - Provide precise assessment methods aligned with objectives.
-    - Suggest practical differentiation strategies for diverse learning needs.
-4. **Visual Elements**: Supporting resources (in English).
-    - Describe relevant visuals or aids.
-    - Suggest no-prep or low-prep resources where feasible.
+1. Title (in {language}):
+   - A clear, concise title directly tied to the lesson’s objectives.
 
-Format each slide as:
+2. Content (in {language}):
+   - Provide **complete**, specific teaching points, definitions, and examples (not placeholders).
+   - Use clear language that is age-appropriate for {gradeLevel} and builds on prior knowledge.
+   - For maximum clarity, consider using a two-column layout for complex comparisons or step-by-step procedures.
+   - **Slide 1 Note**: Include the lesson objective in the format: "Students will be able to ..." (in {language}).
 
-Slide X: [Title]
+3. Teacher Notes (in English):
+   - **ENGAGEMENT**: Provide step-by-step, *fully written out* activities. 
+     - Example: If students must solve practice problems, list the actual problems (e.g., “1. ___, 2. ___, 3. ___”) so they can be posted or displayed **as-is**.
+   - **ASSESSMENT**: Describe a clear, direct method to measure understanding, aligned with the exact problems or examples introduced.
+     - Example: “Have each group present their solution for Problem #2, explaining how they determined the answer.”
+   - **DIFFERENTIATION**: Offer ready-to-use scaffolds (e.g., a printed worksheet with hints) or challenge tasks (e.g., more advanced problems) with explicit details.
+     - Example: “Scaffolded Worksheet: 3-step prompt with partially completed examples; Advanced Worksheet: 5 multi-step problems requiring higher-level reasoning.”
+
+4. Visual Elements (in English):
+   - If referencing problems, list them fully here as well, so teachers can copy or project them instantly.
+   - For other aids (e.g., slides, videos, diagrams), specify exactly what they are and how to use them.
+   - Provide minimal-prep resources or instructions (e.g., “Use the attached printable fraction chart” or “Draw this simple shape on the board”).
+
+FORMAT EACH SLIDE AS FOLLOWS:
+
+Slide X: [Title in {language}]
 Content:
-- [Exact teaching points and examples in {language}]
+- [Exact teaching points, definitions, and examples in {language}]
 
 Teacher Notes:
-- ENGAGEMENT: [Activity idea with step-by-step guidance]
-- ASSESSMENT: [Exact method to measure understanding]
-- DIFFERENTIATION: [Specific examples for diverse needs]
+- ENGAGEMENT: 
+  - [List SPECIFIC, ACTUAL, REAL activities or tasks in English with *all* required prompts/steps or problems spelled out fully]
+- ASSESSMENT:
+  - [Direct SPECIFIC, ACTUAL, REAL methods to measure understanding, in English, referencing the specific tasks introduced under ENGAGEMENT]
+- DIFFERENTIATION:
+  - [Concrete strategies, e.g., specific worksheets with problems layed out, actual and specific challenge questions, or pairing methods, in English]
 
 Visual Elements:
-- [Descriptions of visual aids or interactive activities]
+- [Exact visuals or resources in English, with instructions on how to display or distribute them]
 
-[Repeat for remaining slides, maintaining focus on requirements]
+[Repeat for each slide]
 
-Implementation Guidelines:
-- Every slide must explicitly address the critical requirements.
-- Examples and activities must directly align with the learning objectives.
-- Ensure consistent alignment between objectives, teaching points, and supporting materials.
-- Avoid redundancy by using concise, precise, and actionable language.
-- Focus on creating content that is immediately usable by educators.
+IMPLEMENTATION GUIDELINES:
+- Avoid any vague wording; provide **actual** problems, examples, and instructions.
+- Maintain a consistent link between the **Content** (in {language}) and the **Teacher Notes** + **Visual Elements** (in English).
+- The final product should allow a teacher to copy and paste or read directly with no extra prep or guesswork.
 
-Additional Notes:
-- All "Content" must be written in {language}, while "Teacher Notes" and "Visual Elements" should remain in English.
-- Provide exact examples, questions, and activities to minimize ambiguity and maximize usability.
-- Prioritize specificity and practicality to reduce teacher preparation time.
+ADDITIONAL NOTES:
+- All “Content” must be in {language}. 
+- “Teacher Notes” and “Visual Elements” remain in English, containing specific details.
+- If students need to see certain problems or examples, ensure those exact items are listed under “Visual Elements” or “Teacher Notes.”
+- Think of each slide as a ready-made segment of a presentation: Title, actual teaching content, teacher instructions, and prepared visuals/resources.
+
 `;
+
+
 
 export const generateFullPrompt = (formState) => {
   return OUTLINE_PROMPT_TEMPLATE
@@ -70,7 +82,9 @@ export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
     .replace(/{subject}/g, formState.subjectFocus)
     .replace(/{topic}/g, formState.lessonTopic || 'Not specified')
     .replace(/{district}/g, formState.district || 'Not specified')
-    .replace(/{custom_prompt}/g, `
+    .replace(
+      /{custom_prompt}/g,
+      `
 PRIMARY REQUIREMENTS TO ADDRESS:
 ${formState.customPrompt || 'None'}
 
@@ -96,71 +110,76 @@ INTEGRATION INSTRUCTIONS:
    - Complete implementation of additional requirements
    - Maintenance of original requirements
    - Coherent integration of all elements
-`)
+`
+    );
 };
 
-
 export const parseOutlineToStructured = (outlineText, numSlides) => {
-  console.log("Raw Outline Text:", outlineText);
-  const cleanedText = outlineText.replace(/^Raw Outline Text:\s*/, '');
-  
-  // Split slides, preserving formatting
-  const slides = cleanedText
-    .split(/(?=Slide \d+:)/)
-    .map(slide => slide.trim())
-    .filter(Boolean);
+  // Split by Slide markers
+  const slides = outlineText
+    .split(/\n(?=Slide \d+:)/)
+    .filter(Boolean)
+    .map(slide => slide.trim());
 
   const structuredSlides = [];
 
-  for (let i = 0; i < Math.min(slides.length, numSlides); i++) {
-    const slide = slides[i];
-    
-    const slideObj = {
-      title: '',
-      content: [],
-      teacher_notes: [],
-      visual_elements: []
-    };
-
-    // Extract title without markdown
-    const titleMatch = slide.match(/Slide \d+:(\s*[^\n]+)/);
-    if (titleMatch) {
-      slideObj.title = titleMatch[1].trim();
+  const extractSection = (slideText, sectionName) => {
+    // Look for the section starting with the section name
+    const sectionStart = slideText.indexOf(`${sectionName}:`);
+    if (sectionStart === -1) {
+      console.log(`Section ${sectionName} not found`);
+      return [];
     }
 
-    // Helper function to extract and format section content
-    const extractSection = (sectionName) => {
-      const sectionRegex = new RegExp(
-        `${sectionName}:\\s*\n([\\s\\S]*?)(?=\\n(?:Content:|Teacher Notes:|Visual Elements:|Slide \\d+:|$))`,
-        'i'
-      );
-      const match = slide.match(sectionRegex);
-      if (!match) return [];
+    // Find the next section start or end of text
+    const nextSections = ['Content:', 'Teacher Notes:', 'Visual Elements:'];
+    let sectionEnd = slideText.length;
+    
+    nextSections.forEach(nextSection => {
+      if (nextSection === `${sectionName}:`) return;
+      const nextIndex = slideText.indexOf(nextSection, sectionStart + sectionName.length);
+      if (nextIndex !== -1 && nextIndex < sectionEnd) {
+        sectionEnd = nextIndex;
+      }
+    });
 
-      // Split into bullet points, handling both • and -
-      const rawContent = match[1];
-      const bulletPoints = rawContent.split(/(?:\r?\n|\r)(?=[-•])/);
-      
-      return bulletPoints
-        .map(point => point.trim())
-        .filter(point => point.length > 0)
-        .map(point => {
-          // Remove existing bullet point and trim
-          const cleanPoint = point.replace(/^[-•]\s*/, '').trim();
-          if (cleanPoint) {
-            return '- ' + cleanPoint;
-          }
-          return null;
-        })
-        .filter(Boolean);
-    };
+    // Extract the content between section start and end
+    let sectionContent = slideText
+      .substring(sectionStart + sectionName.length + 1, sectionEnd)
+      .trim()
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && line.length > 0)
+      .map(line => line.replace(/^[-•*]\s*/, ''));
 
-    // Extract all sections
-    slideObj.content = extractSection('Content');
-    slideObj.teacher_notes = extractSection('Teacher Notes');
-    slideObj.visual_elements = extractSection('Visual Elements');
+    console.log(`Extracted ${sectionName}:`, sectionContent);
+    return sectionContent;
+  };
 
-    structuredSlides.push(slideObj);
+  for (let i = 0; i < slides.length && i < numSlides; i++) {
+    const slideText = slides[i];
+    
+    // Extract title
+    const titleMatch = slideText.match(/Slide \d+:\s*(.+?)(?=\n|$)/);
+    const title = titleMatch ? titleMatch[1].trim() : '';
+
+    // Determine layout based on content
+    const layout = slideText.toLowerCase().includes('comparison') ? 'TWO_COLUMN' : 'TITLE_AND_CONTENT';
+
+    const content = extractSection(slideText, 'Content');
+    const teacherNotes = extractSection(slideText, 'Teacher Notes');
+    const visualElements = extractSection(slideText, 'Visual Elements');
+
+    // Create structured slide with extracted content
+    structuredSlides.push({
+      title,
+      layout,
+      content,
+      teacher_notes: teacherNotes,
+      visual_elements: visualElements || [],
+      left_column: [],
+      right_column: []
+    });
   }
 
   return structuredSlides;
@@ -168,55 +187,52 @@ export const parseOutlineToStructured = (outlineText, numSlides) => {
 
 export const formatOutlineForDisplay = (structuredContent) => {
   let output = '';
-  
+
   structuredContent.forEach((slide, index) => {
-    // Format slide title without markdown
+    // Title
     output += `Slide ${index + 1}: ${slide.title}\n\n`;
-    
-    // Format content section with proper line breaks
-    if (slide.content?.length > 0) {
-      output += 'Content:\n';
-      slide.content.forEach(item => {
-        output += `${item}\n`;
-      });
-      output += '\n';
-    }
-    
-    // Format teacher notes section
-    if (slide.teacher_notes?.length > 0) {
-      output += 'Teacher Notes:\n';
-      slide.teacher_notes.forEach(note => {
-        output += `${note}\n`;
-      });
-      output += '\n';
-    }
-    
-    // Format visual elements section
-    if (slide.visual_elements?.length > 0) {
-      output += 'Visual Elements:\n';
+
+    // Content
+    output += 'Content:\n';
+    slide.content.forEach(item => {
+      output += `- ${item}\n`;
+    });
+    output += '\n';
+
+    // Teacher Notes
+    output += 'Teacher Notes:\n';
+    slide.teacher_notes.forEach(note => {
+      output += `- ${note}\n`;
+    });
+    output += '\n';
+
+    // Visual Elements
+    output += 'Visual Elements:\n';
+    if (slide.visual_elements && slide.visual_elements.length > 0) {
       slide.visual_elements.forEach(element => {
-        output += `${element}\n`;
+        output += `- ${element}\n`;
       });
-      output += '\n';
+    } else {
+      output += '- (None provided)\n';
     }
-    
+    output += '\n';
+
     // Add separator between slides
     if (index < structuredContent.length - 1) {
       output += '---\n\n';
     }
   });
-  
+
   return output.trim();
 };
 
-// Helper function for final display formatting
+// (Optional) Further formatting cleanup, if desired
 export const formatForDisplay = (outline) => {
   return outline
-    .replace(/\n{3,}/g, '\n\n')          // Normalize multiple newlines
-    .replace(/(?<=:)\n\n/g, '\n')        // Remove extra newline after colons
-    .replace(/([^.\n])(?=\n- )/g, '$1.') // Add periods at end of sentences before bullets
-    .replace(/\n +/g, '\n')              // Remove excess indentation
-    .replace(/^\s+|\s+$/gm, '')          // Trim line whitespace
+    .replace(/\n{3,}/g, "\n\n")        // Normalize multiple newlines
+    .replace(/(?<=:)\n\n/g, "\n")      // Remove extra newline after colons
+    .replace(/([^.\n])(?=\n- )/g, "$1.") 
+    .replace(/\n +/g, "\n")            // Remove excess indentation
+    .replace(/^\s+|\s+$/gm, "")        // Trim each line's whitespace
     .trim();
 };
-

@@ -1,3 +1,4 @@
+// chat.js
 import React, { useState, useEffect, useRef, memo } from "react";
 import axios from "axios";
 import {
@@ -525,7 +526,19 @@ const Chat = () => {
       structuredContent: [], // Add this
     });
   }, []);
-
+    // Check if this is the exact example configuration
+  const isExampleConfiguration = (formState) => {
+    return (
+      formState.gradeLevel === "4th grade" &&
+      formState.subjectFocus === "Math" &&
+      formState.lessonTopic === "Equivalent Fractions" &&
+      formState.district === "Denver Public Schools" &&
+      formState.language === "English" &&
+      formState.customPrompt === "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention" &&
+      formState.numSlides === 5
+    );
+  };
+  
   const handleGenerateOutline = React.useCallback(async () => {
     if (!formState.gradeLevel || !formState.subjectFocus || !formState.language || !formState.lessonTopic) return;
     
@@ -536,25 +549,16 @@ const Chat = () => {
       generateOutlineClicked: true
     }));
   
-    // Check if this is the exact example configuration
-    const isExampleConfiguration = 
-      formState.gradeLevel === "4th grade" &&
-      formState.subjectFocus === "Math" &&
-      formState.lessonTopic === "Equivalent Fractions" &&
-      formState.district === "Denver Public Schools" &&
-      formState.language === "English";
-  
     try {
       let data;
-      if (isExampleConfiguration) {
+      if (isExampleConfiguration(formState)) {
         // Use the predefined example outline directly
         const { structured_content } = EXAMPLE_OUTLINE;
         
         setContentState(prev => ({
           ...prev,
           outlineToConfirm: formatOutlineForDisplay(
-            structured_content, 
-            EXAMPLE_OUTLINE.messages[0]
+            structured_content
           ),
           structuredContent: structured_content
         }));
@@ -578,8 +582,12 @@ const Chat = () => {
         });
         data = response.data;
       
-        const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
+        const rawOutlineText = response.data.messages[0];
         
+        console.log("DEBUG: Here's the EXACT raw text from AI:", rawOutlineText);
+        
+        const structuredContent = parseOutlineToStructured(rawOutlineText, formState.numSlides);
+                
         setContentState(prev => ({
           ...prev,
           outlineToConfirm: formatOutlineForDisplay(
@@ -637,7 +645,12 @@ const Chat = () => {
       });
     
       try {
+        console.log("DEBUG: AI raw outline text =>", data.messages[0]);
+
         const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
+        
+        console.log("DEBUG: structuredContent =>", JSON.stringify(structuredContent, null, 2));
+        
         const displayMarkdown = formatOutlineForDisplay(structuredContent);
     
         setContentState(prev => ({
@@ -765,9 +778,50 @@ const Chat = () => {
                 mb: 3,
                 backgroundColor: "#fafafa"
               }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {contentState.finalOutline}
-                </ReactMarkdown>
+                {contentState.structuredContent.map((slide, index) => (
+                  <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                      Slide {index + 1}: {slide.title}
+                    </Typography>
+
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                      Content:
+                    </Typography>
+                    {slide.content.map((item, i) => (
+                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                        • {item}
+                      </Typography>
+                    ))}
+
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                      Teacher Notes:
+                    </Typography>
+                    {slide.teacher_notes.map((note, i) => (
+                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                        • {note}
+                      </Typography>
+                    ))}
+
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                      Visual Elements:
+                    </Typography>
+                    {slide.visual_elements.length > 0 ? (
+                      slide.visual_elements.map((element, i) => (
+                        <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                          • {element}
+                        </Typography>
+                      ))
+                    ) : (
+                      <Typography sx={{ pl: 2, mb: 0.5 }}>
+                        • (None provided)
+                      </Typography>
+                    )}
+
+                    {index < contentState.structuredContent.length - 1 && (
+                      <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
+                    )}
+                  </Box>
+                ))}
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2 }}>
