@@ -15,22 +15,21 @@ Essential Guidelines:
 Structure each slide with:
 1. Title: Clear, descriptive title in {language} that connects to core requirements.
 2. Content: Main teaching points in {language} that implement key requirements.
-    - Provide direct explanations and concrete examples that align with specified needs
-    - Use student-friendly {gradeLevel} language while meeting stated requirements
-    - Ensure examples are age-appropriate, relatable, and support core objectives
+    - Include direct explanations and examples rather than descriptions of what to teach.
+    - Include concrete examples that are age-appropriate and relatable.
+    - Use student-friendly {gradeLevel} language with clear, simple explanations.
     - Build understanding progressively, connecting new concepts to requirements
     - Note: Use two-column layouts for comparisons when it serves requirements
-    - Note: Slide 1's objective must align with both requirements and standards
-3. Teacher Notes: Practical Implementation Strategies (in English) that support requirements
-    - SPECIFIC engagement techniques that reinforce key requirements
-    - EXACT instructional language that supports stated needs
-    - READY-TO-USE assessment methods aligned to requirements
-    - IMMEDIATE differentiation strategies that meet specified goals
+    - Note: Slide 1 should include a paragraph about the lesson objective in the form, "Students will be able to ..." in {language}.
+3. Teacher Notes: Practical, Ready-to-Implement Classroom Strategies (in English)
+    - Provide SPECIFIC, MINIMAL-PREP engagement techniques
+    - Include EXACT language for instructions
+    - Create READY-TO-USE assessment methods
+    - Offer IMMEDIATE differentiation strategies
 4. Visual Elements: Supporting Visual Resources (in English) chosen for requirements
-    - EXACT visual aids that reinforce key concepts
-    - SPECIFIC creation instructions aligned to needs
-    - NO-PREP or LOW-PREP resources that support goals
-    - QUICK interactive activities that implement requirements
+    - Provide EXACT visual aid descriptions
+    - Include SPECIFIC creation instructions
+    - Suggest NO-PREP or LOW-PREP visual reso
 
 Format each slide as:
 
@@ -56,16 +55,12 @@ Implementation Guidelines:
 - Maintain focus on key objectives throughout the lesson
 
 Crucial Guidance for Teacher Notes:
-- ALL notes must be IMMEDIATELY implementable while meeting requirements
-- Provide EXACT language aligned with stated needs
+- ALL notes must be IMMEDIATELY implementable
 - Include SPECIFIC time allocations that work within constraints
 - Give PRECISE step-by-step instructions supporting objectives
-- Minimize prep time while maintaining requirement alignment
-- Ensure strategies work for ALL students while meeting goals
 
-Each slide must:
+Crucial Guidance for Content:
 - Teach directly to students in {language}
-- Keep content in {language}, with English for structural elements
 - Use age-appropriate language for {gradeLevel} students
 - Explain technical terms clearly while supporting requirements
 - Include key vocabulary that aligns with stated objectives
