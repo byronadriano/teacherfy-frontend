@@ -21,13 +21,11 @@ Structure each slide with:
     - Build understanding progressively, connecting new concepts to requirements
     - Note: Use two-column layouts for comparisons when it serves requirements
     - Note: Slide 1's objective must align with both requirements and standards
-
 3. Teacher Notes: Practical Implementation Strategies (in English) that support requirements
     - SPECIFIC engagement techniques that reinforce key requirements
     - EXACT instructional language that supports stated needs
     - READY-TO-USE assessment methods aligned to requirements
     - IMMEDIATE differentiation strategies that meet specified goals
-
 4. Visual Elements: Supporting Visual Resources (in English) chosen for requirements
     - EXACT visual aids that reinforce key concepts
     - SPECIFIC creation instructions aligned to needs
@@ -207,7 +205,9 @@ export const formatOutlineForDisplay = (structuredContent, rawOutlineText) => {
     const preambleText = rawOutlineText.substring(0, slidesStartIndex).trim();
     
     if (preambleText) {
-      markdownOutput += `> ${preambleText}\n\n---\n\n`;
+      // Split preamble into paragraphs and quote each one
+      const paragraphs = preambleText.split('\n\n');
+      markdownOutput += paragraphs.map(para => `> ${para}`).join('\n>\n') + '\n\n---\n\n';
     }
   }
   
