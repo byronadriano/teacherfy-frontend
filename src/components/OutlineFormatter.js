@@ -2,25 +2,26 @@
 
 export const OUTLINE_PROMPT_TEMPLATE = `
 CRITICAL REQUIREMENTS TO ADDRESS FIRST:
+THIS LESSON MUST BE SPECIFICALLY ABOUT: {topic}
+Additional Requirements:
 {custom_prompt}
 
 Based on these requirements, create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district}.
 
 Essential Guidelines:
-1. ALL content must directly align with and implement the above requirements
-2. Every slide should explicitly support these specified needs
-3. Examples and activities should be chosen to reinforce these priorities
+1. ALL content must directly align with teaching {topic} and implement the above requirements
+2. Every slide should explicitly focus on aspects of {topic} and support these specified needs
+3. Examples and activities should be chosen to reinforce understanding of {topic} and these priorities
 
 Structure each slide with:
-1. Title: Clear, descriptive title in {language} that connects to core requirements.
-2. Content: Main teaching points in {language} that implement key requirements.
-    - Provide direct explanations and concrete examples that align with specified needs
+1. Title: Clear, descriptive title in {language} that connects to {topic} and core requirements.
+2. Content: Main teaching points in {language} about {topic} that implement key requirements.
+    - Provide direct explanations and concrete examples about {topic} that align with specified needs
     - Use student-friendly {gradeLevel} language while meeting stated requirements
-    - Ensure examples are age-appropriate, relatable, and support core objectives
-    - Build understanding progressively, connecting new concepts to requirements
-    - Note: Use two-column layouts for comparisons when it serves requirements
-    - Note: Slide 1's objective must align with both requirements and standards
-
+    - Ensure examples are age-appropriate, relatable, and support understanding of {topic}
+    - Build understanding of {topic} progressively, connecting new concepts to requirements
+    - Note: Use two-column layouts for comparisons when it serves understanding of {topic}
+    - Note: Slide 1's objective must clearly state what students will learn about {topic}
 3. Teacher Notes: Practical Implementation Strategies (in English) that support requirements
     - SPECIFIC engagement techniques that reinforce key requirements
     - EXACT instructional language that supports stated needs
