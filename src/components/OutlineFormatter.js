@@ -99,76 +99,66 @@ INTEGRATION INSTRUCTIONS:
 `)
 };
 
-const extractBulletPoints = (text) => {
-  if (!text) return [];
-  
-  return text
-    .split('\n')
-    .map(line => line.trim())
-    // Convert any bullet point character to '-'
-    .map(line => line.replace(/^[•*]/, '-'))
-    // Then filter for lines starting with '-'
-    .filter(line => line.startsWith('-') || line.match(/^\d+\./))
-    .map(line => {
-      // Remove bullet point or number and trim
-      return line.replace(/^[-•*]\s*|^\d+\.\s*/, '').trim();
-    })
-    .filter(line => line.length > 0); // Remove empty lines
-};
 
 export const parseOutlineToStructured = (outlineText, numSlides) => {
-  // More robust parsing that handles variations in formatting
   console.log("Raw Outline Text:", outlineText);
+  const cleanedText = outlineText.replace(/^Raw Outline Text:\s*/, '');
+  
+  // Split slides, preserving formatting
+  const slides = cleanedText
+    .split(/(?=Slide \d+:)/)
+    .map(slide => slide.trim())
+    .filter(Boolean);
 
-  const slides = outlineText.split(/(?=Slide \d+:)/i).filter(Boolean);
   const structuredSlides = [];
 
   for (let i = 0; i < Math.min(slides.length, numSlides); i++) {
     const slide = slides[i];
+    
     const slideObj = {
       title: '',
       content: [],
       teacher_notes: [],
-      visual_elements: [],
-      left_column: [],
-      right_column: []
+      visual_elements: []
     };
 
-    // Extract title (case-insensitive, more flexible)
-    const titleMatch = slide.match(/Slide \d+:\s*(.+)/i);
+    // Extract title without markdown
+    const titleMatch = slide.match(/Slide \d+:(\s*[^\n]+)/);
     if (titleMatch) {
       slideObj.title = titleMatch[1].trim();
     }
 
-    // Flexible section extraction
+    // Helper function to extract and format section content
     const extractSection = (sectionName) => {
-      const regex = new RegExp(`${sectionName}:\\s*\n(.*?)(?=\n\n|$)`, 'is');
-      const match = slide.match(regex);
-      return match ? extractBulletPoints(match[1]) : [];
+      const sectionRegex = new RegExp(
+        `${sectionName}:\\s*\n([\\s\\S]*?)(?=\\n(?:Content:|Teacher Notes:|Visual Elements:|Slide \\d+:|$))`,
+        'i'
+      );
+      const match = slide.match(sectionRegex);
+      if (!match) return [];
+
+      // Split into bullet points, handling both • and -
+      const rawContent = match[1];
+      const bulletPoints = rawContent.split(/(?:\r?\n|\r)(?=[-•])/);
+      
+      return bulletPoints
+        .map(point => point.trim())
+        .filter(point => point.length > 0)
+        .map(point => {
+          // Remove existing bullet point and trim
+          const cleanPoint = point.replace(/^[-•]\s*/, '').trim();
+          if (cleanPoint) {
+            return '- ' + cleanPoint;
+          }
+          return null;
+        })
+        .filter(Boolean);
     };
 
-    // Extract sections
+    // Extract all sections
     slideObj.content = extractSection('Content');
     slideObj.teacher_notes = extractSection('Teacher Notes');
     slideObj.visual_elements = extractSection('Visual Elements');
-
-    // Check for two-column layout
-    if (slideObj.content.length === 0) {
-      const leftColumnMatch = slide.match(/Left Column:\n(.*?)(?=\n\n|Right Column:|$)/is);
-      const rightColumnMatch = slide.match(/Right Column:\n(.*?)(?=\n\n|$)/is);
-
-      if (leftColumnMatch) {
-        slideObj.left_column = extractBulletPoints(leftColumnMatch[1]);
-      }
-      if (rightColumnMatch) {
-        slideObj.right_column = extractBulletPoints(rightColumnMatch[1]);
-      }
-    }
-
-    // Determine layout
-    slideObj.layout = slideObj.left_column.length > 0 || slideObj.right_column.length > 0 
-      ? 'TWO_COLUMN' 
-      : 'TITLE_AND_CONTENT';
 
     structuredSlides.push(slideObj);
   }
@@ -176,75 +166,57 @@ export const parseOutlineToStructured = (outlineText, numSlides) => {
   return structuredSlides;
 };
 
-export const formatOutlineForDisplay = (structuredContent, rawOutlineText) => {
-  // Find where the slides actually start
-  const slidesStartIndex = rawOutlineText.indexOf('Slide 1:');
-  let markdownOutput = '';
-
-  if (slidesStartIndex !== -1) {
-    const preambleText = rawOutlineText.substring(0, slidesStartIndex).trim();
-    
-    if (preambleText) {
-      // Split preamble into paragraphs and quote each one
-      const paragraphs = preambleText.split('\n\n');
-      markdownOutput += paragraphs.map(para => `> ${para}`).join('\n>\n') + '\n\n---\n\n';
-    }
-  }
+export const formatOutlineForDisplay = (structuredContent) => {
+  let output = '';
   
   structuredContent.forEach((slide, index) => {
-    markdownOutput += `Slide ${index + 1}: ${slide.title}\n\n`;
+    // Format slide title without markdown
+    output += `Slide ${index + 1}: ${slide.title}\n\n`;
     
-    // Always include content section, even if empty
-    markdownOutput += 'Content:\n';
-    
-    // Add content from different possible sources
-    const contentSources = [
-      slide.content || [],
-      slide.left_column || [],
-      slide.right_column || []
-    ];
-
-    let hasContent = false;
-    contentSources.forEach(contentList => {
-      contentList.forEach(item => {
-        if (item) {
-          hasContent = true;
-          // Change from '-' to '*'
-          markdownOutput += `* ${item.replace(/^[-]/, '').trim()}\n`;
-        }
+    // Format content section with proper line breaks
+    if (slide.content?.length > 0) {
+      output += 'Content:\n';
+      slide.content.forEach(item => {
+        output += `${item}\n`;
       });
-    });
-
-    if (!hasContent) {
-      markdownOutput += '* No content specified\n';
+      output += '\n';
     }
     
-    markdownOutput += '\n';
-    
-    // Teacher Notes section - show even if empty
-    markdownOutput += 'Teacher Notes:\n';
-    if (slide.teacher_notes && slide.teacher_notes.length > 0) {
+    // Format teacher notes section
+    if (slide.teacher_notes?.length > 0) {
+      output += 'Teacher Notes:\n';
       slide.teacher_notes.forEach(note => {
-        // Change from '-' to '*'
-        markdownOutput += `* ${note.replace(/^[-]/, '').trim()}\n`;
+        output += `${note}\n`;
       });
-    } else {
-      markdownOutput += '* No teacher notes specified\n';
+      output += '\n';
     }
-    markdownOutput += '\n';
     
-    // Visual Elements section - show even if empty
-    markdownOutput += 'Visual Elements:\n';
-    if (slide.visual_elements && slide.visual_elements.length > 0) {
-      slide.visual_elements.forEach(visual => {
-        // Change from '-' to '*'
-        markdownOutput += `* ${visual.replace(/^[-]/, '').trim()}\n`;
+    // Format visual elements section
+    if (slide.visual_elements?.length > 0) {
+      output += 'Visual Elements:\n';
+      slide.visual_elements.forEach(element => {
+        output += `${element}\n`;
       });
-    } else {
-      markdownOutput += '* No visual elements specified\n';
+      output += '\n';
     }
-    markdownOutput += '\n';
+    
+    // Add separator between slides
+    if (index < structuredContent.length - 1) {
+      output += '---\n\n';
+    }
   });
   
-  return markdownOutput.trim();
+  return output.trim();
 };
+
+// Helper function for final display formatting
+export const formatForDisplay = (outline) => {
+  return outline
+    .replace(/\n{3,}/g, '\n\n')          // Normalize multiple newlines
+    .replace(/(?<=:)\n\n/g, '\n')        // Remove extra newline after colons
+    .replace(/([^.\n])(?=\n- )/g, '$1.') // Add periods at end of sentences before bullets
+    .replace(/\n +/g, '\n')              // Remove excess indentation
+    .replace(/^\s+|\s+$/gm, '')          // Trim line whitespace
+    .trim();
+};
+
