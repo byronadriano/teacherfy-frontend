@@ -1,18 +1,34 @@
-// chat.js
+// Chat.js
 import React, { useState, useEffect, useRef, memo } from "react";
 import axios from "axios";
 import {
-  Box, Typography, TextField, Button, CircularProgress, MenuItem,
-  FormControl, Select, InputLabel, Snackbar, Alert, Dialog,
-  DialogTitle, DialogContent, DialogActions, Collapse, IconButton,
-  Paper, Tooltip,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  CircularProgress,
+  MenuItem,
+  FormControl,
+  Select,
+  InputLabel,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Collapse,
+  IconButton,
+  Paper,
+  Tooltip,
+  Modal
 } from "@mui/material";
-// import ReactMarkdown from "react-markdown";
-// import remarkGfm from "remark-gfm";
 import ClearIcon from "@mui/icons-material/Clear";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-// import DownloadIcon from "@mui/icons-material/Download";
+import DownloadIcon from "@mui/icons-material/Download";
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { GoogleOAuthProvider, GoogleLogin, googleLogout } from '@react-oauth/google';
 import Logo from "../assets/Teacherfyoai.png";
 import { 
   formatOutlineForDisplay, 
@@ -20,6 +36,9 @@ import {
   generateRegenerationPrompt,
   generateFullPrompt
 } from './OutlineFormatter';
+
+const GOOGLE_CLIENT_ID = "610970411179-kenrq7o9355fa90v2aj9pisroaurnvdm.apps.googleusercontent.com";
+const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
 const FORM_OPTIONS = {
   grades: [
@@ -44,8 +63,6 @@ const FORM_OPTIONS = {
     "Hindi"
   ],
 };
-
-const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net";
 
 export const EXAMPLE_OUTLINE = {
   "messages": [
@@ -255,24 +272,31 @@ Visual Elements:
 };
 
 
+// FormSection Component
 const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGenerateOutline }) => (
-  <Paper elevation={3} sx={{ mb: 3 }}>
+  <Paper elevation={0} className="form-paper">
     <Box sx={{ 
-      p: 2,
       borderBottom: uiState.isFormExpanded ? '1px solid #e0e0e0' : 'none',
+      pb: 2,
+      mb: 2,
       display: "flex", 
       justifyContent: "space-between", 
       alignItems: "center"
     }}>
-      <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+      <Typography variant="h6" sx={{ 
+        fontWeight: "600",
+        fontSize: '1.25rem',
+        color: '#111827'
+      }}>
         Lesson Plan Inputs
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {uiState.isLoading && !uiState.outlineModalOpen && (
-          <CircularProgress size={24} />
+          <CircularProgress size={20} />
         )}
         <Tooltip title={uiState.isFormExpanded ? "Collapse Form" : "Expand Form"}>
           <IconButton
+            size="small"
             onClick={() => setUiState(prev => ({ 
               ...prev, 
               isFormExpanded: !prev.isFormExpanded 
@@ -285,105 +309,168 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
     </Box>
 
     <Collapse in={uiState.isFormExpanded}>
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <FormControl fullWidth disabled={uiState.outlineModalOpen}>
-            <InputLabel>Language *</InputLabel>
-            <Select
-              value={formState.language}
-              onChange={(e) => onFormChange('language', e.target.value)}
-              label="Language *"
-            >
-              {FORM_OPTIONS.languages.map((language) => (
-                <MenuItem key={language} value={language}>{language}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth disabled={uiState.outlineModalOpen}>
-            <InputLabel>Grade Level *</InputLabel>
-            <Select
-              value={formState.gradeLevel}
-              onChange={(e) => onFormChange('gradeLevel', e.target.value)}
-              label="Grade Level *"
-            >
-              {FORM_OPTIONS.grades.map((grade) => (
-                <MenuItem key={grade} value={grade}>{grade}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth disabled={uiState.outlineModalOpen}>
-            <InputLabel>Subject *</InputLabel>
-            <Select
-              value={formState.subjectFocus}
-              onChange={(e) => onFormChange('subjectFocus', e.target.value)}
-              label="Subject *"
-            >
-              {FORM_OPTIONS.subjects.map((subject) => (
-                <MenuItem key={subject} value={subject}>{subject}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Lesson Topic"
-            value={formState.lessonTopic}
-            onChange={(e) => onFormChange('lessonTopic', e.target.value)}
-            placeholder="e.g. Equivalent Fractions"
-            fullWidth
-            disabled={uiState.outlineModalOpen}
-          />
-
-          <TextField
-            label="District"
-            value={formState.district}
-            onChange={(e) => onFormChange('district', e.target.value)}
-            placeholder="e.g. Denver Public Schools"
-            fullWidth
-            disabled={uiState.outlineModalOpen}
-          />
-
-          <TextField
-            label="Additional Requirements"
-            multiline
-            rows={3}
-            value={formState.customPrompt}
-            onChange={(e) => onFormChange('customPrompt', e.target.value)}
-            placeholder="Add specific requirements..."
-            fullWidth
-            disabled={uiState.outlineModalOpen}
-          />
-
-          <TextField
-            label="Number of Slides"
-            type="number"
-            value={formState.numSlides}
-            onChange={(e) => onFormChange('numSlides', e.target.value)}
-            inputProps={{ min: 1, max: 10 }}
-            sx={{ width: 200 }}
-            disabled={uiState.outlineModalOpen}
-          />
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={onGenerateOutline}
-            disabled={
-              !formState.gradeLevel || 
-              !formState.subjectFocus ||
-              !formState.language ||
-              !formState.lessonTopic ||
-              uiState.isLoading || 
-              uiState.generateOutlineClicked
-            }
+      <Box>
+        <FormControl fullWidth sx={{ mb: 2 }} disabled={uiState.outlineModalOpen}>
+          <InputLabel>Language *</InputLabel>
+          <Select
+            value={formState.language}
+            onChange={(e) => onFormChange('language', e.target.value)}
+            label="Language *"
           >
-            Generate Outline
-          </Button>
+            {FORM_OPTIONS.languages.map((language) => (
+              <MenuItem key={language} value={language}>{language}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mb: 2 }} disabled={uiState.outlineModalOpen}>
+          <InputLabel>Grade Level *</InputLabel>
+          <Select
+            value={formState.gradeLevel}
+            onChange={(e) => onFormChange('gradeLevel', e.target.value)}
+            label="Grade Level *"
+          >
+            {FORM_OPTIONS.grades.map((grade) => (
+              <MenuItem key={grade} value={grade}>{grade}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mb: 2 }} disabled={uiState.outlineModalOpen}>
+          <InputLabel>Subject *</InputLabel>
+          <Select
+            value={formState.subjectFocus}
+            onChange={(e) => onFormChange('subjectFocus', e.target.value)}
+            label="Subject *"
+          >
+            {FORM_OPTIONS.subjects.map((subject) => (
+              <MenuItem key={subject} value={subject}>{subject}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <TextField
+          label="Lesson Topic *"
+          value={formState.lessonTopic}
+          onChange={(e) => onFormChange('lessonTopic', e.target.value)}
+          placeholder="e.g. Equivalent Fractions"
+          fullWidth
+          sx={{ mb: 2 }}
+          disabled={uiState.outlineModalOpen}
+        />
+
+        <TextField
+          label="District"
+          value={formState.district}
+          onChange={(e) => onFormChange('district', e.target.value)}
+          placeholder="e.g. Denver Public Schools"
+          fullWidth
+          sx={{ mb: 2 }}
+          disabled={uiState.outlineModalOpen}
+        />
+
+        <TextField
+          label="Additional Requirements"
+          multiline
+          rows={3}
+          value={formState.customPrompt}
+          onChange={(e) => onFormChange('customPrompt', e.target.value)}
+          placeholder="Add specific requirements..."
+          fullWidth
+          sx={{ mb: 2 }}
+          disabled={uiState.outlineModalOpen}
+        />
+
+        <Box className="number-slides-container">
+          <FormControl fullWidth disabled={uiState.outlineModalOpen}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: '#4b5563' }}>
+              Number of Slides
+            </Typography>
+            <TextField
+              type="number"
+              value={formState.numSlides}
+              onChange={(e) => onFormChange('numSlides', e.target.value)}
+              inputProps={{ 
+                min: 1, 
+                max: 10,
+                style: { 
+                  height: '24px',
+                  padding: '12px',
+                  backgroundColor: '#ffffff'
+                }
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '6px'
+                }
+              }}
+            />
+          </FormControl>
         </Box>
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={onGenerateOutline}
+          disabled={
+            !formState.gradeLevel || 
+            !formState.subjectFocus ||
+            !formState.language ||
+            !formState.lessonTopic ||
+            uiState.isLoading || 
+            uiState.generateOutlineClicked
+          }
+          className="generate-button"
+          sx={{
+            backgroundColor: "#2563eb",
+            '&:hover': {
+              backgroundColor: "#1d4ed8"
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#9ca3af'
+            }
+          }}
+        >
+          {uiState.isLoading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "Generate Outline"
+          )}
+        </Button>
       </Box>
     </Collapse>
   </Paper>
 ));
+
+const SignInPrompt = ({ open, onClose, onSuccess }) => (
+  <Modal
+    open={open}
+    onClose={onClose}
+    aria-labelledby="signin-modal-title"
+    aria-describedby="signin-modal-description"
+    className="signin-prompt"
+  >
+    <Box className="signin-dialog">
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Welcome to Teacherfy AI
+      </Typography>
+      <Typography sx={{ mb: 3 }}>
+        Please sign in with your Google account to create personalized lesson plans.
+      </Typography>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <GoogleLogin 
+          onSuccess={onSuccess}
+          onError={() => alert("Login Failed")}
+          theme="filled_blue"
+          shape="pill"
+          size="large"
+          width="100%"
+        />
+      </GoogleOAuthProvider>
+    </Box>
+  </Modal>
+);
+
 
 const ConfirmationModal = memo(({ 
   uiState, 
@@ -431,14 +518,16 @@ const ConfirmationModal = memo(({
   };
 
   return (
-      <Dialog 
-        open={uiState.outlineModalOpen} 
-        onClose={() => setUiState(prev => ({ 
-          ...prev, 
-          outlineModalOpen: false,
-          generateOutlineClicked: false  // Allow generating again
-        }))}
-      >
+    <Dialog 
+      open={uiState.outlineModalOpen} 
+      onClose={() => setUiState(prev => ({ 
+        ...prev, 
+        outlineModalOpen: false,
+        generateOutlineClicked: false
+      }))}
+      maxWidth="md"
+      fullWidth
+    >
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Review and Modify Outline
@@ -450,62 +539,62 @@ const ConfirmationModal = memo(({
         </Box>
       </DialogTitle>
       <DialogContent>
-  <Box sx={{ mb: 3 }}>
-    <Typography variant="subtitle1" sx={{ mb: 2 }}>
-      Generated Outline:
-    </Typography>
-    <Paper sx={{ 
-      p: 2, 
-      maxHeight: "400px", 
-      overflowY: "auto",
-      backgroundColor: "#fafafa" 
-    }}>
-      {contentState.structuredContent.map((slide, index) => (
-        <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-            Slide {index + 1}: {slide.title}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Generated Outline:
           </Typography>
+          <Paper sx={{ 
+            p: 2, 
+            maxHeight: "400px", 
+            overflowY: "auto",
+            backgroundColor: "#fafafa" 
+          }}>
+            {contentState.structuredContent.map((slide, index) => (
+              <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  Slide {index + 1}: {slide.title}
+                </Typography>
 
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-            Content:
-          </Typography>
-          {slide.content.map((item, i) => (
-            <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-              • {item}
-            </Typography>
-          ))}
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                  Content:
+                </Typography>
+                {slide.content.map((item, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {item}
+                  </Typography>
+                ))}
 
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-            Teacher Notes:
-          </Typography>
-          {slide.teacher_notes.map((note, i) => (
-            <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-              • {note}
-            </Typography>
-          ))}
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                  Teacher Notes:
+                </Typography>
+                {slide.teacher_notes.map((note, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {note}
+                  </Typography>
+                ))}
 
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-            Visual Elements:
-          </Typography>
-          {slide.visual_elements.length > 0 ? (
-            slide.visual_elements.map((element, i) => (
-              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                • {element}
-              </Typography>
-            ))
-          ) : (
-            <Typography sx={{ pl: 2, mb: 0.5 }}>
-              • (None provided)
-            </Typography>
-          )}
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                  Visual Elements:
+                </Typography>
+                {slide.visual_elements.length > 0 ? (
+                  slide.visual_elements.map((element, i) => (
+                    <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                      • {element}
+                    </Typography>
+                  ))
+                ) : (
+                  <Typography sx={{ pl: 2, mb: 0.5 }}>
+                    • (None provided)
+                  </Typography>
+                )}
 
-          {index < contentState.structuredContent.length - 1 && (
-            <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
-          )}
+                {index < contentState.structuredContent.length - 1 && (
+                  <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
+                )}
+              </Box>
+            ))}
+          </Paper>
         </Box>
-      ))}
-    </Paper>
-  </Box>
         
         {uiState.regenerationCount < 3 && (
           <Box sx={{ mt: 3 }}>
@@ -558,12 +647,19 @@ const ConfirmationModal = memo(({
 });
 
 const Chat = () => {
+  // Auth & User State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(true);
+
+  // Form & UI State
   const [formState, setFormState] = useState({
     lessonTopic: "",
     district: "",
     gradeLevel: "",
     subjectFocus: "",
-    language: "",  // Add this line
+    language: "",
     customPrompt: "",
     numSlides: 3,
   });
@@ -576,7 +672,7 @@ const Chat = () => {
     isFormExpanded: true,
     regenerationCount: 0,
     modifiedPrompt: "",
-    generateOutlineClicked: false,  // Add this line
+    generateOutlineClicked: false,
   });
 
   const [contentState, setContentState] = useState({
@@ -587,10 +683,24 @@ const Chat = () => {
 
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [contentState.outlineToConfirm]);
+  // Auth Handlers
+  const handleLoginSuccess = (credentialResponse) => {
+    setToken(credentialResponse.credential);
+    setIsAuthenticated(true);
+    const userInfo = JSON.parse(atob(credentialResponse.credential.split(".")[1]));
+    setUser(userInfo);
+    setShowSignInPrompt(false);
+  };
 
+  const handleLogout = () => {
+    googleLogout();
+    setUser(null);
+    setToken(null);
+    setIsAuthenticated(false);
+    setShowSignInPrompt(true);
+  };
+
+  // Form Handlers
   const handleFormChange = React.useCallback((field, value) => {
     setFormState(prev => ({
       ...prev,
@@ -599,7 +709,6 @@ const Chat = () => {
   }, []);
 
   const loadExample = React.useCallback(() => {
-    // Set form state
     setFormState({
       gradeLevel: "4th grade",
       subjectFocus: "Math",
@@ -609,18 +718,16 @@ const Chat = () => {
       customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention",
       numSlides: 5,
     });
-  
-    // Reset UI state, keeping form expanded
+
     setUiState(prev => ({
       ...prev,
-      isFormExpanded: true,  // Keep form expanded
+      isFormExpanded: true,
       outlineModalOpen: false,
       outlineConfirmed: false,
-      generateOutlineClicked: false,  // Reset generate outline clicked
+      generateOutlineClicked: false,
       regenerationCount: 0
     }));
-  
-    // Clear previous content
+
     setContentState({
       outlineToConfirm: "",
       finalOutline: "",
@@ -634,7 +741,7 @@ const Chat = () => {
       district: "",
       gradeLevel: "",
       subjectFocus: "",
-      language: "",  // Add this line
+      language: "",
       customPrompt: "",
       numSlides: 3,
     });
@@ -648,10 +755,10 @@ const Chat = () => {
     setContentState({
       outlineToConfirm: "",
       finalOutline: "",
-      structuredContent: [], // Add this
+      structuredContent: [],
     });
   }, []);
-    // Check if this is the exact example configuration
+
   const isExampleConfiguration = (formState) => {
     return (
       formState.gradeLevel === "4th grade" &&
@@ -664,353 +771,498 @@ const Chat = () => {
     );
   };
   
-  const handleGenerateOutline = React.useCallback(async () => {
-    if (!formState.gradeLevel || !formState.subjectFocus || !formState.language || !formState.lessonTopic) return;
+// API Handlers
+const handleGenerateOutline = React.useCallback(async () => {
+  if (!token) {
+    setShowSignInPrompt(true);
+    return;
+  }
+
+  if (!formState.gradeLevel || !formState.subjectFocus || !formState.language || !formState.lessonTopic) {
+    alert("Please fill in all required fields.");
+    return;
+  }
+
+  setUiState(prev => ({ 
+    ...prev, 
+    isLoading: true,
+    isFormExpanded: false,
+    generateOutlineClicked: true
+  }));
+
+  try {
+    let data;
     
-    setUiState(prev => ({ 
-      ...prev, 
-      isLoading: true,
-      isFormExpanded: false,
-      generateOutlineClicked: true
-    }));
-  
-    try {
-      let data;
-      if (isExampleConfiguration(formState)) {
-        // Use the predefined example outline directly
-        const { structured_content } = EXAMPLE_OUTLINE;
-        
-        setContentState(prev => ({
-          ...prev,
-          outlineToConfirm: formatOutlineForDisplay(
-            structured_content
-          ),
-          structuredContent: structured_content
-        }));
-  
-        setUiState(prev => ({
-          ...prev,
-          outlineModalOpen: true
-        }));
-      } else {
-        // Existing API call for non-example outlines
-        const fullPrompt = generateFullPrompt(formState);
-        
-        const response = await axios.post(`${BASE_URL}/outline`, {
-          grade_level: formState.gradeLevel,
-          subject_focus: formState.subjectFocus,
-          lesson_topic: formState.lessonTopic,
-          district: formState.district,
-          language: formState.language,
-          custom_prompt: fullPrompt,
-          num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
-        });
-        data = response.data;
-      
-        const rawOutlineText = response.data.messages[0];
-        
-        console.log("DEBUG: Here's the EXACT raw text from AI:", rawOutlineText);
-        
-        const structuredContent = parseOutlineToStructured(rawOutlineText, formState.numSlides);
-                
-        setContentState(prev => ({
-          ...prev,
-          outlineToConfirm: formatOutlineForDisplay(
-            structuredContent, 
-            data.messages[0]
-          ),
-          structuredContent: structuredContent
-        }));
-    
-        setUiState(prev => ({
-          ...prev,
-          outlineModalOpen: true
-        }));
-      }
-    } catch (error) {
+    if (isExampleConfiguration(formState)) {
+      const { structured_content } = EXAMPLE_OUTLINE;
+      setContentState(prev => ({
+        ...prev,
+        outlineToConfirm: formatOutlineForDisplay(structured_content),
+        structuredContent: structured_content
+      }));
       setUiState(prev => ({
         ...prev,
-        error: error.response?.data?.error || "Error generating outline."
+        outlineModalOpen: true
       }));
-    } finally {
-      setUiState(prev => ({ 
-        ...prev, 
-        isLoading: false
-      }));
-    }
-  }, [formState]);
-  
-  const handleRegenerateOutline = React.useCallback(async () => {
-    if (uiState.regenerationCount >= 3) {
-      setUiState(prev => ({
-        ...prev,
-        error: "Maximum regeneration attempts (3) reached."
-      }));
-      return;
-    }
-  
-    setUiState(prev => ({
-      ...prev,
-      regenerationCount: prev.regenerationCount + 1,
-      isLoading: true
-    }));
-  
-    try {
-      const regenerationPrompt = generateRegenerationPrompt(formState, uiState.modifiedPrompt);
-    
-      const { data } = await axios.post(`${BASE_URL}/outline`, {
+    } else {
+      const fullPrompt = generateFullPrompt(formState);
+      const response = await axios.post(`${BASE_URL}/outline`, {
         grade_level: formState.gradeLevel,
         subject_focus: formState.subjectFocus,
         lesson_topic: formState.lessonTopic,
         district: formState.district,
         language: formState.language,
-        custom_prompt: formState.customPrompt,
-        regeneration_prompt: regenerationPrompt,
+        custom_prompt: fullPrompt,
         num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
-    
-      try {
-        console.log("DEBUG: AI raw outline text =>", data.messages[0]);
+      
+      data = response.data;
+      const rawOutlineText = response.data.messages[0];
+      const structuredContent = parseOutlineToStructured(rawOutlineText, formState.numSlides);
+              
+      setContentState(prev => ({
+        ...prev,
+        outlineToConfirm: formatOutlineForDisplay(structuredContent, data.messages[0]),
+        structuredContent: structuredContent
+      }));
+      
+      setUiState(prev => ({
+        ...prev,
+        outlineModalOpen: true
+      }));
+    }
+  } catch (error) {
+    setUiState(prev => ({
+      ...prev,
+      error: error.response?.data?.error || "Error generating outline. Please try again."
+    }));
+  } finally {
+    setUiState(prev => ({ 
+      ...prev, 
+      isLoading: false
+    }));
+  }
+}, [formState, token]);
 
-        const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
-        
-        console.log("DEBUG: structuredContent =>", JSON.stringify(structuredContent, null, 2));
-        
-        const displayMarkdown = formatOutlineForDisplay(structuredContent);
-    
-        setContentState(prev => ({
-          ...prev,
-          outlineToConfirm: displayMarkdown,
-          structuredContent: structuredContent
-        }));
-      } catch (parsingError) {
-        setUiState(prev => ({
-          ...prev,
-          error: "Failed to process the outline format. Please try again."
-        }));
-        return;
+const handleRegenerateOutline = React.useCallback(async () => {
+  if (!token) {
+    setShowSignInPrompt(true);
+    return;
+  }
+
+  if (uiState.regenerationCount >= 3) {
+    setUiState(prev => ({
+      ...prev,
+      error: "Maximum regeneration attempts (3) reached."
+    }));
+    return;
+  }
+
+  setUiState(prev => ({
+    ...prev,
+    regenerationCount: prev.regenerationCount + 1,
+    isLoading: true
+  }));
+
+  try {
+    const regenerationPrompt = generateRegenerationPrompt(formState, uiState.modifiedPrompt);
+  
+    const { data } = await axios.post(`${BASE_URL}/outline`, {
+      grade_level: formState.gradeLevel,
+      subject_focus: formState.subjectFocus,
+      lesson_topic: formState.lessonTopic,
+      district: formState.district,
+      language: formState.language,
+      custom_prompt: formState.customPrompt,
+      regeneration_prompt: regenerationPrompt,
+      num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    } catch (error) {
-      setUiState(prev => ({
-        ...prev,
-        error: error.response?.data?.error || "Error regenerating outline."
-      }));
-    } finally {
-      setUiState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt]);
+    });
 
-  const generatePresentation = React.useCallback(async () => {
-    if (!contentState.finalOutline || !contentState.structuredContent?.length) {
-      setUiState(prev => ({
-        ...prev,
-        error: "Please finalize the outline before generating presentation"
-      }));
-      return;
-    }
-    
-    setUiState(prev => ({ ...prev, isLoading: true }));
-    try {
-      const response = await fetch(`${BASE_URL}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lesson_outline: contentState.finalOutline,
-          structured_content: contentState.structuredContent,  // Add this line
-          lesson_topic: formState.lessonTopic,
-          district: formState.district,
-          grade_level: formState.gradeLevel,
-          subject_focus: formState.subjectFocus,
-          custom_prompt: formState.customPrompt,
-          num_slides: Number(formState.numSlides)
-        }),
-      });
+    const structuredContent = parseOutlineToStructured(data.messages[0], formState.numSlides);
+    const displayMarkdown = formatOutlineForDisplay(structuredContent);
 
-      if (!response.ok) throw new Error("Failed to generate the presentation. Please try again.");
+    setContentState(prev => ({
+      ...prev,
+      outlineToConfirm: displayMarkdown,
+      structuredContent: structuredContent
+    }));
+  } catch (error) {
+    setUiState(prev => ({
+      ...prev,
+      error: error.response?.data?.error || "Error regenerating outline."
+    }));
+  } finally {
+    setUiState(prev => ({ ...prev, isLoading: false }));
+  }
+}, [formState, uiState.regenerationCount, uiState.modifiedPrompt, token]);
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      setUiState(prev => ({
-        ...prev,
-        error: err.message || "Error generating presentation"
-      }));
-    } finally {
-      setUiState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [formState, contentState.finalOutline, contentState.structuredContent]);
+const generatePresentation = React.useCallback(async () => {
+  if (!token) {
+    setShowSignInPrompt(true);
+    return;
+  }
+  
+  if (!contentState.finalOutline || !contentState.structuredContent?.length) {
+    setUiState(prev => ({
+      ...prev,
+      error: "Please finalize the outline before generating a presentation"
+    }));
+    return;
+  }
+  
+  setUiState(prev => ({ ...prev, isLoading: true }));
+  
+  try {
+    const response = await fetch(`${BASE_URL}/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        lesson_outline: contentState.finalOutline,
+        structured_content: contentState.structuredContent,
+        lesson_topic: formState.lessonTopic,
+        district: formState.district,
+        grade_level: formState.gradeLevel,
+        subject_focus: formState.subjectFocus,
+        custom_prompt: formState.customPrompt,
+        num_slides: Number(formState.numSlides)
+      }),
+    });
 
-  return (
-    <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100vh", p: 4 }}>
-      <Box sx={{ maxWidth: 1200, mx: "auto" }}>
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
-          <img src={Logo} alt="Teacherfy Logo" style={{ height: 180 }} />
+    if (!response.ok) throw new Error("Failed to generate presentation");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    setUiState(prev => ({
+      ...prev,
+      error: err.message || "Error generating presentation"
+    }));
+  } finally {
+    setUiState(prev => ({ ...prev, isLoading: false }));
+  }
+}, [formState, token, contentState.finalOutline, contentState.structuredContent]);
+
+// Effects
+useEffect(() => {
+  if (!isAuthenticated) {
+    setShowSignInPrompt(true);
+  }
+}, [isAuthenticated]);
+
+useEffect(() => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [contentState.outlineToConfirm]);
+return (
+  <>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Sidebar Section */}
+      <Box className="sidebar">
+        <Box sx={{ mb: 4 }}>
+          <img 
+            src={Logo} 
+            alt="Teacherfy Logo" 
+            style={{ 
+              width: '200px',
+              height: 'auto',
+              marginBottom: '24px'
+            }} 
+          />
         </Box>
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mb: 3 }}>
-          <Button 
-            color="inherit" 
-            onClick={clearAll} 
-            startIcon={<ClearIcon />}
-            disabled={uiState.outlineModalOpen}
-          >
-            Clear All
-          </Button>
-          <Button 
-            color="inherit" 
-            onClick={loadExample}
-            disabled={uiState.outlineModalOpen}
-          >
-            Load Example
-          </Button>
-        </Box>
-
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <FormSection 
-            formState={formState}
-            uiState={uiState}
-            setUiState={setUiState}
-            onFormChange={handleFormChange}
-            onGenerateOutline={handleGenerateOutline}
-          />
-
-          {uiState.outlineConfirmed && (
-            <Paper elevation={3} sx={{ p: 3 }}>
-              <Box sx={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center", 
-                mb: 2 
-              }}>
-                <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                  Lesson Outline
-                </Typography>
-              </Box>
-
-              <Box sx={{
-                maxHeight: 500,
-                overflowY: "auto",
-                border: "1px solid #e0e0e0",
-                borderRadius: 1,
-                p: 2,
-                mb: 3,
-                backgroundColor: "#fafafa"
-              }}>
-                {contentState.structuredContent.map((slide, index) => (
-                  <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                      Slide {index + 1}: {slide.title}
-                    </Typography>
-
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-                      Content:
-                    </Typography>
-                    {slide.content.map((item, i) => (
-                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                        • {item}
-                      </Typography>
-                    ))}
-
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-                      Teacher Notes:
-                    </Typography>
-                    {slide.teacher_notes.map((note, i) => (
-                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                        • {note}
-                      </Typography>
-                    ))}
-
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-                      Visual Elements:
-                    </Typography>
-                    {slide.visual_elements.length > 0 ? (
-                      slide.visual_elements.map((element, i) => (
-                        <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                          • {element}
-                        </Typography>
-                      ))
-                    ) : (
-                      <Typography sx={{ pl: 2, mb: 0.5 }}>
-                        • (None provided)
-                      </Typography>
-                    )}
-
-                    {index < contentState.structuredContent.length - 1 && (
-                      <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
-                    )}
-                  </Box>
-                ))}
-              </Box>
-
-              <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={generatePresentation}
-                  disabled={uiState.isLoading}
-                  sx={{ backgroundColor: "#1976d2" }}
-                >
-                  {uiState.isLoading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    "Open in Powerpoint"
-                  )}
-                </Button>
-                {/* <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => window.open(`${BASE_URL}/authorize`, "_blank")}
-                  sx={{ backgroundColor: "#d32f2f" }}
-                >
-                  Open in Google Slides
-                </Button> */}
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  disabled
-                  sx={{ backgroundColor: "#d32f2f" }}
-                >
-                  Open in Google Slides (Coming Soon)
-                </Button>
-              </Box>
-            </Paper>
-          )}
-
-          <ConfirmationModal 
-            uiState={uiState}
-            contentState={contentState}
-            setUiState={setUiState}
-            setContentState={setContentState}
-            handleRegenerateOutline={handleRegenerateOutline}
-          />
-
-          <Snackbar 
-            open={!!uiState.error} 
-            autoHideDuration={6000} 
-            onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
-          >
-            <Alert 
-              onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
-              severity="error" 
-              sx={{ width: "100%" }}
+        {isAuthenticated ? (
+          <Box sx={{ 
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                color: '#374151',
+                textAlign: 'center',
+                fontSize: '0.875rem'
+              }}
             >
-              {uiState.error}
-            </Alert>
-          </Snackbar>
+              Signed in as {user?.name}
+            </Typography>
+            <Button 
+              variant="outlined"
+              color="inherit" 
+              onClick={handleLogout}
+              startIcon={<ClearIcon />}
+              sx={{
+                borderColor: '#d1d5db',
+                color: '#374151',
+                width: '100%',
+                '&:hover': {
+                  borderColor: '#9ca3af',
+                  backgroundColor: '#f9fafb'
+                }
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
+        ) : (
+          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <GoogleLogin 
+              onSuccess={handleLoginSuccess} 
+              onError={() => alert("Login Failed")} 
+              width="100%"
+            />
+          </GoogleOAuthProvider>
+        )}
+      </Box>
 
-          <div ref={messagesEndRef} />
+      {/* Main Content Section */}
+      <Box className="main-content">
+        <Box className="content-container">
+          {/* Top Action Buttons - Centered */}
+          <Box className="action-buttons">
+              <Button 
+                  variant="text"
+                  onClick={loadExample}
+                  disabled={uiState.outlineModalOpen}
+                  className="action-button"
+                  startIcon={<PlayArrowIcon />}
+                  sx={{ color: '#2563eb' }}
+              >
+                  Load Example
+              </Button>
+              <Button 
+                  variant="text"
+                  onClick={clearAll} 
+                  disabled={uiState.outlineModalOpen}
+                  className="action-button"
+                  startIcon={<ClearIcon />}
+                  sx={{ color: '#dc2626' }}
+              >
+                  Clear All
+              </Button>
+          </Box>
+          {/* Form and Content */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <FormSection 
+              formState={formState}
+              uiState={uiState}
+              setUiState={setUiState}
+              onFormChange={handleFormChange}
+              onGenerateOutline={handleGenerateOutline}
+            />
+
+            {/* Outline Display and Presentation Buttons */}
+            {uiState.outlineConfirmed && (
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 3,
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              >
+                <Box sx={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center", 
+                  mb: 2 
+                }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: "600",
+                    color: '#111827'
+                  }}>
+                    Lesson Outline
+                  </Typography>
+                </Box>
+
+                <Box sx={{
+                  maxHeight: 500,
+                  overflowY: "auto",
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  p: 3,
+                  mb: 3,
+                  backgroundColor: "#f9fafb"
+                }}>
+                  {contentState.structuredContent.map((slide, index) => (
+                    <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: '600', 
+                        mb: 2,
+                        color: '#111827'
+                      }}>
+                        Slide {index + 1}: {slide.title}
+                      </Typography>
+
+                      <Typography variant="subtitle1" sx={{ 
+                        fontWeight: '600', 
+                        mt: 2,
+                        color: '#374151'
+                      }}>
+                        Content:
+                      </Typography>
+                      {slide.content.map((item, i) => (
+                        <Typography key={i} sx={{ 
+                          pl: 2, 
+                          mb: 0.5,
+                          color: '#4b5563'
+                        }}>
+                          • {item}
+                        </Typography>
+                      ))}
+
+                      <Typography variant="subtitle1" sx={{ 
+                        fontWeight: '600', 
+                        mt: 2,
+                        color: '#374151'
+                      }}>
+                        Teacher Notes:
+                      </Typography>
+                      {slide.teacher_notes.map((note, i) => (
+                        <Typography key={i} sx={{ 
+                          pl: 2, 
+                          mb: 0.5,
+                          color: '#4b5563'
+                        }}>
+                          • {note}
+                        </Typography>
+                      ))}
+
+                      <Typography variant="subtitle1" sx={{ 
+                        fontWeight: '600', 
+                        mt: 2,
+                        color: '#374151'
+                      }}>
+                        Visual Elements:
+                      </Typography>
+                      {slide.visual_elements.length > 0 ? (
+                        slide.visual_elements.map((element, i) => (
+                          <Typography key={i} sx={{ 
+                            pl: 2, 
+                            mb: 0.5,
+                            color: '#4b5563'
+                          }}>
+                            • {element}
+                          </Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ 
+                          pl: 2, 
+                          mb: 0.5,
+                          color: '#6b7280'
+                        }}>
+                          • (None provided)
+                        </Typography>
+                      )}
+
+                      {index < contentState.structuredContent.length - 1 && (
+                        <Box sx={{ 
+                          my: 3, 
+                          borderBottom: '1px solid #e5e7eb' 
+                        }} />
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+
+                {/* Presentation Generation Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-start', 
+                  gap: 2 
+                }}>
+                  <Button
+                    variant="contained"
+                    onClick={generatePresentation}
+                    disabled={uiState.isLoading}
+                    startIcon={<DownloadIcon />}
+                    sx={{
+                      backgroundColor: "#2563eb",
+                      '&:hover': {
+                        backgroundColor: "#1d4ed8"
+                      },
+                      '&:disabled': {
+                        backgroundColor: "#9ca3af"
+                      }
+                    }}
+                  >
+                    {uiState.isLoading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      "Open in PowerPoint"
+                    )}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    disabled
+                    sx={{
+                      backgroundColor: "#dc2626",
+                      '&:disabled': {
+                        backgroundColor: "#9ca3af"
+                      }
+                    }}
+                  >
+                    Open in Google Slides (Coming Soon)
+                  </Button>
+                </Box>
+              </Paper>
+            )}
+
+            <ConfirmationModal 
+              uiState={uiState}
+              contentState={contentState}
+              setUiState={setUiState}
+              setContentState={setContentState}
+              handleRegenerateOutline={handleRegenerateOutline}
+            />
+
+            <Snackbar 
+              open={!!uiState.error} 
+              autoHideDuration={6000} 
+              onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
+            >
+              <Alert 
+                onClose={() => setUiState(prev => ({ ...prev, error: "" }))}
+                severity="error" 
+                sx={{ width: "100%" }}
+              >
+                {uiState.error}
+              </Alert>
+            </Snackbar>
+
+            <div ref={messagesEndRef} />
+          </Box>
         </Box>
       </Box>
     </Box>
-  );
-};
 
+    {/* Sign In Prompt Modal */}
+    <SignInPrompt 
+      open={showSignInPrompt && !isAuthenticated}
+      onClose={() => setShowSignInPrompt(false)}
+      onSuccess={handleLoginSuccess}
+    />
+  </>
+);
+};
 
 export default Chat;
