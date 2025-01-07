@@ -7,8 +7,8 @@ import {
   DialogTitle, DialogContent, DialogActions, Collapse, IconButton,
   Paper, Tooltip,
 } from "@mui/material";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+// import ReactMarkdown from "react-markdown";
+// import remarkGfm from "remark-gfm";
 import ClearIcon from "@mui/icons-material/Clear";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -49,22 +49,105 @@ const BASE_URL = "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net
 
 export const EXAMPLE_OUTLINE = {
   "messages": [
-    "Slide 1: Let's Explore Equivalent Fractions!\nContent:\n- Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix.\n- Students will be able to explain why different fractions can show the same amount using pictures and numbers.\n\nTeacher Notes:\n- Begin with students sharing their experiences with fractions in their daily lives\n- Use culturally relevant examples from Denver communities\n\nVisual Elements:\n- Interactive display showing local treats divided into equivalent parts\n- Student-friendly vocabulary cards with pictures"
+    `Slide 1: Let's Explore Equivalent Fractions!
+Content:
+- Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix.
+- Students will be able to explain why different fractions can show the same amount using pictures and numbers.
+
+Teacher Notes:
+- ENGAGEMENT: Begin with students sharing their experiences with fractions in their daily lives.
+- ASSESSMENT: Ask questions about daily fraction use and note which students grasp the concept.
+- DIFFERENTIATION: Use culturally relevant examples from Denver communities, and encourage bilingual students to share fraction terms in their home language.
+
+Visual Elements:
+- Interactive display showing local treats divided into equivalent parts
+- Student-friendly vocabulary cards with pictures
+
+
+Slide 2: What Are Equivalent Fractions?
+Content:
+- Let's learn our fraction vocabulary!
+- Imagine sharing a breakfast burrito with your friend - you can cut it in half (1/2) or into four equal pieces and take two (2/4). You get the same amount!
+- The top number (numerator) tells us how many pieces we have
+- The bottom number (denominator) tells us how many total equal pieces
+- When fractions show the same amount, we call them equivalent
+
+Teacher Notes:
+- ENGAGEMENT: Use local food examples (burritos, pizza) familiar to Denver students.
+- ASSESSMENT: Connect math vocabulary to real experiences; gauge student responses.
+- DIFFERENTIATION: Encourage students to create their own examples or use fraction strips.
+
+Visual Elements:
+- Animation of a burrito being cut into different equivalent portions
+- Interactive fraction wall labeled in English and Spanish
+- Hands-on fraction strips for each student
+
+
+Slide 3: Finding Equivalent Fractions Together
+Content:
+- When we multiply 1/2 by 2/2, we get 2/4
+- It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!
+- Your turn: Try finding an equivalent fraction for 2/3
+
+Teacher Notes:
+- ENGAGEMENT: Use Rocky Mountain National Park trail maps for real-world connections; encourage peer discussion in preferred language.
+- ASSESSMENT: Model think-aloud strategy and ask students to share their reasoning.
+- DIFFERENTIATION: Provide scaffolds like step-by-step multiplication visuals; advanced learners can find multiple equivalent fractions (e.g., 2/3 = 4/6 = 6/9).
+
+Visual Elements:
+- Trail map showing different fraction representations
+- Digital manipulatives for student exploration
+
+
+Slide 4: Your Turn to Create!
+Content:
+- Time to become fraction experts!
+- Work with your partner to create equivalent fraction cards
+- Use different colors to show equal parts
+- Challenge: Can you find three different fractions that equal 1/2?
+- Bonus: Create a story problem using equivalent fractions and your favorite Denver activity
+
+Teacher Notes:
+- ENGAGEMENT: Provide bilingual instruction cards; allow student choice in examples.
+- ASSESSMENT: Check each pair’s fraction cards and see if they are correct matches.
+- DIFFERENTIATION: Offer visual support or partially completed fraction cards for struggling students; challenge advanced learners to create multi-step word problems.
+
+Visual Elements:
+- Sample fraction cards with local themes
+- Student workspace organization guide
+- Visual success criteria
+
+
+Slide 5: Show What You Know!
+Content:
+- Let's celebrate what we learned!
+- Create three equivalent fractions for 3/4
+- Draw a picture showing how you know they're equal
+- Write a story about using equivalent fractions in your neighborhood
+- Share your favorite way to remember equivalent fractions
+
+Teacher Notes:
+- ENGAGEMENT: Have students explain their fractions to a partner or small group.
+- ASSESSMENT: Provide multiple ways to demonstrate understanding; accept explanations in English or home language.
+- DIFFERENTIATION: Use exit ticket responses to plan next lesson; advanced students can convert any improper fraction results to mixed numbers.
+
+Visual Elements:
+- Culturally responsive exit ticket template
+- Digital portfolio upload guide
+- Self-assessment checklist in multiple languages`
   ],
   "structured_content": [
     {
       "title": "Let's Explore Equivalent Fractions!",
       "layout": "TITLE_AND_CONTENT",
       "content": [
-        "Today we're going on a fraction adventure!",
-        "- Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix",
-        "- Students will be able to explain why different fractions can show the same amount using pictures and numbers",
-        "- Let's start by thinking about times when we share things equally!"
+        "Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix",
+        "Students will be able to explain why different fractions can show the same amount using pictures and numbers"
       ],
       "teacher_notes": [
-        "Begin with students sharing their experiences with fractions in their daily lives",
-        "Use culturally relevant examples from Denver communities",
-        "Encourage bilingual students to share fraction terms in their home language"
+        "ENGAGEMENT: Begin with students sharing their experiences with fractions in their daily lives",
+        "ASSESSMENT: Ask questions about daily fraction use and note which students grasp the concept",
+        "DIFFERENTIATION: Use culturally relevant examples from Denver communities; encourage bilingual students to share fraction terms in their home language"
       ],
       "visual_elements": [
         "Interactive display showing local treats divided into equivalent parts",
@@ -78,15 +161,15 @@ export const EXAMPLE_OUTLINE = {
       "layout": "TITLE_AND_CONTENT",
       "content": [
         "Let's learn our fraction vocabulary!",
-        "- Imagine sharing a breakfast burrito with your friend - you can cut it in half (1/2) or into four equal pieces and take two (2/4). You get the same amount!",
-        "- The top number (numerator) tells us how many pieces we have",
-        "- The bottom number (denominator) tells us how many total equal pieces",
-        "- When fractions show the same amount, we call them equivalent"
+        "Imagine sharing a breakfast burrito with your friend - you can cut it in half (1/2) or into four equal pieces and take two (2/4). You get the same amount!",
+        "The top number (numerator) tells us how many pieces we have",
+        "The bottom number (denominator) tells us how many total equal pieces",
+        "When fractions show the same amount, we call them equivalent"
       ],
       "teacher_notes": [
-        "Use local food examples familiar to Denver students",
-        "Connect math vocabulary to real experiences",
-        "Encourage students to create their own examples"
+        "ENGAGEMENT: Use local food examples (burritos, pizza) familiar to Denver students",
+        "ASSESSMENT: Connect math vocabulary to real experiences; gauge student responses",
+        "DIFFERENTIATION: Encourage students to create their own examples or use fraction strips"
       ],
       "visual_elements": [
         "Animation of a burrito being cut into different equivalent portions",
@@ -101,9 +184,9 @@ export const EXAMPLE_OUTLINE = {
       "layout": "TWO_COLUMNS",
       "content": [],
       "teacher_notes": [
-        "Use Rocky Mountain National Park trail maps for real-world connections",
-        "Encourage peer discussion in preferred language",
-        "Model think-aloud strategy"
+        "ENGAGEMENT: Use Rocky Mountain National Park trail maps for real-world connections; encourage peer discussion in preferred language",
+        "ASSESSMENT: Model think-aloud strategy and ask students to share their reasoning",
+        "DIFFERENTIATION: Provide step-by-step multiplication visuals for extra support; advanced learners can find multiple equivalents"
       ],
       "visual_elements": [
         "Trail map showing different fraction representations",
@@ -111,15 +194,15 @@ export const EXAMPLE_OUTLINE = {
       ],
       "left_column": [
         "Let's practice together!",
-        "- When we multiply 1/2 by 2/2, we get 2/4",
-        "- It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!",
-        "- Your turn: Try finding an equivalent fraction for 2/3"
+        "When we multiply 1/2 by 2/2, we get 2/4",
+        "It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!",
+        "Your turn: Try finding an equivalent fraction for 2/3"
       ],
       "right_column": [
         "Check your understanding:",
-        "- Use your fraction strips to show how 1/2 = 2/4",
-        "- Draw a picture to prove your answer",
-        "- Share your strategy with your partner"
+        "Use your fraction strips to show how 1/2 = 2/4",
+        "Draw a picture to prove your answer",
+        "Share your strategy with your partner"
       ]
     },
     {
@@ -127,15 +210,15 @@ export const EXAMPLE_OUTLINE = {
       "layout": "TITLE_AND_CONTENT",
       "content": [
         "Time to become fraction experts!",
-        "- Work with your partner to create equivalent fraction cards",
-        "- Use different colors to show equal parts",
-        "- Challenge: Can you find three different fractions that equal 1/2?",
-        "- Bonus: Create a story problem using equivalent fractions and your favorite Denver activity"
+        "Work with your partner to create equivalent fraction cards",
+        "Use different colors to show equal parts",
+        "Challenge: Can you find three different fractions that equal 1/2?",
+        "Bonus: Create a story problem using equivalent fractions and your favorite Denver activity"
       ],
       "teacher_notes": [
-        "Provide bilingual instruction cards",
-        "Allow student choice in examples",
-        "Support native language use in discussions"
+        "ENGAGEMENT: Provide bilingual instruction cards; allow student choice in examples",
+        "ASSESSMENT: Check each pair’s fraction cards for correctness",
+        "DIFFERENTIATION: Offer visual support or partially completed fraction cards for struggling students; challenge advanced learners with multi-step word problems"
       ],
       "visual_elements": [
         "Sample fraction cards with local themes",
@@ -150,15 +233,15 @@ export const EXAMPLE_OUTLINE = {
       "layout": "TITLE_AND_CONTENT",
       "content": [
         "Let's celebrate what we learned!",
-        "- Create three equivalent fractions for 3/4",
-        "- Draw a picture showing how you know they're equal",
-        "- Write a story about using equivalent fractions in your neighborhood",
-        "- Share your favorite way to remember equivalent fractions"
+        "Create three equivalent fractions for 3/4",
+        "Draw a picture showing how you know they're equal",
+        "Write a story about using equivalent fractions in your neighborhood",
+        "Share your favorite way to remember equivalent fractions"
       ],
       "teacher_notes": [
-        "Provide multiple ways to demonstrate understanding",
-        "Accept explanations in English or home language",
-        "Use exit ticket responses to plan next lesson"
+        "ENGAGEMENT: Have students explain their fractions to a partner or small group",
+        "ASSESSMENT: Provide multiple ways to demonstrate understanding; accept explanations in English or home language",
+        "DIFFERENTIATION: Use exit ticket responses to plan next lesson; advanced students can convert any improper results to mixed numbers"
       ],
       "visual_elements": [
         "Culturally responsive exit ticket template",
@@ -170,6 +253,7 @@ export const EXAMPLE_OUTLINE = {
     }
   ]
 };
+
 
 const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGenerateOutline }) => (
   <Paper elevation={3} sx={{ mb: 3 }}>
@@ -366,21 +450,62 @@ const ConfirmationModal = memo(({
         </Box>
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Generated Outline:
+  <Box sx={{ mb: 3 }}>
+    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+      Generated Outline:
+    </Typography>
+    <Paper sx={{ 
+      p: 2, 
+      maxHeight: "400px", 
+      overflowY: "auto",
+      backgroundColor: "#fafafa" 
+    }}>
+      {contentState.structuredContent.map((slide, index) => (
+        <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+            Slide {index + 1}: {slide.title}
           </Typography>
-          <Paper sx={{ 
-            p: 2, 
-            maxHeight: "400px", 
-            overflowY: "auto",
-            backgroundColor: "#fafafa" 
-          }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {contentState.outlineToConfirm}
-            </ReactMarkdown>
-          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+            Content:
+          </Typography>
+          {slide.content.map((item, i) => (
+            <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+              • {item}
+            </Typography>
+          ))}
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+            Teacher Notes:
+          </Typography>
+          {slide.teacher_notes.map((note, i) => (
+            <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+              • {note}
+            </Typography>
+          ))}
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+            Visual Elements:
+          </Typography>
+          {slide.visual_elements.length > 0 ? (
+            slide.visual_elements.map((element, i) => (
+              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                • {element}
+              </Typography>
+            ))
+          ) : (
+            <Typography sx={{ pl: 2, mb: 0.5 }}>
+              • (None provided)
+            </Typography>
+          )}
+
+          {index < contentState.structuredContent.length - 1 && (
+            <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
+          )}
         </Box>
+      ))}
+    </Paper>
+  </Box>
         
         {uiState.regenerationCount < 3 && (
           <Box sx={{ mt: 3 }}>

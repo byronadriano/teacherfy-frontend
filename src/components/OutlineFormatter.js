@@ -274,13 +274,17 @@ INTEGRATION INSTRUCTIONS:
 };
 
 
-// (Optional) Further formatting cleanup, if desired
 export const formatForDisplay = (outline) => {
   return outline
     .replace(/\n{3,}/g, "\n\n")        // Normalize multiple newlines
     .replace(/(?<=:)\n\n/g, "\n")      // Remove extra newline after colons
-    .replace(/([^.\n])(?=\n- )/g, "$1.") 
+    .replace(/([^.\n])(?=\n- )/g, "$1.")
     .replace(/\n +/g, "\n")            // Remove excess indentation
     .replace(/^\s+|\s+$/gm, "")        // Trim each line's whitespace
+
+    // ADD THIS LINE:
+    .replace(/^•\s/gm, "- ")           // Convert "• " at the start of a line into "- "
+    
     .trim();
 };
+
