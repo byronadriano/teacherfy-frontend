@@ -950,21 +950,35 @@ const Chat = () => {
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => window.open(`${BASE_URL}/authorize`, "_blank")}
-            >
-                Open in Google Slides
-            </Button>
-
-            <Button
-                variant="contained"
-                color="secondary"
-                onClick={generatePresentation}
-            >
-                Open in PowerPoint
-            </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={generatePresentation}
+                  disabled={uiState.isLoading}
+                  sx={{ backgroundColor: "#1976d2" }}
+                >
+                  {uiState.isLoading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    "Open in Powerpoint"
+                  )}
+                </Button>
+                {/* <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => window.open(`${BASE_URL}/authorize`, "_blank")}
+                  sx={{ backgroundColor: "#d32f2f" }}
+                >
+                  Open in Google Slides
+                </Button> */}
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  disabled
+                  sx={{ backgroundColor: "#d32f2f" }}
+                >
+                  Open in Google Slides (Coming Soon)
+                </Button>
               </Box>
             </Paper>
           )}
