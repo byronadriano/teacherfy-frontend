@@ -1,6 +1,6 @@
 // App.js
 import React from "react";
-import Chat from "./components/Chat";
+import LessonBuilder from "./pages/LessonBuilder";  // Updated import
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 const theme = createTheme({
@@ -14,7 +14,7 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Chat />
+      <LessonBuilder />  {/* Updated component name */}
     </ThemeProvider>
   );
 }
