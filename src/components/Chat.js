@@ -12,7 +12,7 @@ import {
 import ClearIcon from "@mui/icons-material/Clear";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import DownloadIcon from "@mui/icons-material/Download";
+// import DownloadIcon from "@mui/icons-material/Download";
 import Logo from "../assets/Teacherfyoai.png";
 import { 
   formatOutlineForDisplay, 
@@ -950,25 +950,21 @@ const Chat = () => {
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={generatePresentation}
-                  startIcon={<DownloadIcon />}
-                  disabled={uiState.isLoading}
-                >
-                  {uiState.isLoading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    "Download Presentation"
-                  )}
-                </Button>
-                <Button
-                  variant="outlined"
-                  disabled
-                >
-                  Open in Google Slides (Coming Soon)
-                </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => window.open(`${BASE_URL}/authorize`, "_blank")}
+            >
+                Open in Google Slides
+            </Button>
+
+            <Button
+                variant="contained"
+                color="secondary"
+                onClick={generatePresentation}
+            >
+                Open in PowerPoint
+            </Button>
               </Box>
             </Paper>
           )}
