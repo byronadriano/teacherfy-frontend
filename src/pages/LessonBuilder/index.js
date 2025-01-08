@@ -593,6 +593,25 @@ const Chat = () => {
   };
   
 // API Handlers
+// For tracking activities
+const trackUserActivity = async (activity) => {
+  await fetch('/track_activity', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      activity,
+      email: user?.email,
+      name: user?.name,
+      given_name: user?.given_name,
+      family_name: user?.family_name
+    })
+  });
+};
+
+// Update handleGenerateOutline
 const handleGenerateOutline = React.useCallback(async () => {
   if (!token) {
     setShowSignInPrompt(true);
@@ -655,6 +674,8 @@ const handleGenerateOutline = React.useCallback(async () => {
         ...prev,
         outlineModalOpen: true
       }));
+
+      await trackUserActivity('Generated Outline');
     }
   } catch (error) {
     setUiState(prev => ({
@@ -667,7 +688,66 @@ const handleGenerateOutline = React.useCallback(async () => {
       isLoading: false
     }));
   }
-}, [formState, token]);
+}, [formState, token, user]);
+
+// Update generatePresentation
+const generatePresentation = React.useCallback(async () => {
+  if (!token) {
+    setShowSignInPrompt(true);
+    return;
+  }
+  
+  if (!contentState.finalOutline || !contentState.structuredContent?.length) {
+    setUiState(prev => ({
+      ...prev,
+      error: "Please finalize the outline before generating a presentation"
+    }));
+    return;
+  }
+  
+  setUiState(prev => ({ ...prev, isLoading: true }));
+  
+  try {
+    const response = await fetch(`${BASE_URL}/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        lesson_outline: contentState.finalOutline,
+        structured_content: contentState.structuredContent,
+        lesson_topic: formState.lessonTopic,
+        district: formState.district,
+        grade_level: formState.gradeLevel,
+        subject_focus: formState.subjectFocus,
+        custom_prompt: formState.customPrompt,
+        num_slides: Number(formState.numSlides)
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to generate presentation");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    await trackUserActivity('Downloaded Presentation');
+  } catch (err) {
+    setUiState(prev => ({
+      ...prev,
+      error: err.message || "Error generating presentation"
+    }));
+  } finally {
+    setUiState(prev => ({ ...prev, isLoading: false }));
+  }
+}, [formState, token, contentState.finalOutline, contentState.structuredContent, user]);
 
 const handleRegenerateOutline = React.useCallback(async () => {
   if (!token) {
@@ -725,61 +805,61 @@ const handleRegenerateOutline = React.useCallback(async () => {
   }
 }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, token]);
 
-const generatePresentation = React.useCallback(async () => {
-  if (!token) {
-    setShowSignInPrompt(true);
-    return;
-  }
+// const generatePresentation = React.useCallback(async () => {
+//   if (!token) {
+//     setShowSignInPrompt(true);
+//     return;
+//   }
   
-  if (!contentState.finalOutline || !contentState.structuredContent?.length) {
-    setUiState(prev => ({
-      ...prev,
-      error: "Please finalize the outline before generating a presentation"
-    }));
-    return;
-  }
+//   if (!contentState.finalOutline || !contentState.structuredContent?.length) {
+//     setUiState(prev => ({
+//       ...prev,
+//       error: "Please finalize the outline before generating a presentation"
+//     }));
+//     return;
+//   }
   
-  setUiState(prev => ({ ...prev, isLoading: true }));
+//   setUiState(prev => ({ ...prev, isLoading: true }));
   
-  try {
-    const response = await fetch(`${BASE_URL}/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        lesson_outline: contentState.finalOutline,
-        structured_content: contentState.structuredContent,
-        lesson_topic: formState.lessonTopic,
-        district: formState.district,
-        grade_level: formState.gradeLevel,
-        subject_focus: formState.subjectFocus,
-        custom_prompt: formState.customPrompt,
-        num_slides: Number(formState.numSlides)
-      }),
-    });
+//   try {
+//     const response = await fetch(`${BASE_URL}/generate`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${token}`
+//       },
+//       body: JSON.stringify({
+//         lesson_outline: contentState.finalOutline,
+//         structured_content: contentState.structuredContent,
+//         lesson_topic: formState.lessonTopic,
+//         district: formState.district,
+//         grade_level: formState.gradeLevel,
+//         subject_focus: formState.subjectFocus,
+//         custom_prompt: formState.customPrompt,
+//         num_slides: Number(formState.numSlides)
+//       }),
+//     });
 
-    if (!response.ok) throw new Error("Failed to generate presentation");
+//     if (!response.ok) throw new Error("Failed to generate presentation");
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    setUiState(prev => ({
-      ...prev,
-      error: err.message || "Error generating presentation"
-    }));
-  } finally {
-    setUiState(prev => ({ ...prev, isLoading: false }));
-  }
-}, [formState, token, contentState.finalOutline, contentState.structuredContent]);
+//     const blob = await response.blob();
+//     const url = window.URL.createObjectURL(blob);
+//     const link = document.createElement("a");
+//     link.href = url;
+//     link.setAttribute("download", `${formState.lessonTopic || "lesson"}_presentation.pptx`);
+//     document.body.appendChild(link);
+//     link.click();
+//     document.body.removeChild(link);
+//     window.URL.revokeObjectURL(url);
+//   } catch (err) {
+//     setUiState(prev => ({
+//       ...prev,
+//       error: err.message || "Error generating presentation"
+//     }));
+//   } finally {
+//     setUiState(prev => ({ ...prev, isLoading: false }));
+//   }
+// }, [formState, token, contentState.finalOutline, contentState.structuredContent]);
 
 // Effects
 useEffect(() => {
