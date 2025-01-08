@@ -1190,6 +1190,14 @@ return (
                   </>
                 )}
               </Button>
+              <Button
+                  variant="contained"
+                  color="secondary"
+                  disabled
+                  sx={{ backgroundColor: "#d32f2f" }}
+                >
+                  Open in Google Slides (Coming Soon)
+                </Button>
               </Paper>
             )}
 
