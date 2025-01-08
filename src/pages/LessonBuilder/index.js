@@ -292,7 +292,8 @@ const SignInPrompt = ({ open, onClose, onSuccess }) => {
 
 const ConfirmationModal = memo(({ 
   uiState, 
-  contentState, 
+  contentState,
+  subscriptionState, 
   setUiState, 
   setContentState, 
   handleRegenerateOutline 
@@ -444,11 +445,10 @@ const ConfirmationModal = memo(({
         </Button>
         {uiState.regenerationCount < 3 && (
           <Button 
-            onClick={handleRegenerateClick}
-            color="primary"
-            disabled={!localModifiedPrompt.trim() || uiState.isLoading}
-          >
-            {uiState.isLoading ? <CircularProgress size={24} /> : "Regenerate Outline"}
+          onClick={handleRegenerateClick}
+          disabled={!localModifiedPrompt.trim() || uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
+        >
+          {uiState.isLoading ? <CircularProgress size={24} /> : "Regenerate Outline"}
           </Button>
         )}
         <Button 
@@ -1162,7 +1162,7 @@ return (
               <Button
                 variant="contained"
                 onClick={generatePresentation}
-                disabled={uiState.isLoading}
+                disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
                 startIcon={<DownloadIcon />}
                 sx={{
                   backgroundColor: "#2563eb",
@@ -1196,6 +1196,7 @@ return (
             <ConfirmationModal 
               uiState={uiState}
               contentState={contentState}
+              subscriptionState={subscriptionState}
               setUiState={setUiState}
               setContentState={setContentState}
               handleRegenerateOutline={handleRegenerateOutline}
