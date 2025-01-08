@@ -218,9 +218,6 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
 ));
 
 const SignInPrompt = ({ open, onClose, onSuccess }) => {
-  // If you get it from .env directly:
-  // const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
   // Early return if the client ID is missing
   if (!GOOGLE_CLIENT_ID) {
     console.error("Google Client ID is not defined!");
@@ -780,7 +777,7 @@ const handleRegenerateOutline = React.useCallback(async () => {
       language: formState.language,
       custom_prompt: formState.customPrompt,
       regeneration_prompt: regenerationPrompt,
-      num_slides: Math.min(Math.max(Number(formState.numSlides) || 3, 1), 10)
+      num_slides: formState.numSlides
     }, {
       headers: {
         Authorization: `Bearer ${token}`
