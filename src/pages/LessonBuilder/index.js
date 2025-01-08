@@ -630,23 +630,44 @@ const [subscriptionState, setSubscriptionState] = useState({
   };
   
 // API Handlers
-// For tracking activities
 const trackUserActivity = React.useCallback(async (activity) => {
-  await fetch('/track_activity', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({
+  try {
+    const payload = {
       activity,
       email: user?.email,
       name: user?.name,
       given_name: user?.given_name,
       family_name: user?.family_name
-    })
-  });
-}, [token, user]);
+    };
+
+    if (activity === 'Downloaded Presentation') {
+      payload.lesson_data = {
+        prompt: formState,
+        outline: contentState.finalOutline,
+        structured_content: contentState.structuredContent
+      };
+    }
+
+    const response = await fetch(`${BASE_URL}/track_activity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Activity tracking failed');
+    }
+  } catch (error) {
+    setUiState(prev => ({
+      ...prev,
+      error: `Failed to track activity: ${error.message}`
+    }));
+  }
+}, [token, user, setUiState, formState, contentState]);
 
 // Update handleGenerateOutline
 const handleGenerateOutline = React.useCallback(async () => {
