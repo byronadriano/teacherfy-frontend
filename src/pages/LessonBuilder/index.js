@@ -464,12 +464,52 @@ const ConfirmationModal = memo(({
   );
 });
 
+const UpgradeModal = ({ open, onClose }) => (
+  <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <DialogTitle>Upgrade to Premium</DialogTitle>
+    <DialogContent>
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        You've reached your monthly limit of 5 free presentations. Upgrade to Premium for:
+      </Typography>
+      <Box sx={{ pl: 2 }}>
+        <Typography>• 50 presentations per month</Typography>
+        <Typography>• Priority support</Typography>
+        <Typography>• Advanced customization options</Typography>
+      </Box>
+      <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+        $20/month
+      </Typography>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={onClose} color="inherit">Cancel</Button>
+      <Button 
+        variant="contained" 
+        color="primary"
+        onClick={() => {
+          // Add your payment processing logic here
+          window.location.href = 'your-stripe-checkout-url';
+        }}
+      >
+        Upgrade Now
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
 const Chat = () => {
-  // Auth & User State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [showSignInPrompt, setShowSignInPrompt] = useState(true);
+const [user, setUser] = useState(null);
+
+// Auth & User State first
+const [isAuthenticated, setIsAuthenticated] = useState(false);
+const [token, setToken] = useState(null);
+const [showSignInPrompt, setShowSignInPrompt] = useState(true);
+
+// Then subscription state
+const [subscriptionState, setSubscriptionState] = useState({
+  downloadCount: 0,
+  isPremium: false,
+  showUpgradeModal: false
+});
 
   // Form & UI State
   const [formState, setFormState] = useState({
@@ -687,21 +727,35 @@ const handleGenerateOutline = React.useCallback(async () => {
   }
 }, [formState, token, trackUserActivity]);
 
+useEffect(() => {
+  if (!user?.email) return;
+  
+  const lastResetDate = localStorage.getItem(`lastResetDate_${user.email}`);
+  const currentDate = new Date();
+  
+  if (!lastResetDate || new Date(lastResetDate).getMonth() !== currentDate.getMonth()) {
+    localStorage.setItem(`downloadCount_${user.email}`, '0');
+    localStorage.setItem(`lastResetDate_${user.email}`, currentDate.toISOString());
+    setSubscriptionState(prev => ({
+      ...prev,
+      downloadCount: 0
+    }));
+  }
+}, [user?.email]);
+
 // Update generatePresentation
 const generatePresentation = React.useCallback(async () => {
   if (!token) {
     setShowSignInPrompt(true);
     return;
   }
-  
-  if (!contentState.finalOutline || !contentState.structuredContent?.length) {
-    setUiState(prev => ({
+  if (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5) {
+    setSubscriptionState(prev => ({
       ...prev,
-      error: "Please finalize the outline before generating a presentation"
+      showUpgradeModal: true
     }));
     return;
   }
-  
   setUiState(prev => ({ ...prev, isLoading: true }));
   
   try {
@@ -735,6 +789,15 @@ const generatePresentation = React.useCallback(async () => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
+    if (!subscriptionState.isPremium) {
+      const newCount = subscriptionState.downloadCount + 1;
+      localStorage.setItem(`downloadCount_${user.email}`, newCount.toString());
+      setSubscriptionState(prev => ({
+        ...prev,
+        downloadCount: newCount
+      }));
+    }
+
     await trackUserActivity('Downloaded Presentation');
   } catch (err) {
     setUiState(prev => ({
@@ -744,7 +807,7 @@ const generatePresentation = React.useCallback(async () => {
   } finally {
     setUiState(prev => ({ ...prev, isLoading: false }));
   }
-}, [formState, token, contentState.finalOutline, contentState.structuredContent, trackUserActivity]);
+}, [formState, token, contentState.finalOutline, contentState.structuredContent, trackUserActivity, subscriptionState, user?.email]);
 
 const handleRegenerateOutline = React.useCallback(async () => {
   if (!token) {
@@ -868,6 +931,16 @@ useEffect(() => {
 useEffect(() => {
   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 }, [contentState.outlineToConfirm]);
+
+// Add the new effect here
+useEffect(() => {
+  if (user?.email) {
+    setSubscriptionState(prev => ({
+      ...prev,
+      downloadCount: parseInt(localStorage.getItem(`downloadCount_${user.email}`) || '0')
+    }));
+  }
+}, [user?.email]);
 return (
   <>
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -967,7 +1040,10 @@ return (
               onFormChange={handleFormChange}
               onGenerateOutline={handleGenerateOutline}
             />
-
+            <UpgradeModal 
+              open={subscriptionState.showUpgradeModal}
+              onClose={() => setSubscriptionState(prev => ({ ...prev, showUpgradeModal: false }))}
+            />
             {/* Outline Display and Presentation Buttons */}
             {uiState.outlineConfirmed && (
               <Paper 
@@ -1083,45 +1159,37 @@ return (
                 </Box>
 
                 {/* Presentation Generation Buttons */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-start', 
-                  gap: 2 
-                }}>
-                  <Button
-                    variant="contained"
-                    onClick={generatePresentation}
-                    disabled={uiState.isLoading}
-                    startIcon={<DownloadIcon />}
-                    sx={{
-                      backgroundColor: "#2563eb",
-                      '&:hover': {
-                        backgroundColor: "#1d4ed8"
-                      },
-                      '&:disabled': {
-                        backgroundColor: "#9ca3af"
-                      }
-                    }}
-                  >
-                    {uiState.isLoading ? (
-                      <CircularProgress size={24} color="inherit" />
-                    ) : (
-                      "Open in PowerPoint"
+              <Button
+                variant="contained"
+                onClick={generatePresentation}
+                disabled={uiState.isLoading}
+                startIcon={<DownloadIcon />}
+                sx={{
+                  backgroundColor: "#2563eb",
+                  '&:hover': {
+                    backgroundColor: "#1d4ed8"
+                  },
+                  '&:disabled': {
+                    backgroundColor: "#9ca3af"
+                  }
+                }}
+              >
+                {uiState.isLoading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  <>
+                    Open in PowerPoint
+                    {!subscriptionState.isPremium && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ ml: 1, opacity: 0.8 }}
+                      >
+                        ({5 - subscriptionState.downloadCount} remaining)
+                      </Typography>
                     )}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    disabled
-                    sx={{
-                      backgroundColor: "#dc2626",
-                      '&:disabled': {
-                        backgroundColor: "#9ca3af"
-                      }
-                    }}
-                  >
-                    Open in Google Slides (Coming Soon)
-                  </Button>
-                </Box>
+                  </>
+                )}
+              </Button>
               </Paper>
             )}
 
