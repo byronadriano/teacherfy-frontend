@@ -594,7 +594,7 @@ const Chat = () => {
   
 // API Handlers
 // For tracking activities
-const trackUserActivity = async (activity) => {
+const trackUserActivity = React.useCallback(async (activity) => {
   await fetch('/track_activity', {
     method: 'POST',
     headers: {
@@ -609,7 +609,7 @@ const trackUserActivity = async (activity) => {
       family_name: user?.family_name
     })
   });
-};
+}, [token, user]);
 
 // Update handleGenerateOutline
 const handleGenerateOutline = React.useCallback(async () => {
@@ -688,7 +688,7 @@ const handleGenerateOutline = React.useCallback(async () => {
       isLoading: false
     }));
   }
-}, [formState, token, user]);
+}, [formState, token, trackUserActivity]);
 
 // Update generatePresentation
 const generatePresentation = React.useCallback(async () => {
@@ -747,7 +747,7 @@ const generatePresentation = React.useCallback(async () => {
   } finally {
     setUiState(prev => ({ ...prev, isLoading: false }));
   }
-}, [formState, token, contentState.finalOutline, contentState.structuredContent, user]);
+}, [formState, token, contentState.finalOutline, contentState.structuredContent, trackUserActivity]);
 
 const handleRegenerateOutline = React.useCallback(async () => {
   if (!token) {
