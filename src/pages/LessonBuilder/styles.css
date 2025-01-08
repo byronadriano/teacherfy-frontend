@@ -1,62 +1,80 @@
-/* Layout containers */
-.sidebar {
-  width: 600px;
-  background-color: #f5f5f5;
-  border-right: 1px solid #f5f5f5;
-  padding: 32px;
+/* Apply flexbox to the entire screen */
+/* html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+  font-family: 'Inter', sans-serif;
+} */
+
+/* Flex container for the app layout */
+/* .app-container {
+  display: flex;
   height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+} */
+
+/* Sidebar Styling */
+.sidebar {
+  width: 250px;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+  border-right: 1px solid #e0e0e0;
+  padding: 0px;
   position: fixed;
   left: 0;
   top: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  box-shadow: 1px 0 2px #f5f5f5;
-  overflow-y: auto;
-  box-sizing: border-box;
+  justify-content: space-between;
+  z-index: 10;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
-.sidebar img {
-  width: 200px;
-  height: auto;
-  margin-bottom: 16px;
-}
-
-.sidebar .MuiTypography-subtitle1 {
-  font-size: 0.875rem;
-  word-break: break-word;
-  max-width: 200px;
-  text-align: center;
-}
-
+/* Main content styling next to the sidebar */
 .main-content {
-  margin-left: 600px; /* Adjusted for the sidebar width */
+  margin-left: 250px;
+  flex: 1;
   padding: 32px;
   box-sizing: border-box;
-  width: calc(100% - 400px); /* Full width minus sidebar */
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center content vertically */
+  overflow-y: auto;
+  background: #f9f9f9;
 }
 
-/* Content and Form Containers - Consistent Width and Alignment */
+/* Content and Form Containers - Consistent Width and Alignment*/
 .form-container, .content-container, .form-paper {
-  max-width: 600px; /* Consistent width for form and content */
-  margin: 0 auto;
+  max-width: 100%; 
   width: 100%;
   box-sizing: border-box;
-}
+} 
 
-/* Padding and Visual Consistency */
+/* Form Section Styling */
 .form-paper {
+  /* max-width: 800px; */
+  margin: 0 auto;
   padding: 24px;
-  margin-bottom: 24px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
+/* Button Styling Consistency */
+.generate-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  background-color: #2563eb;
+}
+
+.generate-button:hover {
+  background-color: #1d4ed8;
+}
 /* Top action buttons */
 .action-buttons {
   display: flex;
@@ -72,160 +90,19 @@
   padding: 8px 16px !important;
   text-transform: none !important;
   font-weight: 500 !important;
-  font-size: 0.875rem !important;
+  font-size: 1.2rem !important;
 }
 
-/* Adjusting input sections for consistent spacing */
-.number-slides-container {
-  width: 100%;
-  margin-bottom: 24px;
-}
-
-/* Consistent button sizing */
-.generate-button {
-  width: 100%;
-  padding: 12px;
-  font-size: 1rem;
-  font-weight: 500;
-  text-transform: none;
-  margin-top: 8px;
-  height: 48px;
-  background-color: #2563eb;
-}
-
-.generate-button:hover {
-  background-color: #1d4ed8;
-}
-
-/* Google Sign-In Prompt - Center Fix */
-.signin-prompt {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%); /* Center modal */
-  background-color: rgba(41, 39, 39); /* Darker overlay for contrast */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1100;
-  width: 100vw;
-  height: 100vh;
-}
-
-/* Adjust dialog box to center properly */
-.signin-dialog {
-  background-color: white;
-  padding: 32px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
-}
-
-
-
-/* MUI Components styling */
-.MuiPaper-root {
-  background-color: #f5f5f5 !important;
-  border-radius: 8px !important;
-  border: 1px solid #e5e7eb;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.MuiOutlinedInput-root {
-  background-color: #f5f5f5;
-}
-
-.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: #9ca3af;
-}
-
-.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #2563eb;
-  border-width: 2px;
-}
-
-/* Form fields */
-.MuiFormControl-root {
-  margin-bottom: 16px !important;
-  width: 100%;
-}
-
-.MuiFormControl-root.number-slides {
-  width: 200px;
-}
-
-/* Buttons */
-.MuiButton-root {
-  text-transform: none !important;
-  border-radius: 6px !important;
-  font-weight: 500 !important;
-}
-
-.MuiButton-contained {
-  background-color: #2563eb !important;
-}
-
-.MuiButton-contained:hover {
-  background-color: #1d4ed8 !important;
-}
-
-.MuiButton-contained:disabled {
-  background-color: #9ca3af !important;
-}
-
-/* Modal styling */
-.MuiDialog-paper {
-  border-radius: 12px !important;
-  max-width: 800px !important;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* Responsive design adjustments */
-@media (max-width: 1024px) {
-  .main-content {
-    padding: 24px;
-  }
-}
-
-@media (max-width: 768px) {
+/* Responsive Design */
+@media (max-width: 100%) {
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    padding: 16px;
+      width: 100%;
+      height: auto;
+      position: static;
   }
-  
+
   .main-content {
-    margin-left: 0;
-    padding: 16px;
-  }
-  
-  .content-container {
-    padding: 0;
-  }
-  
-  .MuiDialog-paper {
-    margin: 16px !important;
+      margin-left: 0;
+      width: auto;
   }
 }
