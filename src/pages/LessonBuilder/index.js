@@ -847,37 +847,59 @@ const generateGoogleSlides = React.useCallback(async () => {
 
   setGoogleSlidesState(prev => ({ ...prev, isGenerating: true, error: null }));
   try {
-    // First attempt to generate slides
-    const response = await fetch(`${BASE_URL}/generate_slides`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        structured_content: contentState.structuredContent,
+    // Store the current state before attempting slides generation
+    const slideData = {
+      structured_content: contentState.structuredContent,
+      meta: {
         lesson_topic: formState.lessonTopic,
         district: formState.district,
         grade_level: formState.gradeLevel,
         subject_focus: formState.subjectFocus,
-        custom_prompt: formState.customPrompt,
-        num_slides: Number(formState.numSlides)
-      }),
+      }
+    };
+    localStorage.setItem('pendingSlideGeneration', JSON.stringify(slideData));
+
+    const response = await fetch(`${BASE_URL}/generate_slides`, {
+      method: "POST",
+      credentials: 'include', // Important for cookies
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(slideData),
     });
 
     const data = await response.json();
 
-    // If we need Google authorization
     if (response.status === 401 || response.status === 403) {
-      // Redirect to the existing authorization endpoint
-      window.location.href = `${BASE_URL}/authorize`;
+      // For OAuth redirect, open in a new window
+      const authWindow = window.open(
+        `${BASE_URL}/authorize`,
+        'Google Authorization',
+        'width=600,height=800,scrollbars=yes'
+      );
+
+      // Poll for completion
+      const checkAuth = setInterval(() => {
+        try {
+          if (authWindow.closed) {
+            clearInterval(checkAuth);
+            // Retry the slides generation
+            generateGoogleSlides();
+          }
+        } catch (e) {
+          clearInterval(checkAuth);
+          console.error('Auth window check failed:', e);
+        }
+      }, 500);
+
       return;
     }
 
     if (data.presentation_url) {
       window.open(data.presentation_url, '_blank');
-      // Track the activity if needed
       await trackUserActivity('Generated Google Slides');
+      localStorage.removeItem('pendingSlideGeneration');
     } else {
       throw new Error("Failed to get presentation URL");
     }
@@ -897,10 +919,9 @@ const generateGoogleSlides = React.useCallback(async () => {
   isAuthenticated, 
   token, 
   contentState.structuredContent, 
-  formState, 
+  formState,
   trackUserActivity
 ]);
-
 
 const handleRegenerateOutline = React.useCallback(async () => {
   if (!token) {
