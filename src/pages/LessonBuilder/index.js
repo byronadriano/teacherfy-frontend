@@ -46,6 +46,8 @@ import {
 
 import "./styles.css";  // Import your CSS file here to apply styles.
 
+import SlideshowIcon from '@mui/icons-material/Slideshow';
+
 
 // FormSection Component
 const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGenerateOutline }) => (
@@ -504,12 +506,18 @@ const [isAuthenticated, setIsAuthenticated] = useState(false);
 const [token, setToken] = useState(null);
 const [showSignInPrompt, setShowSignInPrompt] = useState(true);
 
-// Then subscription state
-const [subscriptionState, setSubscriptionState] = useState({
-  downloadCount: 0,
-  isPremium: false,
-  showUpgradeModal: false
-});
+  // Add the Google Slides state here
+  const [googleSlidesState, setGoogleSlidesState] = useState({
+    isGenerating: false,
+    error: null
+  });
+
+  // Subscription state
+  const [subscriptionState, setSubscriptionState] = useState({
+    downloadCount: 0,
+    isPremium: false,
+    showUpgradeModal: false
+  });
 
   // Form & UI State
   const [formState, setFormState] = useState({
@@ -829,6 +837,70 @@ const generatePresentation = React.useCallback(async () => {
     setUiState(prev => ({ ...prev, isLoading: false }));
   }
 }, [formState, token, contentState.finalOutline, contentState.structuredContent, trackUserActivity, subscriptionState, user?.email]);
+
+// Modify your generateGoogleSlides function
+const generateGoogleSlides = React.useCallback(async () => {
+  if (!isAuthenticated) {
+    setShowSignInPrompt(true);
+    return;
+  }
+
+  setGoogleSlidesState(prev => ({ ...prev, isGenerating: true, error: null }));
+  try {
+    // First attempt to generate slides
+    const response = await fetch(`${BASE_URL}/generate_slides`, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        structured_content: contentState.structuredContent,
+        lesson_topic: formState.lessonTopic,
+        district: formState.district,
+        grade_level: formState.gradeLevel,
+        subject_focus: formState.subjectFocus,
+        custom_prompt: formState.customPrompt,
+        num_slides: Number(formState.numSlides)
+      }),
+    });
+
+    const data = await response.json();
+
+    // If we need Google authorization
+    if (response.status === 401 || response.status === 403) {
+      // Redirect to the existing authorization endpoint
+      window.location.href = `${BASE_URL}/authorize`;
+      return;
+    }
+
+    if (data.presentation_url) {
+      window.open(data.presentation_url, '_blank');
+      // Track the activity if needed
+      await trackUserActivity('Generated Google Slides');
+    } else {
+      throw new Error("Failed to get presentation URL");
+    }
+  } catch (err) {
+    setGoogleSlidesState(prev => ({
+      ...prev,
+      error: err.message || "Error generating Google Slides"
+    }));
+    setUiState(prev => ({
+      ...prev,
+      error: err.message || "Error generating Google Slides"
+    }));
+  } finally {
+    setGoogleSlidesState(prev => ({ ...prev, isGenerating: false }));
+  }
+}, [
+  isAuthenticated, 
+  token, 
+  contentState.structuredContent, 
+  formState, 
+  trackUserActivity
+]);
+
 
 const handleRegenerateOutline = React.useCallback(async () => {
   if (!token) {
@@ -1178,47 +1250,63 @@ return (
                     </Box>
                   ))}
                 </Box>
-
-                {/* Presentation Generation Buttons */}
-              <Button
-                variant="contained"
-                onClick={generatePresentation}
-                disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
-                startIcon={<DownloadIcon />}
-                sx={{
-                  backgroundColor: "#2563eb",
-                  '&:hover': {
-                    backgroundColor: "#1d4ed8"
-                  },
-                  '&:disabled': {
-                    backgroundColor: "#9ca3af"
-                  }
-                }}
-              >
-                {uiState.isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  <>
-                    Open in PowerPoint
-                    {!subscriptionState.isPremium && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ ml: 1, opacity: 0.8 }}
-                      >
-                        ({5 - subscriptionState.downloadCount} remaining)
-                      </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={generatePresentation}
+                    disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
+                    startIcon={<DownloadIcon />}
+                    sx={{
+                      backgroundColor: "#2563eb",
+                      '&:hover': {
+                        backgroundColor: "#1d4ed8"
+                      },
+                      '&:disabled': {
+                        backgroundColor: "#9ca3af"
+                      }
+                    }}
+                  >
+                    {uiState.isLoading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      <>
+                        Open in PowerPoint
+                        {!subscriptionState.isPremium && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ ml: 1, opacity: 0.8 }}
+                          >
+                            ({5 - subscriptionState.downloadCount} remaining)
+                          </Typography>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-              </Button>
-              <Button
-                  variant="contained"
-                  color="secondary"
-                  disabled
-                  sx={{ backgroundColor: "#d32f2f" }}
-                >
-                  Open in Google Slides (Coming Soon)
-                </Button>
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    onClick={generateGoogleSlides}
+                    startIcon={<SlideshowIcon />}
+                    disabled={uiState.isLoading || googleSlidesState.isGenerating || !isAuthenticated}
+                    sx={{
+                      backgroundColor: "#dc2626",
+                      '&:hover': {
+                        backgroundColor: "#b91c1c"
+                      },
+                      '&:disabled': {
+                        backgroundColor: "#9ca3af"
+                      }
+                    }}
+                  >
+                    {googleSlidesState.isGenerating ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : !isAuthenticated ? (
+                      "Sign in for Google Slides"
+                    ) : (
+                      "Open in Google Slides"
+                    )}
+                  </Button>
+                </Box>
               </Paper>
             )}
 
