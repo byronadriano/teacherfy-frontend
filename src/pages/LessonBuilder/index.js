@@ -838,7 +838,6 @@ const generatePresentation = React.useCallback(async () => {
   }
 }, [formState, token, contentState.finalOutline, contentState.structuredContent, trackUserActivity, subscriptionState, user?.email]);
 
-// Modify your generateGoogleSlides function
 const generateGoogleSlides = React.useCallback(async () => {
   if (!isAuthenticated) {
     setShowSignInPrompt(true);
@@ -847,49 +846,79 @@ const generateGoogleSlides = React.useCallback(async () => {
 
   setGoogleSlidesState(prev => ({ ...prev, isGenerating: true, error: null }));
   try {
-    // Store the current state before attempting slides generation
-    const slideData = {
-      structured_content: contentState.structuredContent,
-      meta: {
-        lesson_topic: formState.lessonTopic,
-        district: formState.district,
-        grade_level: formState.gradeLevel,
-        subject_focus: formState.subjectFocus,
-      }
-    };
-    localStorage.setItem('pendingSlideGeneration', JSON.stringify(slideData));
-
     const response = await fetch(`${BASE_URL}/generate_slides`, {
       method: "POST",
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify(slideData),
+      body: JSON.stringify({
+        structured_content: contentState.structuredContent,
+        meta: {
+          lesson_topic: formState.lessonTopic,
+          district: formState.district,
+          grade_level: formState.gradeLevel,
+          subject_focus: formState.subjectFocus,
+        }
+      }),
     });
 
     const data = await response.json();
 
-    if (response.status === 401 || response.status === 403) {
-      // For OAuth redirect, open in a new window
+    if (response.status === 401 && data.needsAuth) {
+      // Store current generation data
+      localStorage.setItem('pendingSlideGeneration', JSON.stringify({
+        structured_content: contentState.structuredContent,
+        meta: {
+          lesson_topic: formState.lessonTopic,
+          district: formState.district,
+          grade_level: formState.gradeLevel,
+          subject_focus: formState.subjectFocus,
+        }
+      }));
+
+      // Open Google auth in new window
       const authWindow = window.open(
-        `${BASE_URL}/authorize`,
+        data.authUrl,
         'Google Authorization',
         'width=600,height=800,scrollbars=yes'
       );
 
-      // Poll for completion
+      // Poll for auth window close
       const checkAuth = setInterval(() => {
-        try {
-          if (authWindow.closed) {
-            clearInterval(checkAuth);
-            // Retry the slides generation
-            generateGoogleSlides();
-          }
-        } catch (e) {
+        if (authWindow.closed) {
           clearInterval(checkAuth);
-          console.error('Auth window check failed:', e);
+          // After auth window closes, retry the operation
+          const retryGeneration = async () => {
+            try {
+              const retryResponse = await fetch(`${BASE_URL}/generate_slides`, {
+                method: "POST",
+                credentials: 'include',
+                headers: { 
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(JSON.parse(localStorage.getItem('pendingSlideGeneration')))
+              });
+
+              if (!retryResponse.ok) {
+                throw new Error("Failed to generate slides after authorization");
+              }
+
+              const retryData = await retryResponse.json();
+              if (retryData.presentation_url) {
+                window.open(retryData.presentation_url, '_blank');
+                await trackUserActivity('Generated Google Slides');
+                localStorage.removeItem('pendingSlideGeneration');
+              }
+            } catch (retryError) {
+              throw new Error("Failed to generate slides after authorization");
+            }
+          };
+          
+          // Wait a brief moment for the session to be properly set
+          setTimeout(retryGeneration, 1000);
         }
       }, 500);
 
