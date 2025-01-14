@@ -1,4 +1,4 @@
-// Chat.js
+// src/pages/LessonBuilder/index.js
 import React, { useState, useEffect, useRef, memo } from "react";
 import axios from "axios";
 import {
