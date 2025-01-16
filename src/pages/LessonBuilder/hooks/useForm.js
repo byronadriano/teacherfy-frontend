@@ -6,18 +6,14 @@ import {
   generateRegenerationPrompt,
   generateFullPrompt,
 } from "../../../utils/outlineFormatter";
-import { EXAMPLE_OUTLINE } from "../../../utils/constants";
-
-// Import services
-import { getOutline, regenerateOutline, trackUserActivity } from "../../../services/api";
+import { FORM, EXAMPLE_FORM_DATA, EXAMPLE_OUTLINE, isExampleConfig } from "../../../utils/constants";
+import { outlineService, analyticsService } from "../../../services";
 
 export default function useForm({
   token,
-  user, // if you need user info for logging
-  isExampleConfiguration,
+  user,
   setShowSignInPrompt,
 }) {
-  // Form-related state
   const [formState, setFormState] = useState({
     lessonTopic: "",
     district: "",
@@ -25,10 +21,9 @@ export default function useForm({
     subjectFocus: "",
     language: "",
     customPrompt: "",
-    numSlides: 3,
+    numSlides: FORM.DEFAULT_SLIDES || 3,
   });
 
-  // UI-related state (loading, error, etc.)
   const [uiState, setUiState] = useState({
     isLoading: false,
     error: "",
@@ -40,14 +35,12 @@ export default function useForm({
     generateOutlineClicked: false,
   });
 
-  // Outline content
   const [contentState, setContentState] = useState({
     outlineToConfirm: "",
     finalOutline: "",
     structuredContent: [],
   });
 
-  // Handle form field changes
   const handleFormChange = useCallback((field, value) => {
     setFormState((prev) => ({
       ...prev,
@@ -55,18 +48,8 @@ export default function useForm({
     }));
   }, []);
 
-  // Load example configuration
   const loadExample = useCallback(() => {
-    setFormState({
-      gradeLevel: "4th grade",
-      subjectFocus: "Math",
-      lessonTopic: "Equivalent Fractions",
-      district: "Denver Public Schools",
-      language: "English",
-      customPrompt:
-        "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson. Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention",
-      numSlides: 5,
-    });
+    setFormState(EXAMPLE_FORM_DATA);
     setUiState((prev) => ({
       ...prev,
       isFormExpanded: true,
@@ -82,7 +65,6 @@ export default function useForm({
     });
   }, []);
 
-  // Clear all form fields and reset
   const clearAll = useCallback(() => {
     setFormState({
       lessonTopic: "",
@@ -107,14 +89,12 @@ export default function useForm({
     });
   }, []);
 
-  // Generate outline
   const handleGenerateOutline = useCallback(async () => {
     if (!token) {
       setShowSignInPrompt(true);
       return;
     }
 
-    // Validate required fields
     if (
       !formState.gradeLevel ||
       !formState.subjectFocus ||
@@ -133,53 +113,47 @@ export default function useForm({
     }));
 
     try {
-      // If using example
-      if (isExampleConfiguration(formState)) {
-        const { structured_content } = EXAMPLE_OUTLINE;
+      // Check if current form matches example configuration
+      if (isExampleConfig(formState)) {
+        console.log("Using example configuration");
         setContentState((prev) => ({
           ...prev,
-          outlineToConfirm: formatOutlineForDisplay(structured_content),
-          structuredContent: structured_content,
-        }));
-        setUiState((prev) => ({
-          ...prev,
-          outlineModalOpen: true,
+          outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
+          structuredContent: EXAMPLE_OUTLINE.structured_content,
         }));
       } else {
-        // Otherwise, call API
+        console.log("Generating new outline");
         const fullPrompt = generateFullPrompt(formState);
-        const data = await getOutline(formState, token, fullPrompt);
+        const data = await outlineService.generate({
+          ...formState,
+          custom_prompt: fullPrompt
+        }, token);
 
-        const rawOutlineText = data.messages[0];
         const structuredContent = parseOutlineToStructured(
-          rawOutlineText,
+          data.messages[0],
           formState.numSlides
         );
 
         setContentState((prev) => ({
           ...prev,
-          outlineToConfirm: formatOutlineForDisplay(
-            structuredContent,
-            rawOutlineText
-          ),
+          outlineToConfirm: formatOutlineForDisplay(structuredContent),
           structuredContent,
         }));
-        setUiState((prev) => ({
-          ...prev,
-          outlineModalOpen: true,
-        }));
-
-        // Track the activity directly here
-        await trackUserActivity("Generated Outline", user, token, {
-          prompt: formState,
-          // ...other data if you want
-        });
       }
-    } catch (error) {
+
       setUiState((prev) => ({
         ...prev,
-        error:
-          error.response?.data?.error || "Error generating outline. Please try again.",
+        outlineModalOpen: true,
+      }));
+
+      await analyticsService.trackActivity("Generated Outline", user, token, {
+        prompt: formState,
+      });
+    } catch (error) {
+      console.error("Error generating outline:", error);
+      setUiState((prev) => ({
+        ...prev,
+        error: error.message || "Error generating outline. Please try again.",
       }));
     } finally {
       setUiState((prev) => ({
@@ -187,15 +161,8 @@ export default function useForm({
         isLoading: false,
       }));
     }
-  }, [
-    token,
-    user,
-    formState,
-    isExampleConfiguration,
-    setShowSignInPrompt,
-  ]);
+  }, [formState, token, user, setShowSignInPrompt]);
 
-  // Regenerate Outline
   const handleRegenerateOutline = useCallback(async () => {
     if (!token) {
       setShowSignInPrompt(true);
@@ -221,29 +188,33 @@ export default function useForm({
         formState,
         uiState.modifiedPrompt
       );
-      const data = await regenerateOutline(formState, token, regenerationPrompt);
+      
+      const data = await outlineService.regenerate(
+        formState,
+        token,
+        regenerationPrompt
+      );
 
       const structuredContent = parseOutlineToStructured(
         data.messages[0],
         formState.numSlides
       );
-      const displayMarkdown = formatOutlineForDisplay(structuredContent);
-
+      
       setContentState((prev) => ({
         ...prev,
-        outlineToConfirm: displayMarkdown,
+        outlineToConfirm: formatOutlineForDisplay(structuredContent),
         structuredContent,
       }));
 
-      // If you'd like to track that a user regenerated an outline:
-      await trackUserActivity("Regenerated Outline", user, token, {
+      await analyticsService.trackActivity("Regenerated Outline", user, token, {
         prompt: formState,
+        regeneration_count: uiState.regenerationCount + 1,
       });
+      
     } catch (error) {
       setUiState((prev) => ({
         ...prev,
-        error:
-          error.response?.data?.error || "Error regenerating outline.",
+        error: error.message || "Error regenerating outline.",
       }));
     } finally {
       setUiState((prev) => ({
@@ -251,7 +222,15 @@ export default function useForm({
         isLoading: false,
       }));
     }
-  }, [token, user, uiState.regenerationCount, uiState.modifiedPrompt, formState, setShowSignInPrompt]);
+  }, [
+    token,
+    formState,
+    uiState.regenerationCount,
+    uiState.modifiedPrompt,
+    setShowSignInPrompt,
+    user
+  ]);
+
 
   return {
     formState,

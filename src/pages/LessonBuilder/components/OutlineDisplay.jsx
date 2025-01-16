@@ -36,8 +36,11 @@ const OutlineDisplay = ({
         mb: 2 
       }}>
         <Typography variant="h6" sx={{ 
-          fontWeight: "600",
-          color: '#111827'
+                fontWeight: "200",
+                fontSize: '2rem',
+                color: '#111827',
+                textAlign: 'center', // Center the text
+                width: '100%' // Ensure the text takes the full width
         }}>
           Lesson Outline
         </Typography>

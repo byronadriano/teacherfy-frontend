@@ -1,23 +1,34 @@
 /* App.css */
 
-/* General Styles */
+/* 
+  If you're using the sidebar layout from LessonBuilder, 
+  you typically wouldn't set the entire body to 
+  display:flex or height:100vh here. Instead, keep it minimal. 
+*/
+
 body {
-  font-family: 'Arial', sans-serif;
   margin: 0;
   padding: 0;
   background-color: #f4f2ec; /* Matches the logo background */
   color: #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
+
+  /* Removed display: flex; align-items: center; justify-content: center; height: 100vh; */
+  /* If you still need a "centered card" layout for certain pages, 
+     handle it with a container class (below). */
 }
 
-/* Container for the application */
+/* -------------------------------------- */
+/*       A CONTAINER FOR A CENTERED CARD  */
+/* -------------------------------------- */
 .container {
-  text-align: center;
+  /* Centering logic if you want a "card" style in the middle of the screen.
+     If you want the entire screen to show the sidebar layout instead, 
+     only use .container on pages that need a card layout. */
   width: 100%;
   max-width: 500px;
+  margin: 40px auto; /* or use flex parents if you prefer */
+  text-align: center;
+
   background: #ffffff;
   border-radius: 15px;
   padding: 20px 30px;
@@ -101,10 +112,10 @@ button.generate-button:hover {
 
 @media (max-width: 768px) {
   .container {
-      padding: 15px;
+    padding: 15px;
   }
 
   h1 {
-      font-size: 20px;
+    font-size: 20px;
   }
 }

@@ -1,5 +1,7 @@
+// src/pages/LessonBuilder/hooks/useAuth.js
 import { useState, useCallback } from 'react';
 import { googleLogout } from '@react-oauth/google';
+import { AUTH } from '../../../utils/constants';
 
 const useAuth = () => {
   const [user, setUser] = useState(null);

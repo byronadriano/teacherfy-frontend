@@ -1,0 +1,24 @@
+/* global.css */
+
+/* 
+  Keep global resets and minimal base styles here.
+  This helps avoid conflicts if you import it everywhere.
+*/
+
+body {
+  margin: 0;
+  padding: 0;
+
+  /* Use a neutral font-family or your desired system font stack. 
+     If you want to unify across the app, do it here or in your MUI theme. */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+               'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 
+               'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}

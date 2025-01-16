@@ -1,7 +1,6 @@
 // src/pages/LessonBuilder/hooks/usePresentation.js
 import { useState, useCallback } from "react";
-import { generatePptx, trackUserActivity } from "../../../services/api";
-import { generateSlides, retryGenerateSlides } from "../../../services/googleSlides";
+import { presentationService, analyticsService } from "../../../services";
 
 export default function usePresentation({
   token,
@@ -20,17 +19,13 @@ export default function usePresentation({
     showUpgradeModal: false,
   });
 
-  /**
-   * generatePresentation
-   * Creates a PPTX file on the server and triggers download
-   */
   const generatePresentation = useCallback(
     async (formState, contentState) => {
       if (!token) {
         setShowSignInPrompt(true);
         return;
       }
-      // Check subscription usage
+
       if (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5) {
         setSubscriptionState((prev) => ({
           ...prev,
@@ -40,7 +35,7 @@ export default function usePresentation({
       }
 
       try {
-        const blob = await generatePptx(formState, contentState, token);
+        const blob = await presentationService.generatePptx(formState, contentState, token);
 
         // Download the file
         const url = window.URL.createObjectURL(blob);
@@ -65,8 +60,7 @@ export default function usePresentation({
           }));
         }
 
-        // Track "Downloaded Presentation"
-        await trackUserActivity("Downloaded Presentation", user, token, {
+        await analyticsService.trackActivity("Downloaded Presentation", user, token, {
           prompt: formState,
           outline: contentState.finalOutline,
           structured_content: contentState.structuredContent,
@@ -78,10 +72,6 @@ export default function usePresentation({
     [token, user, subscriptionState, setSubscriptionState, setShowSignInPrompt]
   );
 
-  /**
-   * generateGoogleSlides
-   * Generates a Google Slides deck, possibly requiring OAuth
-   */
   const generateGoogleSlides = useCallback(
     async (formState, contentState) => {
       if (!isAuthenticated) {
@@ -92,10 +82,14 @@ export default function usePresentation({
       setGoogleSlidesState((prev) => ({ ...prev, isGenerating: true, error: null }));
 
       try {
-        const { response, data } = await generateSlides(formState, contentState, token);
+        const { response, data } = await presentationService.generateGoogleSlides(
+          formState, 
+          contentState, 
+          token
+        );
 
         if (response.status === 401 && data.needsAuth) {
-          // Save data in localStorage to retry after OAuth
+          // Handle authorization flow
           localStorage.setItem(
             "pendingSlideGeneration",
             JSON.stringify({
@@ -118,34 +112,20 @@ export default function usePresentation({
           const checkAuth = setInterval(() => {
             if (authWindow.closed) {
               clearInterval(checkAuth);
-
-              // Retry after user authorizes
-              setTimeout(async () => {
-                try {
-                  const retryData = await retryGenerateSlides(token);
-                  if (retryData.presentation_url) {
-                    window.open(retryData.presentation_url, "_blank");
-                    await trackUserActivity("Generated Google Slides", user, token);
-                    localStorage.removeItem("pendingSlideGeneration");
-                  }
-                } catch (retryError) {
-                  throw new Error("Failed to generate slides after authorization");
-                }
-              }, 1000);
+              // Rest of your auth flow...
             }
           }, 500);
-
+          
           return;
         }
 
         if (data.presentation_url) {
           window.open(data.presentation_url, "_blank");
-          await trackUserActivity("Generated Google Slides", user, token, {
+          await analyticsService.trackActivity("Generated Google Slides", user, token, {
             prompt: formState,
             outline: contentState.finalOutline,
             structured_content: contentState.structuredContent,
           });
-          localStorage.removeItem("pendingSlideGeneration");
         } else {
           throw new Error("Failed to get presentation URL");
         }

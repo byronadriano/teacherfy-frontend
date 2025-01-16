@@ -18,8 +18,8 @@ import "./styles.css";
 import SignInPrompt from "../../components/modals/SignInPrompt";
 import UpgradeModal from "../../components/modals/UpgradeModal";
 import ConfirmationModal from "../../components/modals/ConfirmationModal";
-import FormSection from "../../components/common/FormSection";
-import OutlineDisplay from "../../components/common/OutlineDisplay";
+import FormSection from "./components/FormSection";
+import OutlineDisplay from "./components/OutlineDisplay";
 
 const Chat = () => {
   const {

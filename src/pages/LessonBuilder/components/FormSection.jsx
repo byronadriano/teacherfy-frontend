@@ -1,3 +1,4 @@
+// src/pages/LessonBuilder/components/FormSection.jsx
 import React, { memo } from 'react';
 import {
   Box,
@@ -16,7 +17,7 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import { FORM_OPTIONS } from '../../utils/constants';
+import { FORM } from '../../../utils/constants';
 
 const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGenerateOutline }) => (
   <Paper elevation={0} className="form-paper">
@@ -29,11 +30,13 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
       alignItems: "center"
     }}>
       <Typography variant="h6" sx={{ 
-        fontWeight: "600",
-        fontSize: '1.25rem',
-        color: '#111827'
+        fontWeight: "200",
+        fontSize: '2rem',
+        color: '#111827',
+        textAlign: 'center', // Center the text
+        width: '100%' // Ensure the text takes the full width
       }}>
-        Lesson Plan Inputs
+        What do you want to teach?
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {uiState.isLoading && !uiState.outlineModalOpen && (
@@ -62,7 +65,7 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
             onChange={(e) => onFormChange('language', e.target.value)}
             label="Language *"
           >
-            {FORM_OPTIONS.languages.map((language) => (
+            {FORM.LANGUAGES.map((language) => (
               <MenuItem key={language} value={language}>{language}</MenuItem>
             ))}
           </Select>
@@ -75,7 +78,7 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
             onChange={(e) => onFormChange('gradeLevel', e.target.value)}
             label="Grade Level *"
           >
-            {FORM_OPTIONS.grades.map((grade) => (
+            {FORM.GRADES.map((grade) => (
               <MenuItem key={grade} value={grade}>{grade}</MenuItem>
             ))}
           </Select>
@@ -88,7 +91,7 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
             onChange={(e) => onFormChange('subjectFocus', e.target.value)}
             label="Subject *"
           >
-            {FORM_OPTIONS.subjects.map((subject) => (
+            {FORM.SUBJECTS.map((subject) => (
               <MenuItem key={subject} value={subject}>{subject}</MenuItem>
             ))}
           </Select>
