@@ -1,28 +1,11 @@
+// components/modals/SignInPrompt.jsx
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Modal
-} from "@mui/material";
+import { Box, Typography, Modal } from "@mui/material";
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import Logo from '../../assets/images/Teacherfyoai.png';
+import { GOOGLE_CLIENT_ID } from '../../utils/constants';
 
-
-const SignInPrompt = ({ open, onClose, onSuccess, clientId }) => {
-  // Early return if the client ID is missing
-  if (!clientId) {
-    console.error("Google Client ID is not defined!");
-    return (
-      <Modal open={open} onClose={onClose}>
-        <Box sx={{ p: 2 }}>
-          <Typography color="error" variant="h6">
-            Error: Google Client ID not found.
-          </Typography>
-        </Box>
-      </Modal>
-    );
-  }
-
+const SignInPrompt = ({ open, onClose, onSuccess }) => {
   return (
     <Modal
       open={open}
@@ -51,7 +34,7 @@ const SignInPrompt = ({ open, onClose, onSuccess, clientId }) => {
       >
         <Box sx={{ mb: 3 }}>
           <img
-            src={Logo}  // Updated to use imported Logo
+            src={Logo}
             alt="Teacherfy AI Logo"
             style={{ maxWidth: "150px", height: "auto" }}
           />
@@ -63,10 +46,13 @@ const SignInPrompt = ({ open, onClose, onSuccess, clientId }) => {
           Please sign in with your Google account to create personalized lesson plans.
         </Typography>
 
-        <GoogleOAuthProvider clientId={clientId}>
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <GoogleLogin
             onSuccess={onSuccess}
-            onError={() => alert("Login Failed")}
+            onError={() => {
+              console.error("Login Failed");
+              alert("Login Failed. Please try again.");
+            }}
             theme="filled_blue"
             shape="pill"
             size="large"

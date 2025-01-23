@@ -1,26 +1,25 @@
 // src/utils/constants/examples.js
 export const EXAMPLE_FORM_DATA = {
+    resourceType: "Presentation",
     gradeLevel: "4th grade",
     subjectFocus: "Math",
-    lessonTopic: "Equivalent Fractions",
-    district: "Denver Public Schools",
+    selectedStandards: ["Common Core Math 4.NF.1"], // Updated for new array format
     language: "English",
-    customPrompt: [
-      "Create a lesson plan that introduces and reinforces key vocabulary.",
-      "Include at least three new terms with definitions and examples.",
-      "Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson.",
-      "Finally, suggest opportunities for students to engage in collaborative or hands-on learning to deepen their understanding and retention"
-    ].join(" "),
-    numSlides: 5
+    customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson.",
+    numSlides: 5,
+    includeImages: true,
+    numQuestions: 5,
+    includeAnswerKey: true,
+    includeDifferentiation: true
   };
   
   // Helper function to check if current form matches example configuration
   export const isExampleConfig = (formState) => {
     return (
+      formState.resourceType === EXAMPLE_FORM_DATA.resourceType &&
       formState.gradeLevel === EXAMPLE_FORM_DATA.gradeLevel &&
       formState.subjectFocus === EXAMPLE_FORM_DATA.subjectFocus &&
-      formState.lessonTopic === EXAMPLE_FORM_DATA.lessonTopic &&
-      formState.district === EXAMPLE_FORM_DATA.district &&
+      JSON.stringify(formState.selectedStandards) === JSON.stringify(EXAMPLE_FORM_DATA.selectedStandards) &&
       formState.language === EXAMPLE_FORM_DATA.language &&
       formState.customPrompt === EXAMPLE_FORM_DATA.customPrompt &&
       formState.numSlides === EXAMPLE_FORM_DATA.numSlides
@@ -61,61 +60,7 @@ Teacher Notes:
 Visual Elements:
 - Animation of a burrito being cut into different equivalent portions
 - Interactive fraction wall labeled in English and Spanish
-- Hands-on fraction strips for each student
-
-
-Slide 3: Finding Equivalent Fractions Together
-Content:
-- When we multiply 1/2 by 2/2, we get 2/4
-- It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!
-- Your turn: Try finding an equivalent fraction for 2/3
-
-Teacher Notes:
-- ENGAGEMENT: Use Rocky Mountain National Park trail maps for real-world connections; encourage peer discussion in preferred language.
-- ASSESSMENT: Model think-aloud strategy and ask students to share their reasoning.
-- DIFFERENTIATION: Provide scaffolds like step-by-step multiplication visuals; advanced learners can find multiple equivalent fractions (e.g., 2/3 = 4/6 = 6/9).
-
-Visual Elements:
-- Trail map showing different fraction representations
-- Digital manipulatives for student exploration
-
-
-Slide 4: Your Turn to Create!
-Content:
-- Time to become fraction experts!
-- Work with your partner to create equivalent fraction cards
-- Use different colors to show equal parts
-- Challenge: Can you find three different fractions that equal 1/2?
-- Bonus: Create a story problem using equivalent fractions and your favorite Denver activity
-
-Teacher Notes:
-- ENGAGEMENT: Provide bilingual instruction cards; allow student choice in examples.
-- ASSESSMENT: Check each pair’s fraction cards and see if they are correct matches.
-- DIFFERENTIATION: Offer visual support or partially completed fraction cards for struggling students; challenge advanced learners to create multi-step word problems.
-
-Visual Elements:
-- Sample fraction cards with local themes
-- Student workspace organization guide
-- Visual success criteria
-
-
-Slide 5: Show What You Know!
-Content:
-- Let's celebrate what we learned!
-- Create three equivalent fractions for 3/4
-- Draw a picture showing how you know they're equal
-- Write a story about using equivalent fractions in your neighborhood
-- Share your favorite way to remember equivalent fractions
-
-Teacher Notes:
-- ENGAGEMENT: Have students explain their fractions to a partner or small group.
-- ASSESSMENT: Provide multiple ways to demonstrate understanding; accept explanations in English or home language.
-- DIFFERENTIATION: Use exit ticket responses to plan next lesson; advanced students can convert any improper fraction results to mixed numbers.
-
-Visual Elements:
-- Culturally responsive exit ticket template
-- Digital portfolio upload guide
-- Self-assessment checklist in multiple languages`
+- Hands-on fraction strips for each student`
 ],
 "structured_content": [
     {
@@ -156,78 +101,6 @@ Visual Elements:
         "Animation of a burrito being cut into different equivalent portions",
         "Interactive fraction wall labeled in English and Spanish",
         "Hands-on fraction strips for each student"
-    ],
-    "left_column": [],
-    "right_column": []
-    },
-    {
-    "title": "Finding Equivalent Fractions Together",
-    "layout": "TWO_COLUMNS",
-    "content": [],
-    "teacher_notes": [
-        "ENGAGEMENT: Use Rocky Mountain National Park trail maps for real-world connections; encourage peer discussion in preferred language",
-        "ASSESSMENT: Model think-aloud strategy and ask students to share their reasoning",
-        "DIFFERENTIATION: Provide step-by-step multiplication visuals for extra support; advanced learners can find multiple equivalents"
-    ],
-    "visual_elements": [
-        "Trail map showing different fraction representations",
-        "Digital manipulatives for student exploration"
-    ],
-    "left_column": [
-        "Let's practice together!",
-        "When we multiply 1/2 by 2/2, we get 2/4",
-        "It's like taking a hiking trail that's 1/2 mile long and marking it every quarter mile - you'll have 2/4 of the trail at the same spot as 1/2!",
-        "Your turn: Try finding an equivalent fraction for 2/3"
-    ],
-    "right_column": [
-        "Check your understanding:",
-        "Use your fraction strips to show how 1/2 = 2/4",
-        "Draw a picture to prove your answer",
-        "Share your strategy with your partner"
-    ]
-    },
-    {
-    "title": "Your Turn to Create!",
-    "layout": "TITLE_AND_CONTENT",
-    "content": [
-        "Time to become fraction experts!",
-        "Work with your partner to create equivalent fraction cards",
-        "Use different colors to show equal parts",
-        "Challenge: Can you find three different fractions that equal 1/2?",
-        "Bonus: Create a story problem using equivalent fractions and your favorite Denver activity"
-    ],
-    "teacher_notes": [
-        "ENGAGEMENT: Provide bilingual instruction cards; allow student choice in examples",
-        "ASSESSMENT: Check each pair’s fraction cards for correctness",
-        "DIFFERENTIATION: Offer visual support or partially completed fraction cards for struggling students; challenge advanced learners with multi-step word problems"
-    ],
-    "visual_elements": [
-        "Sample fraction cards with local themes",
-        "Student workspace organization guide",
-        "Visual success criteria"
-    ],
-    "left_column": [],
-    "right_column": []
-    },
-    {
-    "title": "Show What You Know!",
-    "layout": "TITLE_AND_CONTENT",
-    "content": [
-        "Let's celebrate what we learned!",
-        "Create three equivalent fractions for 3/4",
-        "Draw a picture showing how you know they're equal",
-        "Write a story about using equivalent fractions in your neighborhood",
-        "Share your favorite way to remember equivalent fractions"
-    ],
-    "teacher_notes": [
-        "ENGAGEMENT: Have students explain their fractions to a partner or small group",
-        "ASSESSMENT: Provide multiple ways to demonstrate understanding; accept explanations in English or home language",
-        "DIFFERENTIATION: Use exit ticket responses to plan next lesson; advanced students can convert any improper results to mixed numbers"
-    ],
-    "visual_elements": [
-        "Culturally responsive exit ticket template",
-        "Digital portfolio upload guide",
-        "Self-assessment checklist in multiple languages"
     ],
     "left_column": [],
     "right_column": []

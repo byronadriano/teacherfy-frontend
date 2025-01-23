@@ -1,20 +1,32 @@
 // src/pages/LessonBuilder/hooks/useAuth.js
 import { useState, useCallback } from 'react';
 import { googleLogout } from '@react-oauth/google';
-// import { AUTH } from '../../../utils/constants';
+import { AUTH } from '../../../utils/constants';
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);
-  const [showSignInPrompt, setShowSignInPrompt] = useState(true);
 
   const handleLoginSuccess = useCallback((credentialResponse) => {
-    setToken(credentialResponse.credential);
+    const credential = credentialResponse.credential;
+    const userInfo = JSON.parse(atob(credential.split('.')[1]));
+    
+    // Set the user with token included
+    setUser({
+      ...userInfo,
+      token: credential // Include the token in the user object
+    });
+    
+    setToken(credential);
     setIsAuthenticated(true);
-    const userInfo = JSON.parse(atob(credentialResponse.credential.split(".")[1]));
-    setUser(userInfo);
-    setShowSignInPrompt(false);
+    
+    // Save to localStorage if you want persistence
+    localStorage.setItem(AUTH.STORAGE_KEYS.USER_TOKEN, credential);
+    localStorage.setItem(AUTH.STORAGE_KEYS.USER_INFO, JSON.stringify({
+      ...userInfo,
+      token: credential
+    }));
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -22,19 +34,14 @@ const useAuth = () => {
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
-    setShowSignInPrompt(true);
-  }, []);
-
-  const setSignInPromptState = useCallback((value) => {
-    setShowSignInPrompt(value);
+    localStorage.removeItem(AUTH.STORAGE_KEYS.USER_TOKEN);
+    localStorage.removeItem(AUTH.STORAGE_KEYS.USER_INFO);
   }, []);
 
   return {
     user,
     isAuthenticated,
     token,
-    showSignInPrompt,
-    setShowSignInPrompt: setSignInPromptState,
     handleLoginSuccess,
     handleLogout
   };

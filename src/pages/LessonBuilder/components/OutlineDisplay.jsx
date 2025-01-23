@@ -6,8 +6,7 @@ import {
   CircularProgress,
   Paper
 } from "@mui/material";
-import DownloadIcon from "@mui/icons-material/Download";
-import SlideshowIcon from '@mui/icons-material/Slideshow';
+import { Download, Presentation } from 'lucide-react';
 
 const OutlineDisplay = ({ 
   contentState,
@@ -21,178 +20,274 @@ const OutlineDisplay = ({
   if (!uiState.outlineConfirmed) return null;
 
   return (
-    <Paper 
-      elevation={0} 
+    <Box 
       sx={{ 
-        p: 3,
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px'
+        width: '100%',
+        maxWidth: '800px',
+        mx: 'auto',
+        mt: 4
       }}
     >
-      <Box sx={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        mb: 2 
-      }}>
-        <Typography variant="h6" sx={{ 
-                fontWeight: "200",
-                fontSize: '2rem',
-                color: '#111827',
-                textAlign: 'center', // Center the text
-                width: '100%' // Ensure the text takes the full width
+      <Typography 
+        sx={{ 
+          color: '#1e293b',
+          fontSize: '1.875rem',
+          fontWeight: '300',
+          textAlign: 'center',
+          mb: 3
+        }}
+      >
+        Look What You've Created!
+      </Typography>
+
+      <Paper
+        elevation={0}
+        sx={{ 
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          bgcolor: '#ffffff',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Content Area */}
+        <Box sx={{
+          maxHeight: '600px',
+          overflowY: 'auto',
+          p: 4,
+          '&::-webkit-scrollbar': {
+            width: '8px'
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f5f9'
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#94a3b8',
+            borderRadius: '4px'
+          }
         }}>
-          Lesson Outline
-        </Typography>
-      </Box>
-
-      <Box sx={{
-        maxHeight: 500,
-        overflowY: "auto",
-        border: '1px solid #e5e7eb',
-        borderRadius: '6px',
-        p: 3,
-        mb: 3,
-        backgroundColor: "#f9fafb"
-      }}>
-        {contentState.structuredContent.map((slide, index) => (
-          <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
-            <Typography variant="h6" sx={{ 
-              fontWeight: '600', 
-              mb: 2,
-              color: '#111827'
-            }}>
-              Slide {index + 1}: {slide.title}
-            </Typography>
-
-            <Typography variant="subtitle1" sx={{ 
-              fontWeight: '600', 
-              mt: 2,
-              color: '#374151'
-            }}>
-              Content:
-            </Typography>
-            {slide.content.map((item, i) => (
-              <Typography key={i} sx={{ 
-                pl: 2, 
-                mb: 0.5,
-                color: '#4b5563'
-              }}>
-                • {item}
+          {contentState.structuredContent.map((slide, index) => (
+            <Box 
+              key={index} 
+              sx={{ 
+                mb: 4,
+                '&:last-child': {
+                  mb: 0
+                }
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '1.25rem',
+                  fontWeight: 500,
+                  color: '#1e293b',
+                  mb: 2
+                }}
+              >
+                Slide {index + 1}: {slide.title}
               </Typography>
-            ))}
 
-            <Typography variant="subtitle1" sx={{ 
-              fontWeight: '600', 
-              mt: 2,
-              color: '#374151'
-            }}>
-              Teacher Notes:
-            </Typography>
-            {slide.teacher_notes.map((note, i) => (
-              <Typography key={i} sx={{ 
-                pl: 2, 
-                mb: 0.5,
-                color: '#4b5563'
-              }}>
-                • {note}
-              </Typography>
-            ))}
-
-            <Typography variant="subtitle1" sx={{ 
-              fontWeight: '600', 
-              mt: 2,
-              color: '#374151'
-            }}>
-              Visual Elements:
-            </Typography>
-            {slide.visual_elements.length > 0 ? (
-              slide.visual_elements.map((element, i) => (
-                <Typography key={i} sx={{ 
-                  pl: 2, 
-                  mb: 0.5,
-                  color: '#4b5563'
-                }}>
-                  • {element}
-                </Typography>
-              ))
-            ) : (
-              <Typography sx={{ 
-                pl: 2, 
-                mb: 0.5,
-                color: '#6b7280'
-              }}>
-                • (None provided)
-              </Typography>
-            )}
-
-            {index < contentState.structuredContent.length - 1 && (
-              <Box sx={{ 
-                my: 3, 
-                borderBottom: '1px solid #e5e7eb' 
-              }} />
-            )}
-          </Box>
-        ))}
-      </Box>
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          onClick={onGeneratePresentation}
-          disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
-          startIcon={<DownloadIcon />}
-          sx={{
-            backgroundColor: "#2563eb",
-            '&:hover': {
-              backgroundColor: "#1d4ed8"
-            },
-            '&:disabled': {
-              backgroundColor: "#9ca3af"
-            }
-          }}
-        >
-          {uiState.isLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            <>
-              Open in PowerPoint
-              {!subscriptionState.isPremium && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ ml: 1, opacity: 0.8 }}
+              {/* Content Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#2563eb',
+                    mb: 1
+                  }}
                 >
-                  ({5 - subscriptionState.downloadCount} remaining)
+                  Content
                 </Typography>
+                {slide.content.map((item, i) => (
+                  <Typography
+                    key={i}
+                    sx={{
+                      fontSize: '0.875rem',
+                      color: '#475569',
+                      pl: 2,
+                      mb: 0.75,
+                      position: 'relative',
+                      '&:before': {
+                        content: '"•"',
+                        position: 'absolute',
+                        left: '4px'
+                      }
+                    }}
+                  >
+                    {item}
+                  </Typography>
+                ))}
+              </Box>
+
+              {/* Teacher Notes Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#2563eb',
+                    mb: 1
+                  }}
+                >
+                  Teacher Notes
+                </Typography>
+                {slide.teacher_notes.map((note, i) => (
+                  <Typography
+                    key={i}
+                    sx={{
+                      fontSize: '0.875rem',
+                      color: '#475569',
+                      pl: 2,
+                      mb: 0.75,
+                      position: 'relative',
+                      '&:before': {
+                        content: '"•"',
+                        position: 'absolute',
+                        left: '4px'
+                      }
+                    }}
+                  >
+                    {note}
+                  </Typography>
+                ))}
+              </Box>
+
+              {/* Visual Elements Section */}
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#2563eb',
+                    mb: 1
+                  }}
+                >
+                  Visual Elements
+                </Typography>
+                {slide.visual_elements.length > 0 ? (
+                  slide.visual_elements.map((element, i) => (
+                    <Typography
+                      key={i}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: '#475569',
+                        pl: 2,
+                        mb: 0.75,
+                        position: 'relative',
+                        '&:before': {
+                          content: '"•"',
+                          position: 'absolute',
+                          left: '4px'
+                        }
+                      }}
+                    >
+                      {element}
+                    </Typography>
+                  ))
+                ) : (
+                  <Typography
+                    sx={{
+                      fontSize: '0.875rem',
+                      color: '#94a3b8',
+                      pl: 2,
+                      fontStyle: 'italic'
+                    }}
+                  >
+                    No visual elements specified
+                  </Typography>
+                )}
+              </Box>
+
+              {index < contentState.structuredContent.length - 1 && (
+                <Box 
+                  sx={{ 
+                    my: 4,
+                    borderBottom: '1px solid #e2e8f0'
+                  }} 
+                />
               )}
-            </>
-          )}
-        </Button>
-        
-        <Button
-          variant="contained"
-          onClick={onGenerateGoogleSlides}
-          startIcon={<SlideshowIcon />}
-          disabled={uiState.isLoading || googleSlidesState.isGenerating || !isAuthenticated}
-          sx={{
-            backgroundColor: "#dc2626",
-            '&:hover': {
-              backgroundColor: "#b91c1c"
-            },
-            '&:disabled': {
-              backgroundColor: "#9ca3af"
-            }
+            </Box>
+          ))}
+        </Box>
+
+        {/* Actions Area */}
+        <Box 
+          sx={{ 
+            display: 'flex',
+            gap: 2,
+            p: 3,
+            borderTop: '1px solid #e2e8f0',
+            bgcolor: '#f8fafc'
           }}
         >
-          {googleSlidesState.isGenerating ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : !isAuthenticated ? (
-            "Sign in for Google Slides"
-          ) : (
-            "Open in Google Slides"
-          )}
-        </Button>
-      </Box>
-    </Paper>
+          <Button
+            variant="contained"
+            onClick={onGeneratePresentation}
+            disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
+            startIcon={uiState.isLoading ? <CircularProgress size={20} /> : <Download size={18} />}
+            sx={{
+              bgcolor: '#2563eb',
+              '&:hover': {
+                bgcolor: '#1d4ed8'
+              },
+              '&:disabled': {
+                bgcolor: '#94a3b8'
+              },
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              px: 3,
+              py: 1.5,
+              borderRadius: '8px'
+            }}
+          >
+            {uiState.isLoading ? 'Generating...' : (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Open in PowerPoint
+                {!subscriptionState.isPremium && (
+                  <Typography 
+                    component="span"
+                    sx={{ 
+                      fontSize: '0.75rem',
+                      opacity: 0.8,
+                      ml: 1
+                    }}
+                  >
+                    ({5 - subscriptionState.downloadCount} remaining)
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Button>
+          
+          <Button
+            variant="contained"
+            onClick={onGenerateGoogleSlides}
+            disabled={uiState.isLoading || googleSlidesState.isGenerating || !isAuthenticated}
+            startIcon={googleSlidesState.isGenerating ? <CircularProgress size={20} /> : <Presentation size={18} />}
+            sx={{
+              bgcolor: '#dc2626',
+              '&:hover': {
+                bgcolor: '#b91c1c'
+              },
+              '&:disabled': {
+                bgcolor: '#94a3b8'
+              },
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              px: 3,
+              py: 1.5,
+              borderRadius: '8px'
+            }}
+          >
+            {googleSlidesState.isGenerating ? 'Generating...' : 
+             !isAuthenticated ? 'Sign in for Google Slides' : 
+             'Open in Google Slides'}
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 
