@@ -23,18 +23,19 @@ const OutlineDisplay = ({
     <Box 
       sx={{ 
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: '1000px',
         mx: 'auto',
         mt: 4
       }}
     >
       <Typography 
+        variant="h1"
         sx={{ 
-          color: '#1e293b',
-          fontSize: '1.875rem',
           fontWeight: '300',
-          textAlign: 'center',
-          mb: 3
+          fontSize: { xs: '2rem', sm: '2.5rem' },
+          color: '#1e3a8a',
+          textAlign: 'center', 
+          mb: 6
         }}
       >
         Look What You've Created!

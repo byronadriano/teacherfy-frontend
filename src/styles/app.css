@@ -9,26 +9,15 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #f4f2ec; /* Matches the logo background */
+  background-color: #ffffff; /* White background */
   color: #333;
-
-  /* Removed display: flex; align-items: center; justify-content: center; height: 100vh; */
-  /* If you still need a "centered card" layout for certain pages, 
-     handle it with a container class (below). */
 }
 
-/* -------------------------------------- */
-/*       A CONTAINER FOR A CENTERED CARD  */
-/* -------------------------------------- */
 .container {
-  /* Centering logic if you want a "card" style in the middle of the screen.
-     If you want the entire screen to show the sidebar layout instead, 
-     only use .container on pages that need a card layout. */
   width: 100%;
   max-width: 500px;
-  margin: 40px auto; /* or use flex parents if you prefer */
+  margin: 40px auto;
   text-align: center;
-
   background: #ffffff;
   border-radius: 15px;
   padding: 20px 30px;

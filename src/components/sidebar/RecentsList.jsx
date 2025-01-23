@@ -31,7 +31,6 @@ const RESOURCE_TYPES = {
 };
 
 const RecentItem = ({ title, types, date }) => {
-  // First type determines primary icon
   const primaryType = types[0];
   const resourceType = RESOURCE_TYPES[primaryType] || { icon: FileText, color: '#4b5563' };
   const Icon = resourceType.icon;
@@ -41,8 +40,8 @@ const RecentItem = ({ title, types, date }) => {
       sx={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 2,
-        p: 2,
+        gap: 1.5,  // Reduced gap
+        p: 1.5,    // Reduced padding
         borderRadius: '6px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -51,21 +50,21 @@ const RecentItem = ({ title, types, date }) => {
         }
       }}
     >
-      <Icon size={18} color={resourceType.color} />
+      <Icon size={16} color={resourceType.color} />
       <Box sx={{ flex: 1 }}>
         <Typography sx={{ 
-          fontSize: '0.875rem',
+          fontSize: '0.75rem',  // Reduced font size
           color: '#374151',
           fontWeight: '500',
-          mb: 1
+          mb: 0.5  // Reduced margin
         }}>
           {title}
         </Typography>
         <Box sx={{ 
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 1,
-          mb: 1
+          gap: 0.5,  // Reduced gap
+          mb: 0.5   // Reduced margin
         }}>
           {types.map((type, index) => (
             <Chip
@@ -73,16 +72,17 @@ const RecentItem = ({ title, types, date }) => {
               label={RESOURCE_TYPES[type].label}
               size="small"
               sx={{
+                height: '20px',  // Smaller chip height
+                fontSize: '0.625rem',  // Smaller font size
                 backgroundColor: `${RESOURCE_TYPES[type].color}15`,
                 color: RESOURCE_TYPES[type].color,
-                fontWeight: '500',
-                fontSize: '0.75rem'
+                fontWeight: '500'
               }}
             />
           ))}
         </Box>
         <Typography sx={{ 
-          fontSize: '0.75rem',
+          fontSize: '0.625rem',  // Reduced font size
           color: '#6b7280'
         }}>
           {date}
@@ -112,14 +112,14 @@ const RecentsList = () => {
   ];
 
   return (
-    <Box sx={{ mt: 4, px: 2 }}>
+    <Box sx={{ mt: 2, px: 1 }}>  {/* Reduced top margin and side padding */}
       <Typography 
         variant="h6" 
         sx={{ 
-          mb: 2,
-          px: 2,
+          mb: 1,  // Reduced margin
+          px: 1.5,  // Reduced padding
           color: '#4b5563',
-          fontSize: '1rem',
+          fontSize: '0.875rem',  // Slightly smaller font
           fontWeight: '600'
         }}
       >
