@@ -1,13 +1,13 @@
-// src/components/sidebar/Sidebar.jsx
 import React, { useState } from 'react';
 import { Box, Typography, Button, Avatar, IconButton } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, Settings } from 'lucide-react';
+import { ChevronLeft, Settings, Stars } from 'lucide-react';
 import RecentsList from './RecentsList';
 import UserSettingsModal from '../modals/UserSettingsModal';
 import PricingModal from '../modals/PricingModal';
 import Logo from '../../assets/images/Teacherfyoai.png';
 import { GOOGLE_CLIENT_ID } from '../../utils/constants';
+
 
 const Sidebar = ({ 
     isCollapsed,
@@ -16,10 +16,17 @@ const Sidebar = ({
     handleLogout,
     handleLoginSuccess,
     defaultSettings,
-    onSettingsChange
+    onSettingsChange,
+    onLogoReset // New prop
 }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
+    const [isLogoHovered, setIsLogoHovered] = useState(false);
+
+    const handleLogoClick = () => {
+        console.log("Logo clicked"); // Debug log
+        onLogoReset && onLogoReset(); // Call reset method
+    };
 
     const handleSettingsSave = (newSettings) => {
         onSettingsChange?.(newSettings);
@@ -36,7 +43,7 @@ const Sidebar = ({
         <>
             <Box
                 sx={{
-                    width: isCollapsed ? '20px' : '280px',
+                    width: isCollapsed ? '20px' : '240px',
                     height: '100vh',
                     position: 'fixed',
                     left: 0,
@@ -50,22 +57,53 @@ const Sidebar = ({
                     overflow: 'hidden'
                 }}
             >
-                {/* Logo Section */}
-                {!isCollapsed && (
-                    <Box sx={{ 
-                        p: 3,
+            {/* Logo Section */}
+            {!isCollapsed && (
+                <Box 
+                    sx={{ 
+                        p: 2,
                         display: 'flex',
                         justifyContent: 'center',
-                        borderBottom: '1px solid #e5e7eb'
-                    }}>
-                        <img
-                            src={Logo}
-                            alt="Teacherfy Logo"
-                            style={{ 
-                                width: '180px',
-                                height: 'auto'
-                            }}
-                        />
+                        borderBottom: '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                        transform: isLogoHovered ? 'scale(1.05)' : 'scale(1)',
+                        boxShadow: isLogoHovered 
+                            ? '0 4px 15px rgba(37, 99, 235, 0.3)' 
+                            : 'none',
+                        borderRadius: '8px'
+                    }}
+                    onClick={handleLogoClick}
+                    onMouseEnter={() => setIsLogoHovered(true)}
+                    onMouseLeave={() => setIsLogoHovered(false)}
+                >
+                        <Box sx={{ 
+                            position: 'relative', 
+                            display: 'flex', 
+                            alignItems: 'center' 
+                        }}>
+                            <img
+                                src={Logo}
+                                alt="Teacherfy Logo"
+                                style={{ 
+                                    width: '150px',
+                                    height: 'auto',
+                                    transition: 'transform 0.3s ease'
+                                }}
+                            />
+                            {isLogoHovered && (
+                                <Stars 
+                                    size={24} 
+                                    color="#2563eb" 
+                                    style={{
+                                        position: 'absolute',
+                                        top: '-10px',
+                                        right: '-30px',
+                                        animation: 'twinkle 1s infinite alternate'
+                                    }}
+                                />
+                            )}
+                        </Box>
                     </Box>
                 )}
 
@@ -110,7 +148,9 @@ const Sidebar = ({
                         {/* Upgrade Section */}
                         <Box sx={{ 
                             p: 3,
-                            pb: 2
+                            pb: 2,
+                            display: 'flex',
+                            justifyContent: 'center' // Center the upgrade section
                         }}>
                             <Box 
                                 onClick={() => setShowPricing(true)}
@@ -119,6 +159,8 @@ const Sidebar = ({
                                     bgcolor: '#f3f4f6',
                                     borderRadius: '8px',
                                     cursor: 'pointer',
+                                    textAlign: 'center', // Center the text
+                                    maxWidth: '200px', // Optional: limit width
                                     transition: 'all 0.2s ease',
                                     '&:hover': {
                                         bgcolor: '#e5e7eb'
@@ -169,6 +211,7 @@ const Sidebar = ({
                                         }}>
                                             <Typography sx={{ 
                                                 fontWeight: 500,
+                                                fontSize: '0.9rem',
                                                 color: '#1E293B'
                                             }}>
                                                 {user.name}
@@ -187,7 +230,7 @@ const Sidebar = ({
                                             </IconButton>
                                         </Box>
                                         <Typography sx={{ 
-                                            fontSize: '0.875rem',
+                                            fontSize: '0.8rem',
                                             color: '#64748B'
                                         }}>
                                             {user.email}
@@ -243,6 +286,14 @@ const Sidebar = ({
                 onClose={() => setShowPricing(false)}
                 onSelectPlan={handlePlanSelect}
             />
+
+            {/* Global style for twinkle animation */}
+            <style>{`
+                @keyframes twinkle {
+                    from { opacity: 0.6; transform: scale(0.8); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+            `}</style>
         </>
     );
 };

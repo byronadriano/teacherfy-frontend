@@ -1,4 +1,3 @@
-// src/pages/LessonBuilder/hooks/useForm.js
 import { useState, useCallback } from "react";
 import {
   formatOutlineForDisplay,
@@ -14,6 +13,7 @@ export default function useForm({
   user,
   setShowSignInPrompt,
 }) {
+  // Initial form state
   const [formState, setFormState] = useState({
     resourceType: "",
     gradeLevel: "",
@@ -42,6 +42,39 @@ export default function useForm({
     finalOutline: "",
     structuredContent: [],
   });
+
+  // Add a reset method
+  const resetForm = useCallback(() => {
+    console.log("Resetting form...");
+    
+    setFormState({
+      resourceType: "",
+      gradeLevel: "",
+      subjectFocus: "",
+      selectedStandards: [],
+      language: "",
+      customPrompt: "",
+      numSlides: 5
+    });
+
+    setUiState(prev => ({
+      ...prev,
+      isLoading: false,
+      error: "",
+      outlineModalOpen: false,
+      outlineConfirmed: false,
+      regenerationCount: 0,
+      modifiedPrompt: "",
+      generateOutlineClicked: false,
+      isExample: false
+    }));
+
+    setContentState({
+      outlineToConfirm: "",
+      finalOutline: "",
+      structuredContent: [],
+    });
+  }, []);
 
   const handleFormChange = useCallback((field, value) => {
     setFormState((prev) => ({
@@ -222,5 +255,6 @@ export default function useForm({
     toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
+    resetForm, // Add this to the returned methods
   };
 }

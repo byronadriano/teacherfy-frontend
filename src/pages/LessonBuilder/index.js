@@ -51,11 +51,13 @@ const handleSettingsChange = (newSettings) => {
     toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
+    resetForm, // Destructure reset method
   } = useForm({
     token: user?.token,
     user,
     setShowSignInPrompt: () => setUiState(prev => ({ ...prev, showSignInPrompt: true }))
   });
+  
 
   const {
     googleSlidesState,
@@ -77,7 +79,7 @@ const handleSettingsChange = (newSettings) => {
     <Box sx={{ 
       display: 'flex',
       minHeight: '100vh',
-      bgcolor: '#f9fafb',
+      bgcolor: '#ffffff',
       overflow: 'hidden'
     }}>
 <Sidebar
@@ -88,6 +90,7 @@ const handleSettingsChange = (newSettings) => {
     handleLoginSuccess={handleLoginSuccess}
     defaultSettings={userSettings}
     onSettingsChange={handleSettingsChange}
+    onLogoReset={resetForm}
 />
 
       <Box 
@@ -192,6 +195,7 @@ const handleSettingsChange = (newSettings) => {
         open={uiState.showUpgradeModal}
         onClose={() => setUiState(prev => ({ ...prev, showUpgradeModal: false }))}
       />
+      
     </Box>
   );
 };
