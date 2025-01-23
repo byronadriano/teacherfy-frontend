@@ -6,7 +6,7 @@ import {
   generateRegenerationPrompt,
   generateFullPrompt,
 } from "../../../utils/outlineFormatter";
-import { FORM, EXAMPLE_FORM_DATA, EXAMPLE_OUTLINE, isExampleConfig } from "../../../utils/constants";
+import { EXAMPLE_FORM_DATA, EXAMPLE_OUTLINE } from "../../../utils/constants";
 import { outlineService, analyticsService } from "../../../services";
 
 export default function useForm({
@@ -15,13 +15,13 @@ export default function useForm({
   setShowSignInPrompt,
 }) {
   const [formState, setFormState] = useState({
-    lessonTopic: "",
-    district: "",
+    resourceType: "",
     gradeLevel: "",
     subjectFocus: "",
+    selectedStandards: [],
     language: "",
     customPrompt: "",
-    numSlides: FORM.DEFAULT_SLIDES || 3,
+    numSlides: 5
   });
 
   const [uiState, setUiState] = useState({
@@ -29,10 +29,12 @@ export default function useForm({
     error: "",
     outlineModalOpen: false,
     outlineConfirmed: false,
-    isFormExpanded: true,
     regenerationCount: 0,
     modifiedPrompt: "",
     generateOutlineClicked: false,
+    isExample: false,
+    showSignInPrompt: false,
+    showUpgradeModal: false
   });
 
   const [contentState, setContentState] = useState({
@@ -48,124 +50,103 @@ export default function useForm({
     }));
   }, []);
 
-  const loadExample = useCallback(() => {
-    setFormState(EXAMPLE_FORM_DATA);
-    setUiState((prev) => ({
-      ...prev,
-      isFormExpanded: true,
-      outlineModalOpen: false,
-      outlineConfirmed: false,
-      generateOutlineClicked: false,
-      regenerationCount: 0,
-    }));
-    setContentState({
-      outlineToConfirm: "",
-      finalOutline: "",
-      structuredContent: [],
-    });
-  }, []);
-
-  const clearAll = useCallback(() => {
-    setFormState({
-      lessonTopic: "",
-      district: "",
-      gradeLevel: "",
-      subjectFocus: "",
-      language: "",
-      customPrompt: "",
-      numSlides: 3,
-    });
-    setUiState((prev) => ({
-      ...prev,
-      regenerationCount: 0,
-      modifiedPrompt: "",
-      outlineConfirmed: false,
-      isFormExpanded: true,
-    }));
-    setContentState({
-      outlineToConfirm: "",
-      finalOutline: "",
-      structuredContent: [],
-    });
+  const toggleExample = useCallback((isChecked) => {
+    if (isChecked) {
+      setFormState(EXAMPLE_FORM_DATA);
+      setUiState(prev => ({
+        ...prev,
+        isExample: true
+      }));
+    } else {
+      setFormState({
+        resourceType: "",
+        gradeLevel: "",
+        subjectFocus: "",
+        selectedStandards: [],
+        language: "",
+        customPrompt: "",
+        numSlides: 5
+      });
+      setUiState(prev => ({
+        ...prev,
+        isExample: false
+      }));
+    }
   }, []);
 
   const handleGenerateOutline = useCallback(async () => {
-    if (!token) {
-      setShowSignInPrompt(true);
-      return;
-    }
-
     if (
+      !formState.resourceType ||
       !formState.gradeLevel ||
       !formState.subjectFocus ||
-      !formState.language ||
-      !formState.lessonTopic
+      !formState.language
     ) {
-      alert("Please fill in all required fields.");
+      setUiState(prev => ({
+        ...prev,
+        error: "Please fill in all required fields."
+      }));
       return;
     }
 
     setUiState((prev) => ({
       ...prev,
       isLoading: true,
-      isFormExpanded: false,
-      generateOutlineClicked: true,
+      error: "",
     }));
 
     try {
-      // Check if current form matches example configuration
-      if (isExampleConfig(formState)) {
-        console.log("Using example configuration");
-        setContentState((prev) => ({
-          ...prev,
+      if (uiState.isExample) {
+        setContentState({
           outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
           structuredContent: EXAMPLE_OUTLINE.structured_content,
-        }));
+        });
       } else {
-        console.log("Generating new outline");
-        const fullPrompt = generateFullPrompt(formState);
         const data = await outlineService.generate({
           ...formState,
-          custom_prompt: fullPrompt
-        }, token);
+          custom_prompt: generateFullPrompt(formState)
+        }); // No token needed for basic outline generation
 
         const structuredContent = parseOutlineToStructured(
           data.messages[0],
           formState.numSlides
         );
 
-        setContentState((prev) => ({
-          ...prev,
+        setContentState({
           outlineToConfirm: formatOutlineForDisplay(structuredContent),
           structuredContent,
-        }));
+        });
       }
 
-      setUiState((prev) => ({
+      setUiState(prev => ({
         ...prev,
-        outlineModalOpen: true,
+        outlineModalOpen: true
       }));
 
-      await analyticsService.trackActivity("Generated Outline", user, token, {
-        prompt: formState,
-      });
+      // Only track analytics if user is signed in
+      if (token && user) {
+        await analyticsService.trackActivity("Generated Outline", user, token, {
+          prompt: formState,
+          isExample: uiState.isExample
+        });
+      }
     } catch (error) {
       console.error("Error generating outline:", error);
-      setUiState((prev) => ({
+      setUiState(prev => ({
         ...prev,
-        error: error.message || "Error generating outline. Please try again.",
+        error: error.message || "Error generating outline. Please try again."
       }));
     } finally {
-      setUiState((prev) => ({
+      setUiState(prev => ({
         ...prev,
-        isLoading: false,
+        isLoading: false
       }));
     }
-  }, [formState, token, user, setShowSignInPrompt]);
+  }, [formState, token, user, uiState.isExample]);
 
   const handleRegenerateOutline = useCallback(async () => {
+    // Require sign in for regeneration
     if (!token) {
-      setShowSignInPrompt(true);
+      setShowSignInPrompt();
       return;
     }
 
@@ -200,17 +181,17 @@ export default function useForm({
         formState.numSlides
       );
       
-      setContentState((prev) => ({
-        ...prev,
+      setContentState({
         outlineToConfirm: formatOutlineForDisplay(structuredContent),
         structuredContent,
-      }));
-
-      await analyticsService.trackActivity("Regenerated Outline", user, token, {
-        prompt: formState,
-        regeneration_count: uiState.regenerationCount + 1,
       });
-      
+
+      if (token && user) {
+        await analyticsService.trackActivity("Regenerated Outline", user, token, {
+          prompt: formState,
+          regeneration_count: uiState.regenerationCount + 1,
+        });
+      }
     } catch (error) {
       setUiState((prev) => ({
         ...prev,
@@ -219,29 +200,26 @@ export default function useForm({
     } finally {
       setUiState((prev) => ({
         ...prev,
-        isLoading: false,
+        isLoading: false
       }));
     }
   }, [
-    token,
     formState,
     uiState.regenerationCount,
     uiState.modifiedPrompt,
-    setShowSignInPrompt,
-    user
+    token,
+    user,
+    setShowSignInPrompt
   ]);
-
 
   return {
     formState,
     uiState,
     contentState,
-    setFormState,
     setUiState,
     setContentState,
     handleFormChange,
-    loadExample,
-    clearAll,
+    toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
   };

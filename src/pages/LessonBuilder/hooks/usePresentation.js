@@ -21,21 +21,8 @@ export default function usePresentation({
 
   const generatePresentation = useCallback(
     async (formState, contentState) => {
-      if (!token) {
-        setShowSignInPrompt(true);
-        return;
-      }
-
-      if (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5) {
-        setSubscriptionState((prev) => ({
-          ...prev,
-          showUpgradeModal: true,
-        }));
-        return;
-      }
-
       try {
-        const blob = await presentationService.generatePptx(formState, contentState, token);
+        const blob = await presentationService.generatePptx(formState, contentState);
 
         // Download the file
         const url = window.URL.createObjectURL(blob);
@@ -50,8 +37,8 @@ export default function usePresentation({
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
 
-        // Update usage count if not premium
-        if (!subscriptionState.isPremium && user?.email) {
+        // Only update usage count if user is signed in
+        if (user?.email) {
           const newCount = subscriptionState.downloadCount + 1;
           localStorage.setItem(`downloadCount_${user.email}`, newCount.toString());
           setSubscriptionState((prev) => ({
@@ -60,20 +47,25 @@ export default function usePresentation({
           }));
         }
 
-        await analyticsService.trackActivity("Downloaded Presentation", user, token, {
-          prompt: formState,
-          outline: contentState.finalOutline,
-          structured_content: contentState.structuredContent,
-        });
+        // Only track analytics if user is signed in
+        if (token && user) {
+          await analyticsService.trackActivity("Downloaded Presentation", user, token, {
+            prompt: formState,
+            outline: contentState.finalOutline,
+            structured_content: contentState.structuredContent,
+          });
+        }
       } catch (err) {
+        console.error("Error generating presentation:", err);
         throw new Error(err.message || "Error generating presentation");
       }
     },
-    [token, user, subscriptionState, setSubscriptionState, setShowSignInPrompt]
+    [token, user, subscriptionState.downloadCount]
   );
 
   const generateGoogleSlides = useCallback(
     async (formState, contentState) => {
+      // Google Slides generation requires authentication
       if (!isAuthenticated) {
         setShowSignInPrompt(true);
         return;
@@ -121,11 +113,14 @@ export default function usePresentation({
 
         if (data.presentation_url) {
           window.open(data.presentation_url, "_blank");
-          await analyticsService.trackActivity("Generated Google Slides", user, token, {
-            prompt: formState,
-            outline: contentState.finalOutline,
-            structured_content: contentState.structuredContent,
-          });
+          
+          if (token && user) {
+            await analyticsService.trackActivity("Generated Google Slides", user, token, {
+              prompt: formState,
+              outline: contentState.finalOutline,
+              structured_content: contentState.structuredContent,
+            });
+          }
         } else {
           throw new Error("Failed to get presentation URL");
         }

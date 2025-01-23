@@ -4,11 +4,18 @@ import { API } from '../utils/constants';
 
 export const presentationService = {
   async generatePptx(formData, contentState, token) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    // Only add auth header if token is provided
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await httpClient.fetch(API.ENDPOINTS.GENERATE, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       body: JSON.stringify({
         lesson_outline: contentState.finalOutline,
         structured_content: contentState.structuredContent,
@@ -19,10 +26,15 @@ export const presentationService = {
   },
 
   async generateGoogleSlides(formData, contentState, token) {
+    if (!token) {
+      throw new Error('Authentication required for Google Slides generation');
+    }
+
     const { response, data } = await httpClient.fetch(API.ENDPOINTS.GENERATE_SLIDES, {
       method: 'POST',
       credentials: 'include',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({

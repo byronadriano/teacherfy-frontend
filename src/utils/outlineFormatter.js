@@ -1,7 +1,9 @@
 // OutlineFormatter.js
 export const OUTLINE_PROMPT_TEMPLATE = `
 CRITICAL REQUIREMENTS:
+THIS MUST BE A: {resourceType}
 THIS LESSON MUST BE ABOUT: {topic}
+STANDARDS ALIGNMENT: {standard}
 Additional Requirements:
 {custom_prompt}
 
@@ -224,11 +226,12 @@ export const formatOutlineForDisplay = (structuredContent) => {
 
 export const generateFullPrompt = (formState) => {
   return OUTLINE_PROMPT_TEMPLATE
+    .replace(/{resourceType}/g, formState.resourceType || 'Not specified')
     .replace(/{topic}/g, formState.lessonTopic || 'Not specified')
+    .replace(/{standard}/g, formState.standard || 'Not specified')
     .replace(/{language}/g, formState.language)
     .replace(/{gradeLevel}/g, formState.gradeLevel)
     .replace(/{subject}/g, formState.subjectFocus)
-    .replace(/{district}/g, formState.district || 'Not specified')
     .replace(/{numSlides}/g, formState.numSlides)
     .replace(/{custom_prompt}/g, formState.customPrompt || 'None');
 };
