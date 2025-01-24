@@ -2,6 +2,9 @@
   "routes": [
     {
       "route": "/privacy-policy"
+    },
+    {
+      "route": "/terms-of-service"
     }
   ]
 }
