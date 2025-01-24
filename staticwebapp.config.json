@@ -10,7 +10,11 @@
     },
     {
       "route": "/terms-of-service",
-      "redirect": "https://teacherfy.ai/terms-of-service"
+      "redirect": "https://teacherfy.ai/terms-of-service",
+      "statusCode": 301,
+      "allowedRoles": [
+        "anonymous"
+      ]
     }
   ]
 }
