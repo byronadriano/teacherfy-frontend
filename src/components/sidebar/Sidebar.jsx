@@ -44,7 +44,7 @@ const Sidebar = ({
             <Box
                 sx={{
                     width: isCollapsed ? '20px' : '240px',
-                    height: '100vh',
+                    height: '100%',
                     position: 'fixed',
                     left: 0,
                     top: 0,
@@ -64,7 +64,7 @@ const Sidebar = ({
                         p: 2,
                         display: 'flex',
                         justifyContent: 'center',
-                        borderBottom: '1px solid #e5e7eb',
+                        // borderBottom: '1px solid #e5e7eb',
                         cursor: 'pointer',
                         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                         transform: isLogoHovered ? 'scale(1.05)' : 'scale(1)',
