@@ -1,7 +1,8 @@
 {
   "routes": [
     {
-      "route": "/privacy-policy"
+      "route": "/privacy-policy",
+      "redirect": "https://teacherfy.ai/privacy-policy"
     },
     {
       "route": "/terms-of-service"
