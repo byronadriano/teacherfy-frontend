@@ -24,7 +24,18 @@ export const FORM = {
   GRADES: [
     "Preschool",
     "Kindergarten",
-    ...Array.from({ length: 12 }, (_, i) => `${i + 1}th grade`)
+    "1st grade",
+    "2nd grade",
+    "3rd grade",
+    "4th grade",
+    "5th grade",
+    "6th grade",
+    "7th grade",
+    "8th grade",
+    "9th grade",
+    "10th grade",
+    "11th grade",
+    "12th grade"
   ],
   SUBJECTS: [
     "Arts & music",
@@ -279,4 +290,38 @@ STANDARDS: {
     }
   }
 }
+};
+
+// Add this to your form.js file, after your existing FORM constant
+
+export const getAllStandards = () => {
+  const standards = {
+    ELA: [],
+    Mathematics: []
+  };
+  
+  // Iterate through all grades
+  Object.values(FORM.STANDARDS.COMMON_CORE_STANDARDS).forEach(gradeStandards => {
+    // For each grade, look at ELA and Mathematics
+    Object.entries(gradeStandards).forEach(([subject, domains]) => {
+      // For each domain in the subject
+      Object.entries(domains).forEach(([domain, standardsList]) => {
+        if (subject === 'ELA') {
+          standards.ELA.push(...standardsList.map(s => ({
+            ...s,
+            domain,
+            grade: subject
+          })));
+        } else if (subject === 'Mathematics') {
+          standards.Mathematics.push(...standardsList.map(s => ({
+            ...s,
+            domain,
+            grade: subject
+          })));
+        }
+      });
+    });
+  });
+  
+  return standards;
 };

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Typography, Popover, Paper, Checkbox, FormControlLabel } from '@mui/material';
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import StandardsSelector from './StandardsSelector';
 import { FORM } from '../../utils/constants/form';
+import StandardsModal from '../modals/StandardsModal';
 
 const MenuOption = ({ 
     label, 
@@ -86,7 +86,6 @@ const FilterButton = ({ label, isSelected, onClick }) => (
     </Box>
 );
 
-// Updated PresentationOptions component
 const PresentationOptions = ({
     open,
     anchorEl,
@@ -168,12 +167,17 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     const [activeFilter, setActiveFilter] = useState(null);
     const [submenuAnchorEl, setSubmenuAnchorEl] = useState(null);
     const [activeSubmenu, setActiveSubmenu] = useState(null);
+    const [showStandardsModal, setShowStandardsModal] = useState(false);
 
     const handleFilterClick = (event, filter) => {
-        setAnchorEl(event.currentTarget);
-        setActiveFilter(filter);
-        setSubmenuAnchorEl(null);
-        setActiveSubmenu(null);
+        if (filter === 'standards') {
+            setShowStandardsModal(true);
+        } else {
+            setAnchorEl(event.currentTarget);
+            setActiveFilter(filter);
+            setSubmenuAnchorEl(null);
+            setActiveSubmenu(null);
+        }
     };
 
     const handleOptionHover = (event, option) => {
@@ -195,7 +199,7 @@ const FiltersBar = ({ formState, handleFormChange }) => {
             if (option === 'Presentation') {
                 handleFormChange(activeFilter, option);
                 if (!formState.numSlides) {
-                    handleFormChange('numSlides', 5); // Default to 5 slides
+                    handleFormChange('numSlides', 5);
                 }
             }
         } else {
@@ -247,6 +251,17 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                 onClick={(e) => handleFilterClick(e, 'language')}
             />
 
+            {/* Standards Modal */}
+            <StandardsModal
+                open={showStandardsModal}
+                onClose={() => setShowStandardsModal(false)}
+                selectedStandards={formState.selectedStandards || []}
+                onStandardsChange={(standards) => {
+                    handleFormChange('selectedStandards', standards);
+                    setShowStandardsModal(false);
+                }}
+            />
+
             {/* Main Popover */}
             <Popover
                 open={Boolean(anchorEl)}
@@ -266,13 +281,13 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
                         border: '1px solid #E2E8F0',
                         borderRadius: '8px',
-                        minWidth: activeFilter === 'standards' ? '600px' : '200px',
+                        minWidth: '200px',
                         maxHeight: '80vh',
                         overflow: 'auto'
                     }
                 }}
             >
-                <Paper elevation={0} sx={{ py: activeFilter === 'standards' ? 0 : 0.5 }}>
+                <Paper elevation={0} sx={{ py: 0.5 }}>
                     {activeFilter === 'resourceType' && [
                         { label: 'Presentation', type: 'presentation', hasSubmenu: true, disabled: false },
                         { label: 'Lesson Plan', type: 'lessonPlan', disabled: true },
@@ -316,15 +331,6 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                             onClick={() => handleOptionSelect(language)}
                         />
                     ))}
-
-                    {activeFilter === 'standards' && (
-                        <StandardsSelector
-                            gradeLevel={formState.gradeLevel}
-                            subjectFocus={formState.subjectFocus}
-                            selectedStandards={formState.selectedStandards || []}
-                            onStandardsChange={(standard) => handleFormChange('selectedStandards', standard)}
-                        />
-                    )}
                 </Paper>
             </Popover>
 
