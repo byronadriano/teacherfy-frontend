@@ -3,7 +3,7 @@ export const EXAMPLE_FORM_DATA = {
     resourceType: "Presentation",
     gradeLevel: "4th grade",
     subjectFocus: "Math",
-    selectedStandards: ["Common Core Math 4.NF.1"], // Updated for new array format
+    selectedStandards: ["4.NF.1"], // Updated for new array format
     language: "English",
     customPrompt: "Create a lesson plan that introduces and reinforces key vocabulary. Include at least three new terms with definitions and examples. Incorporate a variety of interactive checks for understanding—such as quick formative assessments, short activities, or exit tickets—to ensure students are grasping the concepts throughout the lesson.",
     numSlides: 5,

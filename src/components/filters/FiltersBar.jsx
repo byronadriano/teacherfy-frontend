@@ -62,13 +62,13 @@ const FilterButton = ({ label, isSelected, onClick }) => (
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            px: 2,
+            px: 2.2,
             py: 1.5,
             borderRadius: '8px',
             backgroundColor: '#FFFFFF',
             border: '1px solid #E2E8F0',
             cursor: 'pointer',
-            minWidth: '140px',
+            minWidth: '115px',
             '&:hover': {
                 backgroundColor: '#F8FAFC',
                 borderColor: '#CBD5E1'
@@ -78,7 +78,7 @@ const FilterButton = ({ label, isSelected, onClick }) => (
         <Typography sx={{ 
             color: isSelected ? '#1E293B' : '#64748B',
             fontSize: '0.9375rem',
-            fontWeight: isSelected ? 500 : 400
+            fontWeight: isSelected ? 600 : 500
         }}>
             {label}
         </Typography>
@@ -209,10 +209,16 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-            {/* Resource Type Button */}
+        <Box sx={{ 
+            display: 'flex',
+            gap: 1.5,
+            mb: 3,
+            flexWrap: 'wrap', // Allow wrapping on smaller screens
+            justifyContent: 'flex-start'
+          }}>
+            {/* Resource Button */}
             <FilterButton
-                label={formState.resourceType || "Resource Type"}
+                label={formState.resourceType || "Resource"}
                 isSelected={!!formState.resourceType}
                 onClick={(e) => handleFilterClick(e, 'resourceType')}
             />

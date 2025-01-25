@@ -22,7 +22,7 @@ function App() {
           sx={{
             position: 'fixed',
             bottom: 0,
-            left: 0,
+            left: 100,
             right: 0,
             bgcolor: 'white',
             py: 2,
