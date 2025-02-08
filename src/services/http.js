@@ -7,19 +7,75 @@ class HttpClient {
   }
 
   async fetch(endpoint, options = {}) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API.TIMEOUT);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        signal: controller.signal,
+        credentials: 'include',
+        headers: {
+          ...API.HEADERS,
+          ...options.headers,
+        },
+        mode: 'cors'
+      });
+
+      clearTimeout(timeoutId);
+
+      // Handle OPTIONS preflight response
+      if (options.method === 'OPTIONS') {
+        return response;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          message: response.statusText
+        }));
+        throw new Error(errorData.message || 'Network response was not ok');
+      }
+
+      // Check if the response is a blob (for file downloads)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
+        return response.blob();
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }
 
-    return response;
+  // Helper methods for common HTTP methods
+  async get(endpoint, options = {}) {
+    return this.fetch(endpoint, { ...options, method: 'GET' });
+  }
+
+  async post(endpoint, data, options = {}) {
+    return this.fetch(endpoint, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async put(endpoint, data, options = {}) {
+    return this.fetch(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async delete(endpoint, options = {}) {
+    return this.fetch(endpoint, { ...options, method: 'DELETE' });
   }
 }
 
