@@ -1,28 +1,28 @@
 import React from 'react';
 import { Box, TextField, Switch, Paper, Button } from '@mui/material';
 import { Rocket, Sparkles } from 'lucide-react';
-import { styled } from '@mui/system';
+// import { styled } from '@mui/system';
 
-const CreateButton = styled(Button)(({ theme }) => ({
-  backgroundColor: '#035073',
-  color: '#FFFFFF',
-  borderRadius: '8px',
-  textTransform: 'none',       // no ALL CAPS
-  fontWeight: 500,
-  padding: '6px 16px',
-  transition: 'transform 0.15s ease-in-out',
-  '&:hover': {
-    backgroundColor: 'rgb(45, 147, 249)',
-    transform: 'translateY(-2px)',
-    boxShadow: '0 4px 12px rgba(69, 162, 244, 0.1)',
-  },
-  '&.Mui-disabled': {
-    backgroundColor: '#94A3B8',
-    color: '#FFFFFF',
-    boxShadow: 'none',
-    transform: 'none',
-  },
-}));
+// const CreateButton = styled(Button)(({ theme }) => ({
+//   backgroundColor: '#035073',
+//   color: '#FFFFFF',
+//   borderRadius: '8px',
+//   textTransform: 'none',       // no ALL CAPS
+//   fontWeight: 500,
+//   padding: '6px 16px',
+//   transition: 'transform 0.15s ease-in-out',
+//   '&:hover': {
+//     backgroundColor: 'rgb(45, 147, 249)',
+//     transform: 'translateY(-2px)',
+//     boxShadow: '0 4px 12px rgba(69, 162, 244, 0.1)',
+//   },
+//   '&.Mui-disabled': {
+//     backgroundColor: '#94A3B8',
+//     color: '#FFFFFF',
+//     boxShadow: 'none',
+//     transform: 'none',
+//   },
+// }));
 
 const CustomizationForm = ({ 
   value,
@@ -32,8 +32,22 @@ const CustomizationForm = ({
   onSubmit,
   isLoading 
 }) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+    
+    try {
+      console.log('Form submitted with value:', value);
+      await onSubmit();
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  };
+
   return (
     <Paper
+      component="form"
+      onSubmit={handleSubmit}
       elevation={0}
       sx={{
         width: '100%',
@@ -45,7 +59,6 @@ const CustomizationForm = ({
         overflow: 'hidden',
       }}
     >
-      {/* The main text input area */}
       <Box sx={{ p: 0 }}>
         <TextField
           fullWidth
@@ -77,7 +90,6 @@ const CustomizationForm = ({
         />
       </Box>
 
-      {/* The "Try Example" toggle and the CTA button */}
       <Box
         sx={{
           display: 'flex',
@@ -88,7 +100,6 @@ const CustomizationForm = ({
           backgroundColor: '#FFFFFF',
         }}
       >
-        {/* "Try Example" switch */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center',
@@ -117,17 +128,38 @@ const CustomizationForm = ({
           />
         </Box>
 
-        {/* "Create" button (primary action) */}
-        <CreateButton 
-          onClick={onSubmit} 
+        <Button 
+          type="submit"
           disabled={isLoading}
+          variant="contained"
           endIcon={<Rocket size={20} />}
-          >
-          Create
-        </CreateButton>
+          sx={{
+            backgroundColor: '#035073',
+            color: '#FFFFFF',
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 500,
+            padding: '6px 16px',
+            transition: 'all 0.15s ease-in-out',
+            '&:hover': {
+              backgroundColor: 'rgb(45, 147, 249)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 4px 12px rgba(69, 162, 244, 0.1)'
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#94A3B8',
+              color: '#FFFFFF',
+              boxShadow: 'none',
+              transform: 'none'
+            }
+          }}
+        >
+          {isLoading ? 'Creating...' : 'Create'}
+        </Button>
       </Box>
     </Paper>
   );
 };
 
 export default CustomizationForm;
+

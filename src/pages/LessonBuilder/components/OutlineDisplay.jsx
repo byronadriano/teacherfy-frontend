@@ -11,9 +11,9 @@ import { Download, Presentation } from 'lucide-react';
 const OutlineDisplay = ({ 
   contentState,
   uiState,
-  subscriptionState,
-  isAuthenticated,
-  googleSlidesState,
+  subscriptionState = { isPremium: false, downloadCount: 0 },
+  isAuthenticated = false,
+  googleSlidesState = { isGenerating: false }, // Add default value here
   onGeneratePresentation,
   onGenerateGoogleSlides
 }) => {

@@ -1,99 +1,89 @@
 // src/pages/LessonBuilder/hooks/usePresentation.js
-import { useState, useCallback } from "react";
-import { presentationService } from "../../../services";
+import { useState } from 'react';
+import { presentationService } from '../../../services';
 
-export default function usePresentation({
-  isAuthenticated,
-  setShowSignInPrompt,
-}) {
-  const [googleSlidesState, setGoogleSlidesState] = useState({
-    isGenerating: false,
-    error: null,
+const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) => {
+  const [googleSlidesState, setGoogleSlidesState] = useState({ isGenerating: false });
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // This can be updated to fetch from your backend
+  const [subscriptionState] = useState({ 
+    isPremium: isAuthenticated && user?.isPremium, 
+    downloadCount: 0 
   });
 
-  const [subscriptionState, setSubscriptionState] = useState({
-    downloadCount: 0,
-    isPremium: false,
-    showUpgradeModal: false,
-  });
-
-  const generatePresentation = useCallback(
-    async (formState, contentState) => {
-      try {
-        setGoogleSlidesState(prev => ({ ...prev, isGenerating: true }));
-        
-        const blob = await presentationService.generatePptx(formState, contentState);
-        
-        // Verify we have a valid blob
-        if (!(blob instanceof Blob)) {
-          throw new Error('Invalid response format');
+  const generatePresentation = async (formState, contentState) => {
+    try {
+      setIsLoading(true);
+      console.log('Generating presentation with:', {
+        formState,
+        contentState: {
+          finalOutline: contentState.finalOutline,
+          structuredContentLength: contentState.structuredContent.length
         }
+      });
+  
+      // Log structured content details
+      contentState.structuredContent.forEach((slide, index) => {
+        console.log(`Slide ${index + 1}:`, {
+          title: slide.title,
+          layout: slide.layout,
+          contentLength: slide.content.length,
+          teacherNotesLength: slide.teacher_notes.length
+        });
+      });
+  
+      const blob = await presentationService.generatePptx(formState, contentState);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'lesson_presentation.pptx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+  
+      // Optional: Show success message
+      alert('Presentation downloaded successfully!');
+    } catch (error) {
+      console.error('Complete presentation generation error:', error);
+      
+      // Show user-friendly error message
+      alert(`Failed to generate presentation: ${error.message}`);
+      
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        // Create the download URL
-        const url = window.URL.createObjectURL(blob);
-        
-        // Create and trigger download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${formState.lessonTopic || "lesson"}_presentation.pptx`;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        // Update download count
-        setSubscriptionState(prev => ({
-          ...prev,
-          downloadCount: prev.downloadCount + 1,
-        }));
-      } catch (err) {
-        console.error("Error generating presentation:", err);
-        throw new Error(err.message || "Error generating presentation");
-      } finally {
-        setGoogleSlidesState(prev => ({ ...prev, isGenerating: false }));
-      }
-    },
-    []
-  );
-
-  const generateGoogleSlides = useCallback(
-    async (formState, contentState) => {
+  const generateGoogleSlides = async (formState, contentState) => {
+    try {
+      // Only Google Slides needs authentication
       if (!isAuthenticated) {
-        setShowSignInPrompt(true);
+        setShowSignInPrompt();
         return;
       }
 
-      setGoogleSlidesState((prev) => ({ ...prev, isGenerating: true, error: null }));
-
-      try {
-        const data = await presentationService.generateGoogleSlides(formState, contentState);
-
-        if (data.presentation_url) {
-          window.open(data.presentation_url, "_blank");
-        } else {
-          throw new Error("Failed to get presentation URL");
-        }
-      } catch (err) {
-        setGoogleSlidesState((prev) => ({
-          ...prev,
-          error: err.message || "Error generating Google Slides",
-        }));
-        throw err;
-      } finally {
-        setGoogleSlidesState((prev) => ({ ...prev, isGenerating: false }));
-      }
-    },
-    [isAuthenticated, setShowSignInPrompt]
-  );
+      setGoogleSlidesState(prev => ({ ...prev, isGenerating: true }));
+      await presentationService.generateGoogleSlides(formState, contentState, token);
+    } catch (error) {
+      console.error('Error generating Google Slides:', error);
+      throw error;
+    } finally {
+      setGoogleSlidesState(prev => ({ ...prev, isGenerating: false }));
+    }
+  };
 
   return {
+    isLoading,
     googleSlidesState,
-    setGoogleSlidesState,
     subscriptionState,
-    setSubscriptionState,
     generatePresentation,
     generateGoogleSlides,
   };
-}
+};
+
+export default usePresentation;

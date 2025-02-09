@@ -44,7 +44,7 @@ const Sidebar = ({
             <Box
                 sx={{
                     width: isCollapsed ? '20px' : '240px',
-                    height: '100%',
+                    height: '100vh',  // This ensures full viewport height
                     position: 'fixed',
                     left: 0,
                     top: 0,
