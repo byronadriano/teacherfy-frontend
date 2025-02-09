@@ -1,9 +1,10 @@
-// src/services/presentation.js
 import { API } from '../utils/constants';
 
 export const presentationService = {
   async generatePptx(formState, contentState) {
     try {
+      console.log('Generating presentation with URL:', `${API.BASE_URL}${API.ENDPOINTS.GENERATE}`);
+      
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.GENERATE}`, {
         method: 'POST',
         credentials: 'include',
@@ -17,36 +18,43 @@ export const presentationService = {
           ...formState,
         })
       });
-  
-      // Check if the response is ok
+
+      // Detailed error handling for non-OK responses
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Server error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-  
+
       // Check content type
       const contentType = response.headers.get('content-type');
+      console.log('Response Content-Type:', contentType);
+
       if (!contentType || !contentType.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
         throw new Error(`Unexpected content type: ${contentType}`);
       }
-  
+
       // Convert response to Blob
       const blob = await response.blob();
-  
+
       // Validate Blob
       if (!(blob instanceof Blob)) {
         throw new Error('Response is not a valid Blob');
       }
-  
-      // Optional: Log Blob details for debugging
+
+      // Log Blob details
       console.log('Blob details:', {
         size: blob.size,
         type: blob.type
       });
-  
+
       return blob;
     } catch (error) {
-      console.error('Presentation download error:', error);
+      console.error('Detailed fetch error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       throw error;
     }
   },

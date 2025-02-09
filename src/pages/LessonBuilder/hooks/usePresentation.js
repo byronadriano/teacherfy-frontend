@@ -1,6 +1,6 @@
-// src/pages/LessonBuilder/hooks/usePresentation.js
 import { useState } from 'react';
 import { presentationService } from '../../../services';
+import { API } from '../../../utils/constants';
 
 const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) => {
   const [googleSlidesState, setGoogleSlidesState] = useState({ isGenerating: false });
@@ -16,13 +16,14 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
     try {
       setIsLoading(true);
       console.log('Generating presentation with:', {
+        baseUrl: API.BASE_URL,
         formState,
         contentState: {
           finalOutline: contentState.finalOutline,
           structuredContentLength: contentState.structuredContent.length
         }
       });
-  
+
       // Log structured content details
       contentState.structuredContent.forEach((slide, index) => {
         console.log(`Slide ${index + 1}:`, {
@@ -32,7 +33,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
           teacherNotesLength: slide.teacher_notes.length
         });
       });
-  
+
       const blob = await presentationService.generatePptx(formState, contentState);
       
       // Create download link
@@ -40,18 +41,26 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = 'lesson_presentation.pptx';
+      a.download = `${formState.lessonTopic || 'lesson'}_presentation.pptx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-  
+
       // Optional: Show success message
       alert('Presentation downloaded successfully!');
     } catch (error) {
-      console.error('Complete presentation generation error:', error);
+      console.error('Complete presentation generation error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
-      // Show user-friendly error message
-      alert(`Failed to generate presentation: ${error.message}`);
+      // More informative error message
+      const errorMessage = error.message.includes('Failed to fetch') 
+        ? 'Unable to connect to the server. Please check your internet connection or try again later.' 
+        : error.message;
+      
+      alert(`Presentation Generation Error: ${errorMessage}`);
       
       throw error;
     } finally {
@@ -71,6 +80,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       await presentationService.generateGoogleSlides(formState, contentState, token);
     } catch (error) {
       console.error('Error generating Google Slides:', error);
+      alert(`Google Slides Generation Error: ${error.message}`);
       throw error;
     } finally {
       setGoogleSlidesState(prev => ({ ...prev, isGenerating: false }));
