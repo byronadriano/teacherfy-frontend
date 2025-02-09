@@ -13,29 +13,37 @@ export const API = {
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
     'Origin': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
   }
 };
-// Add helper functions for error handling
+
 export const handleApiError = (error) => {
   console.error('API Error:', error);
-  if (error.response) {
-    // Server responded with error
+  
+  if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
     return {
-      error: error.response.data.error || 'Server error occurred',
+      error: 'Unable to connect to server. Please check your internet connection.',
+      status: 0
+    };
+  }
+  
+  if (error.response) {
+    return {
+      error: error.response.data?.error || 'Server error occurred',
       status: error.response.status
     };
-  } else if (error.request) {
-    // Request made but no response
+  } 
+  
+  if (error.request) {
     return {
       error: 'No response from server',
       status: 503
     };
-  } else {
-    // Request setup error
-    return {
-      error: 'Error setting up request',
-      status: 500
-    };
   }
+  
+  return {
+    error: 'Error setting up request',
+    status: 500
+  };
 };
