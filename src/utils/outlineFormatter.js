@@ -1,4 +1,5 @@
-// OutlineFormatter.js
+// src/utils/outlineFormatter.js
+
 export const OUTLINE_PROMPT_TEMPLATE = `
 CRITICAL REQUIREMENTS:
 THIS MUST BE A: {resourceType}
@@ -43,7 +44,7 @@ Teacher Notes:
 - ASSESSMENT:
   - [Direct SPECIFIC, ACTUAL, REAL methods to measure understanding, in English, referencing the specific tasks introduced under ENGAGEMENT]
 - DIFFERENTIATION:
-  - [Concrete strategies, e.g., specific worksheets with problems layed out, actual and specific challenge questions, or pairing methods, in English]
+  - [Concrete strategies, e.g., specific worksheets with problems laid out, actual and specific challenge questions, or pairing methods, in English]
 
 Visual Elements:
 - [Exact visuals or resources in English, with instructions on how to display or distribute them]
@@ -60,180 +61,19 @@ ADDITIONAL NOTES:
 - “Teacher Notes” and “Visual Elements” remain in English, containing specific details.
 - If students need to see certain problems or examples, ensure those exact items are listed under “Visual Elements” or “Teacher Notes.”
 - Think of each slide as a ready-made segment of a presentation: Title, actual teaching content, teacher instructions, and prepared visuals/resources.
-
 `;
-
-export const parseOutlineToStructured = (outlineText, numSlides) => {
-  // First, normalize the markdown bold syntax
-  const normalizedText = outlineText.replace(/\*\*Slide (\d+):/g, 'Slide $1:');
-  
-  // Split by Slide markers, handling both formats
-  const slides = normalizedText
-    .split(/\n(?=(?:\*\*)?Slide \d+:)/)
-    .filter(Boolean)
-    .map(slide => slide.trim());
-
-  const structuredSlides = [];
-
-  const extractSection = (slideText, sectionName) => {
-    // Handle both regular and bold markdown section headers
-    const sectionPattern = new RegExp(`(?:\\*\\*)?${sectionName}:`, 'i');
-    const sectionStart = slideText.search(sectionPattern);
-    
-    if (sectionStart === -1) {
-      console.debug(`Section ${sectionName} not found in slide text`);
-      return [];
-    }
-
-    // Find the next section start or end of text
-    const nextSections = ['Content:', 'Teacher Notes:', 'Visual Elements:'];
-    let sectionEnd = slideText.length;
-    
-    nextSections.forEach(nextSection => {
-      if (nextSection === `${sectionName}:`) return;
-      // Handle both regular and bold markdown headers for next sections
-      const nextPattern = new RegExp(`(?:\\*\\*)?${nextSection}`, 'i');
-      const nextIndex = slideText.slice(sectionStart).search(nextPattern);
-      if (nextIndex !== -1 && nextIndex + sectionStart < sectionEnd) {
-        sectionEnd = nextIndex + sectionStart;
-      }
-    });
-
-    // Extract the content between section start and end
-    const sectionHeader = slideText.slice(sectionStart).match(sectionPattern)[0];
-    let sectionContent = slideText
-      .substring(sectionStart + sectionHeader.length, sectionEnd)
-      .trim()
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line && line.length > 0 && !line.match(/^(?:\*\*)?(?:Content|Teacher Notes|Visual Elements):/i))
-      .map(line => {
-        // Remove list markers and trim
-        return line
-          .replace(/^[-•*]\s*/, '')
-          .replace(/^\d+\.\s*/, '')
-          .trim();
-      });
-
-    console.debug(`Extracted ${sectionName}:`, sectionContent);
-    return sectionContent;
-  };
-
-  for (let i = 0; i < slides.length && i < numSlides; i++) {
-    const slideText = slides[i];
-    
-    // Extract title, handling both formats
-    const titleMatch = slideText.match(/(?:\*\*)?Slide \d+:\s*([^*\n]+?)(?:\*\*)?(?=\n|$)/);
-    const title = titleMatch ? titleMatch[1].trim() : '';
-
-    // Determine layout based on content
-    const layout = slideText.toLowerCase().includes('comparison') || 
-                  slideText.toLowerCase().includes('vs') ? 
-                  'TWO_COLUMN' : 'TITLE_AND_CONTENT';
-
-    // Extract sections
-    const content = extractSection(slideText, 'Content');
-    const teacherNotes = extractSection(slideText, 'Teacher Notes');
-    const visualElements = extractSection(slideText, 'Visual Elements');
-
-    // Handle two-column layout content distribution
-    let leftColumn = [];
-    let rightColumn = [];
-    
-    if (layout === 'TWO_COLUMN') {
-      // Split content evenly between columns
-      const midpoint = Math.ceil(content.length / 2);
-      leftColumn = content.slice(0, midpoint);
-      rightColumn = content.slice(midpoint);
-    }
-
-    // Create structured slide
-    structuredSlides.push({
-      title,
-      layout,
-      content,
-      teacher_notes: teacherNotes,
-      visual_elements: visualElements,
-      left_column: leftColumn,
-      right_column: rightColumn
-    });
-  }
-
-  return structuredSlides;
-};
-
-// Helper function to format the outline for display
-export const formatOutlineForDisplay = (structuredContent) => {
-  let output = '';
-
-  structuredContent.forEach((slide, index) => {
-    // Add extra padding at the start of each slide except the first
-    if (index > 0) {
-      output += '\n\n';
-    }
-
-    // Title with clear separation
-    output += `## Slide ${index + 1}: ${slide.title}\n\n`;
-
-    // Content section with clear structure
-    output += '### Content\n\n';
-    slide.content.forEach(item => {
-      // Wrap long content lines
-      const wrappedContent = item.split(/(?<=\. )/g).join('\n  ');
-      output += `• ${wrappedContent}\n`;
-    });
-    output += '\n';
-
-    // Teacher Notes with subsections
-    output += '### Teacher Notes\n\n';
-    
-    // Group teacher notes by type
-    const noteTypes = ['ENGAGEMENT', 'ASSESSMENT', 'DIFFERENTIATION'];
-    noteTypes.forEach(type => {
-      const typeNotes = slide.teacher_notes.filter(note => note.startsWith(type));
-      if (typeNotes.length > 0) {
-        output += `**${type}:**\n`;
-        typeNotes.forEach(note => {
-          // Remove the type prefix and format the note
-          const cleanNote = note.replace(`${type}: `, '').trim();
-          output += `  • ${cleanNote}\n`;
-        });
-        output += '\n';
-      }
-    });
-    
-    // Visual Elements with clear structure
-    output += '### Visual Elements\n\n';
-    if (slide.visual_elements && slide.visual_elements.length > 0) {
-      slide.visual_elements.forEach(element => {
-        if (element !== '--') {  // Skip divider markers
-          output += `• ${element}\n`;
-        }
-      });
-    } else {
-      output += '• (None provided)\n';
-    }
-    output += '\n';
-
-    // Add clear separator between slides
-    if (index < structuredContent.length - 1) {
-      output += '\n---\n';
-    }
-  });
-
-  return output.trim();
-};
 
 export const generateFullPrompt = (formState) => {
   return OUTLINE_PROMPT_TEMPLATE
     .replace(/{resourceType}/g, formState.resourceType || 'Not specified')
     .replace(/{topic}/g, formState.lessonTopic || 'Not specified')
-    .replace(/{standard}/g, formState.standard || 'Not specified')
+    .replace(/{standard}/g, (formState.selectedStandards && formState.selectedStandards.join(', ')) || 'Not specified')
     .replace(/{language}/g, formState.language)
     .replace(/{gradeLevel}/g, formState.gradeLevel)
     .replace(/{subject}/g, formState.subjectFocus)
     .replace(/{numSlides}/g, formState.numSlides)
-    .replace(/{custom_prompt}/g, formState.customPrompt || 'None');
+    .replace(/{custom_prompt}/g, formState.customPrompt || 'None')
+    .replace(/{district}/g, formState.district || 'Not specified');
 };
 
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
@@ -254,40 +94,154 @@ ADDITIONAL CRITICAL REQUIREMENTS:
 ${modifiedPrompt}
 
 INTEGRATION INSTRUCTIONS:
-1. Start by fully understanding both sets of requirements
-2. Identify any potential conflicts or overlaps
+1. Start by fully understanding both sets of requirements.
+2. Identify any potential conflicts or overlaps.
 3. Prioritize requirements in this order:
    - Additional critical requirements (newest guidance)
    - Primary requirements (original custom prompt)
-   - Standard lesson structure and format
+   - Standard lesson structure and format.
 4. Ensure EVERY component of the lesson plan:
-   - Explicitly addresses additional requirements
-   - Maintains alignment with original requirements
-   - Follows standard lesson structure
+   - Explicitly addresses additional requirements.
+   - Maintains alignment with original requirements.
+   - Follows the standard lesson structure.
 5. When modifying content:
-   - Make comprehensive changes to fully implement new requirements
-   - Preserve original requirements where compatible
-   - Adapt examples and activities to serve both sets of needs
+   - Make comprehensive changes to fully implement new requirements.
+   - Preserve original requirements where compatible.
+   - Adapt examples and activities to serve both sets of needs.
 6. Review final outline to verify:
-   - Complete implementation of additional requirements
-   - Maintenance of original requirements
-   - Coherent integration of all elements
+   - Complete implementation of additional requirements.
+   - Maintenance of original requirements.
+   - Coherent integration of all elements.
 `
     );
 };
 
+export const formatOutlineForDisplay = (structuredContent) => {
+  let output = '';
 
-export const formatForDisplay = (outline) => {
-  return outline
-    .replace(/\n{3,}/g, "\n\n")        // Normalize multiple newlines
-    .replace(/(?<=:)\n\n/g, "\n")      // Remove extra newline after colons
-    .replace(/([^.\n])(?=\n- )/g, "$1.")
-    .replace(/\n +/g, "\n")            // Remove excess indentation
-    .replace(/^\s+|\s+$/gm, "")        // Trim each line's whitespace
+  structuredContent.forEach((slide, index) => {
+    if (index > 0) {
+      output += '\n\n';
+    }
+    output += `## Slide ${index + 1}: ${slide.title}\n\n`;
+    output += '### Content\n\n';
+    slide.content.forEach(item => {
+      const wrappedContent = item.split(/(?<=\. )/g).join('\n  ');
+      output += `• ${wrappedContent}\n`;
+    });
+    output += '\n';
+    output += '### Teacher Notes\n\n';
+    const noteTypes = ['ENGAGEMENT', 'ASSESSMENT', 'DIFFERENTIATION'];
+    noteTypes.forEach(type => {
+      const typeNotes = slide.teacher_notes.filter(note => note.startsWith(type));
+      if (typeNotes.length > 0) {
+        output += `**${type}:**\n`;
+        typeNotes.forEach(note => {
+          const cleanNote = note.replace(`${type}: `, '').trim();
+          output += `  • ${cleanNote}\n`;
+        });
+        output += '\n';
+      }
+    });
+    output += '### Visual Elements\n\n';
+    if (slide.visual_elements && slide.visual_elements.length > 0) {
+      slide.visual_elements.forEach(element => {
+        if (element !== '--') {
+          output += `• ${element}\n`;
+        }
+      });
+    } else {
+      output += '• (None provided)\n';
+    }
+    output += '\n';
+    if (index < structuredContent.length - 1) {
+      output += '\n---\n';
+    }
+  });
 
-    // ADD THIS LINE:
-    .replace(/^•\s/gm, "- ")           // Convert "• " at the start of a line into "- "
-    
-    .trim();
+  return output.trim();
 };
 
+export const parseOutlineToStructured = (outlineText, numSlides) => {
+  // Normalize markdown bold syntax.
+  const normalizedText = outlineText.replace(/\*\*Slide (\d+):/g, 'Slide $1:');
+  
+  // Split the text by slide markers.
+  const slides = normalizedText
+    .split(/\n(?=(?:\*\*)?Slide \d+:)/)
+    .filter(Boolean)
+    .map(slide => slide.trim());
+
+  const structuredSlides = [];
+
+  const extractSection = (slideText, sectionName) => {
+    // Create a regex for the section header (handles bold and non-bold).
+    const sectionPattern = new RegExp(`(?:\\*\\*)?${sectionName}:`, 'i');
+    const sectionStart = slideText.search(sectionPattern);
+    
+    if (sectionStart === -1) {
+      console.debug(`Section ${sectionName} not found in slide text`);
+      return [];
+    }
+
+    // Determine where the section ends by looking for the next section header.
+    const nextSections = ['Content:', 'Teacher Notes:', 'Visual Elements:'];
+    let sectionEnd = slideText.length;
+    
+    nextSections.forEach(nextSection => {
+      if (nextSection === `${sectionName}:`) return;
+      const nextPattern = new RegExp(`(?:\\*\\*)?${nextSection}`, 'i');
+      const nextIndex = slideText.slice(sectionStart).search(nextPattern);
+      if (nextIndex !== -1 && nextIndex + sectionStart < sectionEnd) {
+        sectionEnd = nextIndex + sectionStart;
+      }
+    });
+
+    // Extract the section's content.
+    const sectionHeader = slideText.slice(sectionStart).match(sectionPattern)[0];
+    let sectionContent = slideText
+      .substring(sectionStart + sectionHeader.length, sectionEnd)
+      .trim()
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && line.length > 0 && !line.match(/^(?:\*\*)?(?:Content|Teacher Notes|Visual Elements):/i))
+      .map(line => line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim());
+
+    console.debug(`Extracted ${sectionName}:`, sectionContent);
+    return sectionContent;
+  };
+
+  for (let i = 0; i < slides.length && i < numSlides; i++) {
+    const slideText = slides[i];
+    const titleMatch = slideText.match(/(?:\*\*)?Slide \d+:\s*([^*\n]+?)(?:\*\*)?(?=\n|$)/);
+    const title = titleMatch ? titleMatch[1].trim() : '';
+
+    const layout = slideText.toLowerCase().includes('comparison') || slideText.toLowerCase().includes('vs')
+      ? 'TWO_COLUMN'
+      : 'TITLE_AND_CONTENT';
+
+    const content = extractSection(slideText, 'Content');
+    const teacherNotes = extractSection(slideText, 'Teacher Notes');
+    const visualElements = extractSection(slideText, 'Visual Elements');
+
+    let leftColumn = [];
+    let rightColumn = [];
+    if (layout === 'TWO_COLUMN') {
+      const midpoint = Math.ceil(content.length / 2);
+      leftColumn = content.slice(0, midpoint);
+      rightColumn = content.slice(midpoint);
+    }
+
+    structuredSlides.push({
+      title,
+      layout,
+      content,
+      teacher_notes: teacherNotes,
+      visual_elements: visualElements,
+      left_column: leftColumn,
+      right_column: rightColumn
+    });
+  }
+
+  return structuredSlides;
+};

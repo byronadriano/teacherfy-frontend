@@ -6,7 +6,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
   const [googleSlidesState, setGoogleSlidesState] = useState({ isGenerating: false });
   const [isLoading, setIsLoading] = useState(false);
   
-  // This can be updated to fetch from your backend
+  // Example subscription state—adjust as needed.
   const [subscriptionState] = useState({ 
     isPremium: isAuthenticated && user?.isPremium, 
     downloadCount: 0 
@@ -24,7 +24,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         }
       });
 
-      // Log structured content details
+      // Log each slide's details for debugging.
       contentState.structuredContent.forEach((slide, index) => {
         console.log(`Slide ${index + 1}:`, {
           title: slide.title,
@@ -36,7 +36,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
 
       const blob = await presentationService.generatePptx(formState, contentState);
       
-      // Create download link
+      // Create and click a download link for the generated presentation.
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
@@ -46,7 +46,6 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       a.click();
       window.URL.revokeObjectURL(url);
 
-      // Optional: Show success message
       alert('Presentation downloaded successfully!');
     } catch (error) {
       console.error('Complete presentation generation error:', {
@@ -55,13 +54,11 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         stack: error.stack
       });
       
-      // More informative error message
       const errorMessage = error.message.includes('Failed to fetch') 
         ? 'Unable to connect to the server. Please check your internet connection or try again later.' 
         : error.message;
       
       alert(`Presentation Generation Error: ${errorMessage}`);
-      
       throw error;
     } finally {
       setIsLoading(false);
@@ -70,7 +67,6 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
 
   const generateGoogleSlides = async (formState, contentState) => {
     try {
-      // Only Google Slides needs authentication
       if (!isAuthenticated) {
         setShowSignInPrompt();
         return;

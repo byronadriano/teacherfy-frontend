@@ -1,4 +1,3 @@
-// src/services/outline.js
 import { API, handleApiError } from '../utils/constants/api';
 
 export const outlineService = {
@@ -13,7 +12,8 @@ export const outlineService = {
           'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
         },
         body: JSON.stringify({
-          custom_prompt: formData.customPrompt,
+          // Use the underscore property as built by the hook.
+          custom_prompt: formData.custom_prompt,
           lesson_topic: formData.lessonTopic,
           grade_level: formData.gradeLevel,
           subject_focus: formData.subjectFocus,
@@ -74,6 +74,7 @@ export const outlineService = {
         },
         body: JSON.stringify({
           ...formData,
+          // Use the underscore property here as well.
           custom_prompt: modifiedPrompt,
           regeneration: true,
           previous_outline: formData.outlineToConfirm
@@ -90,12 +91,10 @@ export const outlineService = {
       const data = await response.json();
       console.log('Received regeneration response:', data);
 
-      // Validate response data
       if (!data.messages || !data.structured_content) {
         throw new Error('Invalid response format from server');
       }
 
-      // Validate and normalize structured content
       const validatedContent = data.structured_content.map((slide, index) => ({
         title: slide.title || `Slide ${index + 1}`,
         layout: slide.layout || 'TITLE_AND_CONTENT',
