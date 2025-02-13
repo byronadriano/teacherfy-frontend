@@ -3,13 +3,13 @@ export const API = {
   BASE_URL: process.env.REACT_APP_API_BASE_URL || 
             (process.env.NODE_ENV === 'development' 
               ? "http://localhost:5000"  
-              : "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"),
+              : "https://teacherfy.ai"),
   ENDPOINTS: {
     OUTLINE: "/outline",
     GENERATE: "/generate",
     GENERATE_SLIDES: "/generate_slides"
   },
-  TIMEOUT: 30000, // 30 seconds
+  TIMEOUT: 30000,
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -35,15 +35,8 @@ export const handleApiError = (error) => {
     };
   } 
   
-  if (error.request) {
-    return {
-      error: 'No response from server',
-      status: 503
-    };
-  }
-  
   return {
-    error: 'Error setting up request',
+    error: error.message || 'An unknown error occurred',
     status: 500
   };
 };
