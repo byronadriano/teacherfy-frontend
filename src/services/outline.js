@@ -2,29 +2,30 @@ import { API, handleApiError } from '../utils/constants/api';
 
 export const outlineService = {
   async generate(formData) {
+    // Ensure all fields have sensible defaults
+    const completeFormData = {
+      resourceType: formData.resourceType || 'Presentation',
+      gradeLevel: formData.gradeLevel || '',
+      subjectFocus: formData.subjectFocus || '',
+      language: formData.language || 'Spanish',
+      lessonTopic: formData.lessonTopic || 'Exploring Learning',
+      numSlides: formData.numSlides || 3,
+      customPrompt: formData.customPrompt || '',
+      selectedStandards: formData.selectedStandards || []
+    };
+
     try {
-      console.log('Sending outline request with data:', formData);
+      console.log('Sending outline request with complete data:', completeFormData);
       
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.OUTLINE}`, {
         method: 'POST',
         headers: {
           ...API.HEADERS,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
         },
-        body: JSON.stringify({
-          // Use the underscore property as built by the hook.
-          custom_prompt: formData.custom_prompt,
-          lesson_topic: formData.lessonTopic,
-          grade_level: formData.gradeLevel,
-          subject_focus: formData.subjectFocus,
-          language: formData.language,
-          use_example: formData.useExample || false,
-          resource_type: formData.resourceType,
-          num_slides: formData.numSlides,
-          selected_standards: formData.selectedStandards || []
-        }),
-        credentials: 'include',
-        mode: 'cors'
+        body: JSON.stringify(completeFormData),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -35,12 +36,12 @@ export const outlineService = {
       const data = await response.json();
       console.log('Received response from server:', data);
 
-      // Validate response data
+      // Validate response structure
       if (!data.messages || !data.structured_content) {
         throw new Error('Invalid response format from server');
       }
 
-      // Validate and normalize structured content
+      // Normalize structured content
       const validatedContent = data.structured_content.map((slide, index) => ({
         title: slide.title || `Slide ${index + 1}`,
         layout: slide.layout || 'TITLE_AND_CONTENT',
@@ -56,10 +57,16 @@ export const outlineService = {
         structured_content: validatedContent
       };
     } catch (error) {
-      console.error('Error in outline service:', error);
+      console.error('Outline generation error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
       throw handleApiError(error);
     }
   },
+
 
   async regenerate(formData, modifiedPrompt) {
     try {
@@ -70,11 +77,11 @@ export const outlineService = {
         method: 'POST',
         headers: {
           ...API.HEADERS,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
         },
         body: JSON.stringify({
           ...formData,
-          // Use the underscore property here as well.
           custom_prompt: modifiedPrompt,
           regeneration: true,
           previous_outline: formData.outlineToConfirm
@@ -82,19 +89,19 @@ export const outlineService = {
         credentials: 'include',
         mode: 'cors'
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-
+  
       const data = await response.json();
       console.log('Received regeneration response:', data);
-
+  
       if (!data.messages || !data.structured_content) {
         throw new Error('Invalid response format from server');
       }
-
+  
       const validatedContent = data.structured_content.map((slide, index) => ({
         title: slide.title || `Slide ${index + 1}`,
         layout: slide.layout || 'TITLE_AND_CONTENT',
@@ -104,7 +111,7 @@ export const outlineService = {
         left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
         right_column: Array.isArray(slide.right_column) ? slide.right_column : []
       }));
-
+  
       return {
         messages: data.messages,
         structured_content: validatedContent
