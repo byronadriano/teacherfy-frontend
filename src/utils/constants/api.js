@@ -1,4 +1,3 @@
-// src/utils/constants/api.js
 export const API = {
   BASE_URL: process.env.REACT_APP_API_BASE_URL || 
             (process.env.NODE_ENV === 'development' 
@@ -9,7 +8,7 @@ export const API = {
     GENERATE: "/generate",
     GENERATE_SLIDES: "/generate_slides"
   },
-  TIMEOUT: 30000,
+  TIMEOUT: 30000, // 30 seconds timeout
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -19,24 +18,32 @@ export const API = {
 };
 
 export const handleApiError = (error) => {
-  console.error('API Error:', error);
+  console.error('Full API Error:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack
+  });
   
+  // More comprehensive error handling
   if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
     return {
       error: 'Unable to connect to server. Please check your internet connection.',
-      status: 0
+      status: 0,
+      details: 'Network error or server unreachable'
     };
   }
   
   if (error.response) {
     return {
       error: error.response.data?.error || 'Server error occurred',
-      status: error.response.status
+      status: error.response.status,
+      details: error.response.data?.details || 'No additional details available'
     };
   } 
   
   return {
-    error: error.message || 'An unknown error occurred',
-    status: 500
+    error: error.message || 'An unexpected error occurred',
+    status: 500,
+    details: 'Unknown error type'
   };
 };

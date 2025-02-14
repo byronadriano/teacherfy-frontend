@@ -7,9 +7,9 @@ export const outlineService = {
       resourceType: formData.resourceType || 'Presentation',
       gradeLevel: formData.gradeLevel || '',
       subjectFocus: formData.subjectFocus || '',
-      language: formData.language || 'Spanish',
+      language: formData.language || 'English', // Changed from Spanish to English
       lessonTopic: formData.lessonTopic || 'Exploring Learning',
-      numSlides: formData.numSlides || 3,
+      numSlides: formData.numSlides || 5, // Changed from 3 to 5 to match typical default
       customPrompt: formData.customPrompt || '',
       selectedStandards: formData.selectedStandards || []
     };
@@ -28,20 +28,26 @@ export const outlineService = {
         credentials: 'include'
       });
 
+      // Improved error handling: try to parse error response text if JSON parsing fails
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        } catch (parseError) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
       }
 
       const data = await response.json();
       console.log('Received response from server:', data);
 
-      // Validate response structure
+      // More robust validation of response structure
       if (!data.messages || !data.structured_content) {
-        throw new Error('Invalid response format from server');
+        throw new Error('Invalid response format from server. Expected messages and structured_content.');
       }
 
-      // Normalize structured content
+      // Normalize structured content with more comprehensive validation
       const validatedContent = data.structured_content.map((slide, index) => ({
         title: slide.title || `Slide ${index + 1}`,
         layout: slide.layout || 'TITLE_AND_CONTENT',
