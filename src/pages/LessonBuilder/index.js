@@ -10,8 +10,9 @@ import UpgradeModal from '../../components/modals/UpgradeModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
 import OutlineDisplay from './components/OutlineDisplay';
 import DebugPanel from '../../components/debug/DebugPanel';
+import AppFooter from '../../components/common/AppFooter';
 
-import useAuth from './hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import useForm from './hooks/useForm';
 import useOutline from './hooks/useOutline';
 import usePresentation from './hooks/usePresentation';
@@ -27,13 +28,14 @@ const LessonBuilder = () => {
     alwaysIncludeImages: false
   });
 
-  // Hooks
-  const {
-    user,
-    isAuthenticated,
-    handleLoginSuccess,
-    handleLogout
-  } = useAuth();
+  // Use auth context instead of hook
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+
+  const handleLoginSuccess = (credentialResponse) => {
+    const credential = credentialResponse.credential;
+    const userInfo = JSON.parse(atob(credential.split('.')[1]));
+    login(userInfo, credential);
+  };
 
   const {
     formState,
@@ -67,23 +69,47 @@ const LessonBuilder = () => {
     setShowSignInPrompt: () => setUiState(prev => ({ ...prev, showSignInPrompt: true }))
   });
 
-  // Effects
+  // Load user settings from session storage instead of local storage
   useEffect(() => {
-    const savedSettings = localStorage.getItem('userSettings');
+    const savedSettings = sessionStorage.getItem('userSettings');
     if (savedSettings) {
       setUserSettings(JSON.parse(savedSettings));
     }
+
+    // Restore sidebar collapsed state
+    const storedSidebarState = localStorage.getItem('sidebarCollapsed') === 'true';
+    setIsSidebarCollapsed(storedSidebarState);
   }, []);
 
-  // Handlers
   const handleSettingsChange = (newSettings) => {
     setUserSettings(newSettings);
-    localStorage.setItem('userSettings', JSON.stringify(newSettings));
+    sessionStorage.setItem('userSettings', JSON.stringify(newSettings));
   };
 
   const handleInputChange = (e) => {
     handleFormChange('customPrompt', e.target.value);
   };
+
+  // Toggle sidebar and persist state
+  const toggleSidebar = () => {
+    const newCollapsedState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newCollapsedState);
+    localStorage.setItem('sidebarCollapsed', newCollapsedState.toString());
+  };
+
+  // Show loading state while auth is being checked
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <Typography>Loading...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ 
@@ -92,12 +118,11 @@ const LessonBuilder = () => {
       bgcolor: '#ffffff',
       overflow: 'hidden'
     }}>
-      {/* Sidebar */}
       <Sidebar
         isCollapsed={isSidebarCollapsed}
-        toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        toggleSidebar={toggleSidebar}
         user={user}
-        handleLogout={handleLogout}
+        handleLogout={logout}
         handleLoginSuccess={handleLoginSuccess}
         defaultSettings={userSettings}
         onSettingsChange={handleSettingsChange}
@@ -114,7 +139,8 @@ const LessonBuilder = () => {
           transition: 'margin-left 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative'
+          position: 'relative',
+          pb: '60px' // Space for footer
         }}
       >
         {/* Content Container */}
@@ -210,7 +236,6 @@ const LessonBuilder = () => {
           onClose={() => setUiState(prev => ({ ...prev, showUpgradeModal: false }))}
         />
 
-        {/* Debug Panel */}
         <DebugPanel 
           contentState={contentState}
           uiState={{
@@ -218,6 +243,9 @@ const LessonBuilder = () => {
             isLoading: outlineLoading || presentationLoading
           }}
         />
+
+        {/* Footer */}
+        <AppFooter />
       </Box>
     </Box>
   );

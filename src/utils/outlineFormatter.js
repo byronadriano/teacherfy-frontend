@@ -73,7 +73,7 @@ export const generateFullPrompt = (formState) => {
     .replace(/{subject}/g, formState.subjectFocus)
     .replace(/{numSlides}/g, formState.numSlides)
     .replace(/{custom_prompt}/g, formState.customPrompt || 'None')
-    .replace(/{district}/g, formState.district || 'Not specified');
+    // .replace(/{district}/g, formState.district || 'Not specified');
 };
 
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {

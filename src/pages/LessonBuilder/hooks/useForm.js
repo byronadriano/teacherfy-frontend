@@ -1,26 +1,21 @@
 // src/pages/LessonBuilder/hooks/useForm.js
 import { useState, useCallback } from "react";
-import {
-  formatOutlineForDisplay,
-  parseOutlineToStructured,
-  generateRegenerationPrompt,
-  generateFullPrompt,
-} from "../../../utils/outlineFormatter";
+import { formatOutlineForDisplay, parseOutlineToStructured } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA, EXAMPLE_OUTLINE } from "../../../utils/constants";
 import { outlineService } from "../../../services";
 
-export default function useForm({
-  setShowSignInPrompt,
-}) {
-  // Initial form state
+export default function useForm({ setShowSignInPrompt }) {
+  // Initial form state with all required fields
   const [formState, setFormState] = useState({
     resourceType: "",
     gradeLevel: "",
     subjectFocus: "",
     selectedStandards: [],
     language: "",
-    customPrompt: "",
-    numSlides: 5
+    lessonTopic: "",
+    numSlides: 5,
+    includeImages: false,
+    customPrompt: ""
   });
 
   const [uiState, setUiState] = useState({
@@ -31,28 +26,26 @@ export default function useForm({
     regenerationCount: 0,
     modifiedPrompt: "",
     generateOutlineClicked: false,
-    isExample: false,
-    showSignInPrompt: false,
-    showUpgradeModal: false
+    isExample: false
   });
 
   const [contentState, setContentState] = useState({
     outlineToConfirm: "",
     finalOutline: "",
-    structuredContent: [],
+    structuredContent: []
   });
 
   const resetForm = useCallback(() => {
-    console.log("Resetting form...");
-    
     setFormState({
-      resourceType: "",
+      resourceType: "Presentation",
       gradeLevel: "",
       subjectFocus: "",
       selectedStandards: [],
       language: "",
-      customPrompt: "",
-      numSlides: 5
+      lessonTopic: "",
+      numSlides: 5,
+      includeImages: false,
+      customPrompt: ""
     });
 
     setUiState(prev => ({
@@ -70,90 +63,115 @@ export default function useForm({
     setContentState({
       outlineToConfirm: "",
       finalOutline: "",
-      structuredContent: [],
+      structuredContent: []
     });
   }, []);
 
   const handleFormChange = useCallback((field, value) => {
-    setFormState((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormState(prev => {
+      // Special handling for resourceType
+      if (field === 'resourceType') {
+        // Reset numSlides and includeImages when switching from Presentation
+        if (prev.resourceType === 'Presentation' && value !== 'Presentation') {
+          return {
+            ...prev,
+            [field]: value,
+            numSlides: undefined,
+            includeImages: false
+          };
+        }
+        // Set default numSlides when switching to Presentation
+        if (value === 'Presentation') {
+          return {
+            ...prev,
+            [field]: value,
+            numSlides: 5
+          };
+        }
+      }
+      return { ...prev, [field]: value };
+    });
   }, []);
 
   const toggleExample = useCallback((isChecked) => {
     if (isChecked) {
-      setFormState(EXAMPLE_FORM_DATA);
-      setUiState(prev => ({
-        ...prev,
-        isExample: true
+      setFormState(prev => ({
+        ...EXAMPLE_FORM_DATA,
+        // Preserve any current settings that shouldn't be overwritten
+        resourceType: prev.resourceType,
+        numSlides: prev.numSlides,
+        includeImages: prev.includeImages
       }));
+      setUiState(prev => ({ ...prev, isExample: true }));
     } else {
-      setFormState({
-        resourceType: "",
-        gradeLevel: "",
-        subjectFocus: "",
-        selectedStandards: [],
-        language: "",
-        customPrompt: "",
-        numSlides: 5
-      });
-      setUiState(prev => ({
-        ...prev,
-        isExample: false
-      }));
+      resetForm();
     }
-  }, []);
+  }, [resetForm]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleGenerateOutline = useCallback(async () => {
-    if (
-      !formState.resourceType ||
-      !formState.gradeLevel ||
-      !formState.subjectFocus ||
-      !formState.language
-    ) {
+    // Validate only the essential required fields
+    if (!formState.resourceType || !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
+      const missingFields = [
+        !formState.resourceType && 'resource type',
+        !formState.gradeLevel && 'grade level',
+        !formState.subjectFocus && 'subject',
+        !formState.language && 'language'
+      ].filter(Boolean).join(', ');
+  
       setUiState(prev => ({
         ...prev,
-        error: "Please fill in all required fields."
+        error: `Please fill in all required fields: ${missingFields}.`
       }));
       return;
     }
-
-    setUiState((prev) => ({
+  
+    setUiState(prev => ({
       ...prev,
       isLoading: true,
       error: "",
+      generateOutlineClicked: true
     }));
-
+  
     try {
       if (uiState.isExample) {
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
-          structuredContent: EXAMPLE_OUTLINE.structured_content,
+          structuredContent: EXAMPLE_OUTLINE.structured_content
         });
       } else {
-        const data = await outlineService.generate({
-          ...formState,
-          custom_prompt: generateFullPrompt(formState)
-        });
-
-        const structuredContent = parseOutlineToStructured(
-          data.messages[0],
-          formState.numSlides
-        );
-
+        const requestData = {
+          resourceType: formState.resourceType,
+          gradeLevel: formState.gradeLevel,
+          subjectFocus: formState.subjectFocus,
+          language: formState.language,
+          numSlides: formState.numSlides,
+          includeImages: formState.includeImages,
+          // Optional fields
+          selectedStandards: formState.selectedStandards || [],
+          custom_prompt: formState.customPrompt || '',
+          lessonTopic: formState.lessonTopic || ''  // Made optional
+        };
+  
+        const data = await outlineService.generate(requestData);
+        
+        if (!data.messages || !data.structured_content) {
+          throw new Error('Invalid response format from server');
+        }
+  
+        const structuredContent = Array.isArray(data.structured_content) 
+          ? data.structured_content 
+          : parseOutlineToStructured(data.messages[0]);
+  
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(structuredContent),
-          structuredContent,
+          structuredContent
         });
       }
-
+  
       setUiState(prev => ({
         ...prev,
         outlineModalOpen: true
       }));
-
     } catch (error) {
       console.error("Error generating outline:", error);
       setUiState(prev => ({
@@ -168,55 +186,60 @@ export default function useForm({
     }
   }, [formState, uiState.isExample]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
-      setUiState((prev) => ({
+      setUiState(prev => ({
         ...prev,
-        error: "Maximum regeneration attempts (3) reached.",
+        error: "Maximum regeneration attempts (3) reached."
       }));
       return;
     }
 
-    setUiState((prev) => ({
+    setUiState(prev => ({
       ...prev,
-      regenerationCount: prev.regenerationCount + 1,
       isLoading: true,
+      error: "",
+      regenerationCount: prev.regenerationCount + 1
     }));
 
     try {
-      const regenerationPrompt = generateRegenerationPrompt(
-        formState,
-        uiState.modifiedPrompt
-      );
-      
-      const data = await outlineService.regenerate(
-        formState,
-        regenerationPrompt
-      );
+      const requestData = {
+        ...formState,
+        regeneration: true,
+        regenerationCount: uiState.regenerationCount + 1,
+        previous_outline: contentState.outlineToConfirm,
+        custom_prompt: uiState.modifiedPrompt
+      };
 
-      const structuredContent = parseOutlineToStructured(
-        data.messages[0],
-        formState.numSlides
-      );
+      const data = await outlineService.generate(requestData);
       
+      // Ensure we have the expected response structure
+      if (!data.messages || !data.structured_content) {
+        throw new Error('Invalid response format from server');
+      }
+
+      const structuredContent = Array.isArray(data.structured_content) 
+        ? data.structured_content 
+        : parseOutlineToStructured(data.messages[0]);
+
       setContentState({
         outlineToConfirm: formatOutlineForDisplay(structuredContent),
-        structuredContent,
+        structuredContent
       });
 
     } catch (error) {
-      setUiState((prev) => ({
+      console.error("Error regenerating outline:", error);
+      setUiState(prev => ({
         ...prev,
-        error: error.message || "Error regenerating outline.",
+        error: error.message || "Error regenerating outline. Please try again."
       }));
     } finally {
-      setUiState((prev) => ({
+      setUiState(prev => ({
         ...prev,
         isLoading: false
       }));
     }
-  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt]);
+  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm]);
 
   return {
     formState,
@@ -228,6 +251,6 @@ export default function useForm({
     toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
-    resetForm,
+    resetForm
   };
 }
