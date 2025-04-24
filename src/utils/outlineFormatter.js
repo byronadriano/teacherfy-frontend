@@ -162,86 +162,196 @@ export const formatOutlineForDisplay = (structuredContent) => {
   return output.trim();
 };
 
-export const parseOutlineToStructured = (outlineText, numSlides) => {
-  // Normalize markdown bold syntax.
-  const normalizedText = outlineText.replace(/\*\*Slide (\d+):/g, 'Slide $1:');
+export const parseOutlineToStructured = (outlineText, numSlides = 5) => {
+  console.log('Parsing outline text to structured content', { 
+    textLength: outlineText.length,
+    requestedSlides: numSlides
+  });
   
-  // Split the text by slide markers.
+  // Normalize markdown bold syntax and line breaks
+  const normalizedText = outlineText
+    .replace(/\*\*Slide (\d+):/g, 'Slide $1:')
+    .replace(/\r\n/g, '\n');
+  
+  // Split the text by slide markers - handle different slide header formats
+  const slideRegex = /\n?(?:Slide \d+:|#{1,3} Slide \d+:)/;
   const slides = normalizedText
-    .split(/\n(?=(?:\*\*)?Slide \d+:)/)
+    .split(slideRegex)
     .filter(Boolean)
     .map(slide => slide.trim());
+  
+  console.log(`Found ${slides.length} slides in text`);
+  
+  if (slides.length === 0) {
+    console.warn('No slides found in outline text. Text might not be in expected format.');
+    // Try an alternative parsing approach - look for sections instead
+    const sections = normalizedText.split(/\n(?:#{1,3} |\*\*)/);
+    if (sections.length > 1) {
+      console.log(`Found ${sections.length} possible sections to convert to slides`);
+      return sections.slice(0, numSlides).map((section, index) => {
+        const titleMatch = section.match(/^(.+?)(?:\n|$)/);
+        const title = titleMatch ? titleMatch[1].trim() : `Slide ${index + 1}`;
+        
+        // Extract content after title
+        const content = section
+          .replace(/^.+?\n/, '')
+          .split('\n')
+          .map(line => line.trim())
+          .filter(Boolean);
+        
+        return {
+          title,
+          layout: 'TITLE_AND_CONTENT',
+          content,
+          teacher_notes: ['Auto-converted from outline text'],
+          visual_elements: [],
+          left_column: [],
+          right_column: []
+        };
+      });
+    }
+    
+    // If all else fails, create a minimal structured content
+    return [{
+      title: 'Generated Slide',
+      layout: 'TITLE_AND_CONTENT',
+      content: [normalizedText],
+      teacher_notes: ['Auto-generated from text'],
+      visual_elements: [],
+      left_column: [],
+      right_column: []
+    }];
+  }
 
   const structuredSlides = [];
 
+  // Function to extract a section from slide text
   const extractSection = (slideText, sectionName) => {
-    // Create a regex for the section header (handles bold and non-bold).
-    const sectionPattern = new RegExp(`(?:\\*\\*)?${sectionName}:`, 'i');
-    const sectionStart = slideText.search(sectionPattern);
+    console.log(`Extracting ${sectionName} section from slide text`);
     
-    if (sectionStart === -1) {
-      console.debug(`Section ${sectionName} not found in slide text`);
+    // Create a regex for the section header (handles multiple formats)
+    const sectionPattern = new RegExp(`(?:\\*\\*)?${sectionName}:?(?:\\*\\*)?`, 'i');
+    const sectionMatch = slideText.match(sectionPattern);
+    
+    if (!sectionMatch) {
+      console.warn(`Section ${sectionName} not found in slide text`);
       return [];
     }
-
-    // Determine where the section ends by looking for the next section header.
+    
+    const sectionStart = sectionMatch.index;
+    const sectionHeader = sectionMatch[0];
+    
+    // Find the end of this section (start of next section or end of slide)
     const nextSections = ['Content:', 'Teacher Notes:', 'Visual Elements:'];
     let sectionEnd = slideText.length;
     
-    nextSections.forEach(nextSection => {
-      if (nextSection === `${sectionName}:`) return;
-      const nextPattern = new RegExp(`(?:\\*\\*)?${nextSection}`, 'i');
-      const nextIndex = slideText.slice(sectionStart).search(nextPattern);
-      if (nextIndex !== -1 && nextIndex + sectionStart < sectionEnd) {
-        sectionEnd = nextIndex + sectionStart;
+    for (const nextSection of nextSections) {
+      if (nextSection === sectionName + ':') continue;
+      
+      const nextPattern = new RegExp(`(?:\\*\\*)?${nextSection}(?:\\*\\*)?`, 'i');
+      const nextMatch = slideText.substring(sectionStart + sectionHeader.length).match(nextPattern);
+      
+      if (nextMatch) {
+        const nextPos = sectionStart + sectionHeader.length + nextMatch.index;
+        if (nextPos < sectionEnd) {
+          sectionEnd = nextPos;
+        }
       }
-    });
-
-    // Extract the section's content.
-    const sectionHeader = slideText.slice(sectionStart).match(sectionPattern)[0];
+    }
+    
+    // Extract and clean the section content
     let sectionContent = slideText
       .substring(sectionStart + sectionHeader.length, sectionEnd)
       .trim()
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line && line.length > 0 && !line.match(/^(?:\*\*)?(?:Content|Teacher Notes|Visual Elements):/i))
-      .map(line => line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim());
-
-    console.debug(`Extracted ${sectionName}:`, sectionContent);
+      .filter(line => 
+        line && 
+        line.length > 0 && 
+        !line.match(/^(?:\*\*)?(?:Content|Teacher Notes|Visual Elements):?(?:\*\*)?$/i)
+      )
+      .map(line => {
+        // Clean bullet points and numbering
+        return line
+          .replace(/^[-•*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
+          .trim();
+      });
+    
+    console.log(`Extracted ${sectionContent.length} items from ${sectionName}`);
     return sectionContent;
   };
 
-  for (let i = 0; i < slides.length && i < numSlides; i++) {
+  // Process each slide
+  for (let i = 0; i < slides.length; i++) {
+    if (i >= numSlides) {
+      console.warn(`Limiting to ${numSlides} slides as requested`);
+      break;
+    }
+    
     const slideText = slides[i];
-    const titleMatch = slideText.match(/(?:\*\*)?Slide \d+:\s*([^*\n]+?)(?:\*\*)?(?=\n|$)/);
-    const title = titleMatch ? titleMatch[1].trim() : '';
-
-    const layout = slideText.toLowerCase().includes('comparison') || slideText.toLowerCase().includes('vs')
-      ? 'TWO_COLUMN'
-      : 'TITLE_AND_CONTENT';
-
+    
+    // Extract title
+    const titleMatch = slideText.match(/^(?:Slide \d+:\s*)?([^*\n]+?)(?:\n|$)/);
+    const title = titleMatch ? titleMatch[1].trim() : `Slide ${i + 1}`;
+    
+    // Determine layout
+    const layout = (
+      slideText.toLowerCase().includes('comparison') || 
+      slideText.toLowerCase().includes('vs') ||
+      slideText.toLowerCase().includes('compare')
+    ) ? 'TWO_COLUMN' : 'TITLE_AND_CONTENT';
+    
+    // Extract sections
     const content = extractSection(slideText, 'Content');
     const teacherNotes = extractSection(slideText, 'Teacher Notes');
     const visualElements = extractSection(slideText, 'Visual Elements');
-
+    
+    // Handle two-column layout
     let leftColumn = [];
     let rightColumn = [];
-    if (layout === 'TWO_COLUMN') {
+    
+    if (layout === 'TWO_COLUMN' && content.length > 0) {
       const midpoint = Math.ceil(content.length / 2);
       leftColumn = content.slice(0, midpoint);
       rightColumn = content.slice(midpoint);
     }
-
+    
+    // If no content sections found, try to extract content from the whole slide
+    if (content.length === 0 && teacherNotes.length === 0) {
+      console.warn(`No structured sections found in slide ${i + 1}, extracting from raw text`);
+      
+      const rawContent = slideText
+        .replace(/^Slide \d+:\s*[^\n]+\n/, '') // Remove title line
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+      
+      structuredSlides.push({
+        title,
+        layout: 'TITLE_AND_CONTENT',
+        content: rawContent,
+        teacher_notes: ['Auto-extracted from slide text'],
+        visual_elements: [],
+        left_column: [],
+        right_column: []
+      });
+      
+      continue;
+    }
+    
+    // Add slide to structured content
     structuredSlides.push({
       title,
       layout,
       content,
-      teacher_notes: teacherNotes,
-      visual_elements: visualElements,
+      teacher_notes: teacherNotes.length > 0 ? teacherNotes : ['Teacher notes placeholder'],
+      visual_elements: visualElements.length > 0 ? visualElements : [],
       left_column: leftColumn,
       right_column: rightColumn
     });
   }
-
+  
+  console.log(`Created structured content with ${structuredSlides.length} slides`);
   return structuredSlides;
 };

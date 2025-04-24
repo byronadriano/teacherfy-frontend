@@ -58,18 +58,44 @@ const ConfirmationModal = ({
       return;
     }
     
+    console.log('Finalizing outline with structured content:', 
+      contentState.structuredContent.map(slide => ({
+        title: slide.title,
+        layout: slide.layout,
+        contentLength: slide.content?.length || 0
+      }))
+    );
+    
+    // Make a deep copy of structured content to avoid reference issues
+    const validatedContent = contentState.structuredContent.map(slide => ({
+      // Ensure all required fields exist with proper defaults
+      title: slide.title || `Untitled Slide`,
+      layout: slide.layout || 'TITLE_AND_CONTENT',
+      content: Array.isArray(slide.content) ? [...slide.content] : [],
+      teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
+      visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
+      left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
+      right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
+    }));
+    
+    // Ensure the data is properly set for the next step
     setContentState(prev => ({ 
       ...prev, 
       finalOutline: contentState.outlineToConfirm,
-      structuredContent: contentState.structuredContent
+      structuredContent: validatedContent
     }));
+    
+    // Close the modal and update UI state
     setUiState(prev => ({ 
       ...prev, 
       outlineConfirmed: true,
       outlineModalOpen: false,
       isLoading: false
     }));
+    
+    console.log('Outline finalized and ready for presentation generation');
   };
+  
 
   const handleClose = () => {
     setUiState(prev => ({ 

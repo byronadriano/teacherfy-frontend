@@ -134,33 +134,64 @@ export default function useForm({ setShowSignInPrompt }) {
   
     try {
       if (uiState.isExample) {
+        // Example workflow - this part works correctly
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
           structuredContent: EXAMPLE_OUTLINE.structured_content
         });
       } else {
+        // FIX: Ensure proper construction of request data for custom inputs
+        // Build request with all available fields, using defaults for optional fields
         const requestData = {
           resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel,
           subjectFocus: formState.subjectFocus,
           language: formState.language,
-          numSlides: formState.numSlides,
-          includeImages: formState.includeImages,
-          // Optional fields
-          selectedStandards: formState.selectedStandards || [],
+          
+          // Optional fields with defaults
+          lessonTopic: formState.lessonTopic || '',
           custom_prompt: formState.customPrompt || '',
-          lessonTopic: formState.lessonTopic || ''  // Made optional
+          
+          // Resource-specific options
+          ...(formState.resourceType === 'Presentation' && {
+            numSlides: formState.numSlides || 5,
+            includeImages: Boolean(formState.includeImages)
+          }),
+          
+          // Standards selection - properly formatted for the API
+          selectedStandards: Array.isArray(formState.selectedStandards) 
+            ? formState.selectedStandards 
+            : []
         };
+        
+        console.log('Sending outline request with data:', requestData);
   
         const data = await outlineService.generate(requestData);
+        
+        console.log('Received outline data:', data);
         
         if (!data.messages || !data.structured_content) {
           throw new Error('Invalid response format from server');
         }
   
+        // Ensure structured_content is properly parsed and formatted
         const structuredContent = Array.isArray(data.structured_content) 
           ? data.structured_content 
-          : parseOutlineToStructured(data.messages[0]);
+          : parseOutlineToStructured(data.messages[0], formState.numSlides || 5);
+  
+        // Add validation for structured content
+        if (!structuredContent || structuredContent.length === 0) {
+          throw new Error('No valid slide content returned from the server');
+        }
+  
+        // Log structured content for debugging
+        console.log('Parsed structured content:', 
+          structuredContent.map(slide => ({
+            title: slide.title,
+            contentLength: slide.content?.length || 0,
+            notesLength: slide.teacher_notes?.length || 0
+          }))
+        );
   
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(structuredContent),
@@ -185,6 +216,7 @@ export default function useForm({ setShowSignInPrompt }) {
       }));
     }
   }, [formState, uiState.isExample]);
+  
 
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {

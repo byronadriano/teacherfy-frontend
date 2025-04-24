@@ -2,174 +2,118 @@ import { API, handleApiError } from '../utils/constants/api';
 
 export const outlineService = {
   async generate(formData) {
-    // Ensure all fields have sensible defaults
-    const completeFormData = {
-      resourceType: formData.resourceType || 'Presentation',
-      gradeLevel: formData.gradeLevel || '',
-      subjectFocus: formData.subjectFocus || '',
-      language: formData.language || 'English', // Changed from Spanish to English
-      lessonTopic: formData.lessonTopic || 'Exploring Learning',
-      numSlides: formData.numSlides || 5, // Changed from 3 to 5 to match typical default
-      customPrompt: formData.customPrompt || '',
-      selectedStandards: formData.selectedStandards || []
-    };
-
     try {
-      console.log('Sending outline request with complete data:', completeFormData);
+      console.log('Sending outline request with data:', formData);
       
+      // Create a clean request body with proper field naming
+      const requestBody = {
+        // Required fields - keep as is from form data
+        resourceType: formData.resourceType,
+        gradeLevel: formData.gradeLevel,
+        subjectFocus: formData.subjectFocus,
+        language: formData.language,
+        
+        // Optional fields with appropriate defaults
+        lessonTopic: formData.lessonTopic || '',
+        
+        // Handle both naming conventions for custom prompt
+        custom_prompt: formData.custom_prompt || formData.customPrompt || '',
+        
+        // Standards selection - clean and consistent format
+        selectedStandards: Array.isArray(formData.selectedStandards) 
+          ? formData.selectedStandards 
+          : [],
+        
+        // Resource type specific options
+        ...(formData.resourceType === 'Presentation' && {
+          numSlides: parseInt(formData.numSlides || 5, 10),
+          includeImages: Boolean(formData.includeImages)
+        })
+      };
+
+      console.log('Cleaned request body:', requestBody);
+
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.OUTLINE}`, {
         method: 'POST',
         headers: {
           ...API.HEADERS,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
         },
-        body: JSON.stringify(completeFormData),
-        credentials: 'include'
+        body: JSON.stringify(requestBody),
+        credentials: 'include',
+        mode: 'cors'
       });
 
-      // Improved error handling: try to parse error response text if JSON parsing fails
+      // Enhanced error handling for non-OK responses
       if (!response.ok) {
+        console.error('Server returned non-OK status:', response.status);
+        
+        let errorMessage = `HTTP error! status: ${response.status}`;
         try {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        } catch (parseError) {
           const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+          console.error('Error response text:', errorText);
+          
+          try {
+            // Try to parse as JSON
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || errorMessage;
+          } catch (e) {
+            // If not JSON, use text
+            errorMessage = `${errorMessage}, message: ${errorText.substring(0, 100)}...`;
+          }
+        } catch (e) {
+          console.error('Could not read error response text:', e);
         }
+        
+        console.error('Final error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
+      // Parse JSON response with validation
       const data = await response.json();
-      console.log('Received response from server:', data);
+      console.log('Received response from server:', {
+        hasMessages: Boolean(data.messages),
+        hasStructuredContent: Boolean(data.structured_content),
+        structuredContentLength: data.structured_content?.length || 0
+      });
 
-      // More robust validation of response structure
+      // Validate response structure
       if (!data.messages || !data.structured_content) {
+        console.error('Invalid server response format:', data);
         throw new Error('Invalid response format from server. Expected messages and structured_content.');
       }
 
-      // Normalize structured content with more comprehensive validation
-      const validatedContent = data.structured_content.map((slide, index) => ({
-        title: slide.title || `Slide ${index + 1}`,
-        layout: slide.layout || 'TITLE_AND_CONTENT',
-        content: Array.isArray(slide.content) ? slide.content : [],
-        teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
-        visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
-        left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
-        right_column: Array.isArray(slide.right_column) ? slide.right_column : []
-      }));
+      // Add validation for structured content format
+      if (!Array.isArray(data.structured_content) || data.structured_content.length === 0) {
+        console.error('Empty or invalid structured_content:', data.structured_content);
+        throw new Error('Server returned empty or invalid structured content.');
+      }
 
-      return {
-        messages: data.messages,
-        structured_content: validatedContent
-      };
+      // Validate that each slide has minimum required fields
+      data.structured_content.forEach((slide, index) => {
+        if (!slide.title) {
+          console.warn(`Slide ${index} missing title, adding default`);
+          slide.title = `Slide ${index + 1}`;
+        }
+        
+        if (!slide.layout) {
+          console.warn(`Slide ${index} missing layout, defaulting to TITLE_AND_CONTENT`);
+          slide.layout = 'TITLE_AND_CONTENT';
+        }
+        
+        // Ensure arrays exist
+        slide.content = Array.isArray(slide.content) ? slide.content : [];
+        slide.teacher_notes = Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [];
+        slide.visual_elements = Array.isArray(slide.visual_elements) ? slide.visual_elements : [];
+      });
+
+      return data;
     } catch (error) {
       console.error('Outline generation error:', {
-        name: error.name,
         message: error.message,
         stack: error.stack
       });
-      
-      throw handleApiError(error);
-    }
-  },
-
-
-  async regenerate(formData, modifiedPrompt) {
-    try {
-      console.log('Sending regeneration request with data:', formData);
-      console.log('Modified prompt:', modifiedPrompt);
-      
-      const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.OUTLINE}`, {
-        method: 'POST',
-        headers: {
-          ...API.HEADERS,
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          custom_prompt: modifiedPrompt,
-          regeneration: true,
-          previous_outline: formData.outlineToConfirm
-        }),
-        credentials: 'include',
-        mode: 'cors'
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      console.log('Received regeneration response:', data);
-  
-      if (!data.messages || !data.structured_content) {
-        throw new Error('Invalid response format from server');
-      }
-  
-      const validatedContent = data.structured_content.map((slide, index) => ({
-        title: slide.title || `Slide ${index + 1}`,
-        layout: slide.layout || 'TITLE_AND_CONTENT',
-        content: Array.isArray(slide.content) ? slide.content : [],
-        teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
-        visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
-        left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
-        right_column: Array.isArray(slide.right_column) ? slide.right_column : []
-      }));
-  
-      return {
-        messages: data.messages,
-        structured_content: validatedContent
-      };
-    } catch (error) {
-      console.error('Error in regenerate service:', error);
-      throw handleApiError(error);
-    }
-  },
-
-  async downloadPresentation(contentState) {
-    try {
-      console.log('Sending presentation request with content:', contentState);
-      
-      const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.GENERATE}`, {
-        method: 'POST',
-        headers: {
-          ...API.HEADERS,
-          'Accept': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        body: JSON.stringify({
-          lesson_outline: contentState.messages?.[0] || '',
-          structured_content: contentState.structured_content || []
-        }),
-        credentials: 'include',
-        mode: 'cors'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
-        throw new Error('Invalid response type from server');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'lesson_presentation.pptx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      return true;
-    } catch (error) {
-      console.error('Error downloading presentation:', error);
-      throw handleApiError(error);
+      throw error;
     }
   }
 };
