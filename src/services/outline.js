@@ -14,8 +14,8 @@ export const outlineService = {
         subjectFocus: formData.subjectFocus,
         language: formData.language,
         
-        // Optional fields with appropriate defaults
-        lessonTopic: formData.lessonTopic || '',
+        // Use subject focus as lesson topic if not explicitly provided
+        lessonTopic: formData.lessonTopic || formData.subjectFocus,
         
         // Handle both naming conventions for custom prompt
         custom_prompt: formData.custom_prompt || formData.customPrompt || '',
@@ -34,20 +34,31 @@ export const outlineService = {
 
       console.log('Cleaned request body:', requestBody);
 
-      // Set up a timeout for the fetch
+      // Create controller for timeout functionality - use a longer timeout
+      // OpenAI API calls can take 30+ seconds, especially on first request
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API.TIMEOUT || 30000);
+      const timeout = API.TIMEOUT || 120000; // Use 120 seconds (2 minutes) as fallback
+      console.log(`Setting request timeout to ${timeout/1000} seconds`);
+      
+      const timeoutId = setTimeout(() => {
+        console.warn(`Request timed out after ${timeout/1000} seconds`);
+        controller.abort();
+      }, timeout);
 
       try {
         const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.OUTLINE}`, {
           method: 'POST',
-          headers: API.HEADERS,
+          headers: {
+            ...API.HEADERS,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(requestBody),
           credentials: 'include',
           mode: 'cors',
           signal: controller.signal
         });
         
+        // Clear timeout once response is received
         clearTimeout(timeoutId);
 
         // Enhanced error handling for non-OK responses
@@ -66,6 +77,13 @@ export const outlineService = {
               // Try to parse as JSON
               const errorJson = JSON.parse(errorText);
               errorMessage = errorJson.error || errorMessage;
+              
+              // Add appropriate status code to the error object
+              return {
+                error: errorMessage,
+                status: response.status,
+                details: errorJson.details || 'No additional details available'
+              };
             } catch (e) {
               // If not JSON, use text
               errorMessage = `${errorMessage}, message: ${errorText.substring(0, 100)}...`;
@@ -135,6 +153,18 @@ export const outlineService = {
             throw jsonError; // Throw the original JSON parsing error
           }
         }
+      } catch (fetchError) {
+        // Clear timeout to prevent multiple aborts
+        clearTimeout(timeoutId);
+        
+        console.error('Fetch error:', fetchError);
+        
+        // Handle aborted requests (timeout)
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timeout - the server is taking too long to respond. This may be because the OpenAI API is slow. Try using the example feature instead.');
+        }
+        
+        throw fetchError;
       } finally {
         clearTimeout(timeoutId);
       }
@@ -145,7 +175,7 @@ export const outlineService = {
       const errorObj = handleApiError(error);
       console.error('Structured error:', errorObj);
       
-      throw errorObj;
+      return errorObj; // Return the error object instead of throwing
     }
   },
   

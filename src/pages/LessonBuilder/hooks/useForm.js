@@ -110,6 +110,7 @@ export default function useForm({ setShowSignInPrompt }) {
 
   const handleGenerateOutline = useCallback(async () => {
     // Validate only the essential required fields
+    // Note: We're no longer requiring lessonTopic as a separate field
     if (!formState.resourceType || !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
       const missingFields = [
         !formState.resourceType && 'resource type',
@@ -117,101 +118,125 @@ export default function useForm({ setShowSignInPrompt }) {
         !formState.subjectFocus && 'subject',
         !formState.language && 'language'
       ].filter(Boolean).join(', ');
-  
+
       setUiState(prev => ({
         ...prev,
         error: `Please fill in all required fields: ${missingFields}.`
       }));
       return;
     }
-  
+
     setUiState(prev => ({
       ...prev,
       isLoading: true,
       error: "",
       generateOutlineClicked: true
     }));
-  
+
     try {
       if (uiState.isExample) {
-        // Example workflow - this part works correctly
+        // Example workflow code (unchanged)
+        console.log('Using example data');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
           structuredContent: EXAMPLE_OUTLINE.structured_content
         });
-      } else {
-        // FIX: Ensure proper construction of request data for custom inputs
-        // Build request with all available fields, using defaults for optional fields
+        
+        setUiState(prev => ({
+          ...prev,
+          outlineModalOpen: true,
+          isLoading: false
+        }));
+        
+        return;
+      }
+      
+      // Regular workflow - make API request
+      console.log('Making API request with form data:', {
+        resourceType: formState.resourceType,
+        gradeLevel: formState.gradeLevel,
+        subjectFocus: formState.subjectFocus,
+        language: formState.language,
+        // Don't log the full request for brevity
+      });
+      
+      try {
+        // Build request with all available fields
+        // Use subjectFocus as lessonTopic if lessonTopic is empty
         const requestData = {
           resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel,
           subjectFocus: formState.subjectFocus,
           language: formState.language,
-          
-          // Optional fields with defaults
-          lessonTopic: formState.lessonTopic || '',
+          // Use subject focus as the lesson topic if not explicitly provided
+          lessonTopic: formState.lessonTopic || formState.subjectFocus,
           custom_prompt: formState.customPrompt || '',
-          
-          // Resource-specific options
-          ...(formState.resourceType === 'Presentation' && {
-            numSlides: formState.numSlides || 5,
-            includeImages: Boolean(formState.includeImages)
-          }),
-          
-          // Standards selection - properly formatted for the API
           selectedStandards: Array.isArray(formState.selectedStandards) 
             ? formState.selectedStandards 
-            : []
+            : [],
+          numSlides: formState.numSlides || 5,
+          includeImages: Boolean(formState.includeImages)
         };
         
-        console.log('Sending outline request with data:', requestData);
-  
         const data = await outlineService.generate(requestData);
         
-        console.log('Received outline data:', data);
+        console.log('API request successful:', {
+          hasMessages: Boolean(data.messages),
+          structuredContentLength: data.structured_content?.length || 0
+        });
         
+        // Process the response data (unchanged)
         if (!data.messages || !data.structured_content) {
           throw new Error('Invalid response format from server');
         }
-  
-        // Ensure structured_content is properly parsed and formatted
+
         const structuredContent = Array.isArray(data.structured_content) 
           ? data.structured_content 
           : parseOutlineToStructured(data.messages[0], formState.numSlides || 5);
-  
-        // Add validation for structured content
+
         if (!structuredContent || structuredContent.length === 0) {
           throw new Error('No valid slide content returned from the server');
         }
-  
-        // Log structured content for debugging
-        console.log('Parsed structured content:', 
-          structuredContent.map(slide => ({
-            title: slide.title,
-            contentLength: slide.content?.length || 0,
-            notesLength: slide.teacher_notes?.length || 0
-          }))
-        );
-  
+
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(structuredContent),
           structuredContent
         });
+        
+        setUiState(prev => ({
+          ...prev,
+          outlineModalOpen: true,
+          isLoading: false
+        }));
+      } catch (apiError) {
+        console.error('API request failed:', apiError);
+        
+        // More comprehensive error handling
+        let errorMessage = 'Error generating outline: ';
+        
+        if (apiError.status === 405) {
+          errorMessage += 'The server endpoint is not properly configured. Please try the example instead.';
+        } else if (apiError.status === 400) {
+          errorMessage += 'Missing required field(s). Please ensure all fields are filled in.';
+        } else if (apiError.status === 403) {
+          errorMessage += 'You have reached your generation limit. Please try again later.';
+        } else if (apiError.error) {
+          errorMessage += apiError.error;
+        } else {
+          errorMessage += 'Unexpected error occurred. Please try again later.';
+        }
+        
+        throw new Error(errorMessage);
       }
-  
-      setUiState(prev => ({
-        ...prev,
-        outlineModalOpen: true
-      }));
     } catch (error) {
-      console.error("Error generating outline:", error);
+      console.error("Error in handleGenerateOutline:", error);
+      
       setUiState(prev => ({
         ...prev,
-        error: error.message || "Error generating outline. Please try again."
-      }));
-    } finally {
-      setUiState(prev => ({
-        ...prev,
+        error: error.message || "Error generating outline. Please try again.",
         isLoading: false
       }));
     }

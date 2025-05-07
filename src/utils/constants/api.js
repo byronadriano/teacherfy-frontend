@@ -1,6 +1,5 @@
 // src/utils/constants/api.js
 export const API = {
-  // Update the BASE_URL to always use the Azure endpoint
   BASE_URL: process.env.REACT_APP_API_BASE_URL || 
             (process.env.NODE_ENV === 'development' 
               ? "http://localhost:5000"  
@@ -10,7 +9,7 @@ export const API = {
     GENERATE: "/generate",
     GENERATE_SLIDES: "/generate_slides"
   },
-  TIMEOUT: 30000, // 30 seconds timeout
+  TIMEOUT: 60000, // Increase the timeout to 60 seconds since OpenAI API calls can take time
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -20,11 +19,7 @@ export const API = {
 };
 
 export const handleApiError = (error) => {
-  console.error('Full API Error:', {
-    name: error.name,
-    message: error.message,
-    stack: error.stack
-  });
+  console.error('Full API Error:', error);
   
   // More comprehensive error handling
   if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
@@ -32,6 +27,14 @@ export const handleApiError = (error) => {
       error: 'Unable to connect to server. Please check your internet connection.',
       status: 0,
       details: 'Network error or server unreachable'
+    };
+  }
+  
+  if (error.name === 'AbortError') {
+    return {
+      error: 'Request timed out. The server is taking too long to respond.',
+      status: 408,
+      details: 'Consider trying again or using the example feature'
     };
   }
   

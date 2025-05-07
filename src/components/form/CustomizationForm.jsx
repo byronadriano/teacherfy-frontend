@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, TextField, Switch, Paper, Button } from '@mui/material';
-import { Rocket, Sparkles } from 'lucide-react';
+import { Box, TextField, Switch, Paper, Button, Typography } from '@mui/material';
+import { Rocket, Sparkles, AlertCircle } from 'lucide-react';
 // import { styled } from '@mui/system';
 
 // const CreateButton = styled(Button)(({ theme }) => ({
@@ -30,7 +30,8 @@ const CustomizationForm = ({
   isExample,
   setIsExample,
   onSubmit,
-  isLoading 
+  isLoading,
+  error
 }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,6 +91,28 @@ const CustomizationForm = ({
         />
       </Box>
 
+      {/* Display error message if present */}
+      {error && (
+        <Box sx={{ 
+          px: 3, 
+          py: 2, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5,
+          backgroundColor: '#FEF2F2',
+          borderTop: '1px solid #FECACA'
+        }}>
+          <AlertCircle size={18} color="#DC2626" />
+          <Typography sx={{ 
+            color: '#DC2626',
+            fontSize: '0.875rem',
+            fontWeight: 500
+          }}>
+            {error}
+          </Typography>
+        </Box>
+      )}
+
       <Box
         sx={{
           display: 'flex',
@@ -98,6 +121,7 @@ const CustomizationForm = ({
           px: 2.5,
           py: 1.5,
           backgroundColor: '#FFFFFF',
+          borderTop: '1px solid #E2E8F0'
         }}
       >
         <Box sx={{ 
