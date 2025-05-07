@@ -14,8 +14,9 @@ export const outlineService = {
         subjectFocus: formData.subjectFocus,
         language: formData.language,
         
-        // Use subject focus as lesson topic if not explicitly provided
-        lessonTopic: formData.lessonTopic || formData.subjectFocus,
+        // FIXED: Force lessonTopic to be the subjectFocus if empty
+        // This ensures we always have a lessonTopic
+        lessonTopic: formData.lessonTopic || formData.subjectFocus || "General Learning",
         
         // Handle both naming conventions for custom prompt
         custom_prompt: formData.custom_prompt || formData.customPrompt || '',
@@ -31,6 +32,11 @@ export const outlineService = {
           includeImages: Boolean(formData.includeImages)
         })
       };
+
+      // Double-check to make sure lessonTopic is not empty
+      if (!requestBody.lessonTopic) {
+        requestBody.lessonTopic = requestBody.subjectFocus || "General Learning";
+      }
 
       console.log('Cleaned request body:', requestBody);
 

@@ -172,7 +172,7 @@ export default function useForm({ setShowSignInPrompt }) {
           subjectFocus: formState.subjectFocus,
           language: formState.language,
           // Use subject focus as the lesson topic if not explicitly provided
-          lessonTopic: formState.lessonTopic || formState.subjectFocus,
+          lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
           custom_prompt: formState.customPrompt || '',
           selectedStandards: Array.isArray(formState.selectedStandards) 
             ? formState.selectedStandards 
