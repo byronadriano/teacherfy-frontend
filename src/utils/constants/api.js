@@ -1,8 +1,10 @@
+// src/utils/constants/api.js
 export const API = {
+  // Update the BASE_URL to always use the Azure endpoint
   BASE_URL: process.env.REACT_APP_API_BASE_URL || 
             (process.env.NODE_ENV === 'development' 
               ? "http://localhost:5000"  
-              : "https://teacherfy.ai"),
+              : "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"),
   ENDPOINTS: {
     OUTLINE: "/outline",
     GENERATE: "/generate",
