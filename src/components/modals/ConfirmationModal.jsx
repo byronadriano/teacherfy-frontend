@@ -18,7 +18,9 @@ const ConfirmationModal = ({
   subscriptionState, 
   setUiState, 
   setContentState, 
-  handleRegenerateOutline 
+  handleRegenerateOutline,
+  handleDownload,
+  onFinalize  // Add this prop
 }) => {
   const [localModifiedPrompt, setLocalModifiedPrompt] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -49,7 +51,7 @@ const ConfirmationModal = ({
     }
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (!contentState.structuredContent?.length) {
       setUiState(prev => ({
         ...prev,
@@ -94,6 +96,17 @@ const ConfirmationModal = ({
     }));
     
     console.log('Outline finalized and ready for presentation generation');
+    
+    // Call the tracking function
+    if (onFinalize) {
+      try {
+        await onFinalize();
+        console.log('Lesson tracked in history successfully');
+      } catch (error) {
+        console.error('Error tracking lesson in history:', error);
+        // Continue even if tracking fails
+      }
+    }
   };
   
 

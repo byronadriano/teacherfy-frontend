@@ -1,11 +1,11 @@
-// components/modals/SignInPrompt.jsx
+// src/components/modals/SignInPrompt.jsx
 import React from 'react';
 import { Box, Typography, Modal } from "@mui/material";
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import Logo from '../../assets/images/Teacherfyoai.png';
 import { GOOGLE_CLIENT_ID } from '../../utils/constants';
 
-const SignInPrompt = ({ open, onClose, onSuccess }) => {
+const SignInPrompt = ({ open = false, onClose, onSuccess }) => {
   return (
     <Modal
       open={open}

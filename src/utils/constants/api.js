@@ -7,7 +7,9 @@ export const API = {
   ENDPOINTS: {
     OUTLINE: "/outline",
     GENERATE: "/generate",
-    GENERATE_SLIDES: "/generate_slides"
+    GENERATE_SLIDES: "/generate_slides",
+    USER_HISTORY: "/user/history",
+    CLEAR_HISTORY: "/user/history/clear"
   },
   TIMEOUT: 60000, // Increase the timeout to 60 seconds since OpenAI API calls can take time
   HEADERS: {

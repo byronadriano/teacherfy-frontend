@@ -1,3 +1,4 @@
+// src/components/modals/UpgradeModal.jsx
 import React from 'react';
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
   Button
 } from "@mui/material";
 
-const UpgradeModal = ({ open, onClose }) => (
+const UpgradeModal = ({ open = false, onClose }) => (
   <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
     <DialogTitle>Upgrade to Premium</DialogTitle>
     <DialogContent>

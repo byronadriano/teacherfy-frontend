@@ -1,3 +1,4 @@
+// src/components/sidebar/Sidebar.jsx
 import React, { useState } from 'react';
 import { Box, Typography, Button, Avatar, IconButton } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
@@ -8,7 +9,6 @@ import PricingModal from '../modals/PricingModal';
 import Logo from '../../assets/images/Teacherfyoai.png';
 import { GOOGLE_CLIENT_ID } from '../../utils/constants';
 
-
 const Sidebar = ({ 
     isCollapsed,
     toggleSidebar,
@@ -17,7 +17,8 @@ const Sidebar = ({
     handleLoginSuccess,
     defaultSettings,
     onSettingsChange,
-    onLogoReset // New prop
+    onLogoReset,
+    onHistoryItemSelect  // Add this prop
 }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
@@ -36,6 +37,13 @@ const Sidebar = ({
     const handlePlanSelect = (plan) => {
         if (plan === 'pro') {
             window.location.href = 'your-stripe-checkout-url';
+        }
+    };
+
+    // Add this function to handle history item selection
+    const handleHistoryItemSelect = (item) => {
+        if (onHistoryItemSelect) {
+            onHistoryItemSelect(item);
         }
     };
 
@@ -136,7 +144,8 @@ const Sidebar = ({
 
                 {/* Content */}
                 <Box sx={{ flex: 1, overflow: 'auto' }}>
-                    {!isCollapsed && <RecentsList />}
+                    {/* Update this line to pass the handler */}
+                    {!isCollapsed && <RecentsList onSelectItem={handleHistoryItemSelect} />}
                 </Box>
 
                 {/* Footer Section */}

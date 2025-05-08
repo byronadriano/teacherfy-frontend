@@ -1,5 +1,5 @@
 // src/pages/LessonBuilder/index.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
@@ -16,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import useForm from './hooks/useForm';
 import useOutline from './hooks/useOutline';
 import usePresentation from './hooks/usePresentation';
+import { historyService } from '../../services';
 
 const LessonBuilder = () => {
   // States
@@ -43,6 +44,7 @@ const LessonBuilder = () => {
     contentState,
     setUiState,
     setContentState,
+    // setFormState,
     handleFormChange,
     toggleExample,
     handleGenerateOutline,
@@ -97,6 +99,118 @@ const LessonBuilder = () => {
     localStorage.setItem('sidebarCollapsed', newCollapsedState.toString());
   };
 
+  // Save lesson to history after successful generation
+  const saveToHistory = useCallback(async () => {
+    if (contentState.structuredContent?.length > 0) {
+      try {
+        const historyData = {
+          title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+          resourceType: formState.resourceType || 'PRESENTATION',
+          lessonData: {
+            ...formState,
+            structuredContent: contentState.structuredContent,
+            finalOutline: contentState.finalOutline
+          }
+        };
+        
+        await historyService.saveHistoryItem(historyData);
+        
+        // Also save to local storage for anonymous users
+        if (!isAuthenticated) {
+          const localHistoryItem = {
+            id: Date.now(), // Use timestamp as ID
+            title: historyData.title,
+            types: [historyData.resourceType],
+            date: 'Today',
+            lessonData: historyData.lessonData
+          };
+          
+          historyService.saveLocalHistory(localHistoryItem);
+        }
+        
+        console.log('Lesson saved to history');
+      } catch (error) {
+        console.error('Error saving to history:', error);
+        // Continue even if history saving fails
+      }
+    }
+  }, [formState, contentState, isAuthenticated]);
+
+  // After outline is confirmed, save to history
+  useEffect(() => {
+    if (uiState.outlineConfirmed && contentState.structuredContent?.length > 0) {
+      saveToHistory();
+    }
+  }, [uiState.outlineConfirmed, contentState.structuredContent, saveToHistory]);
+
+  // Handle history item selection
+  const handleHistoryItemSelect = (historyItem) => {
+    // Check if the history item has valid lesson data
+    if (!historyItem || !historyItem.lessonData) {
+      console.error('Invalid history item selected:', historyItem);
+      return;
+    }
+    
+    console.log('Loading lesson from history:', historyItem.title);
+    
+    try {
+      const { lessonData } = historyItem;
+      
+      // Method 1: Using individual handleFormChange calls
+      // This is the safer approach since we're using a function we know exists
+      if (lessonData.resourceType) handleFormChange('resourceType', lessonData.resourceType);
+      if (lessonData.gradeLevel) handleFormChange('gradeLevel', lessonData.gradeLevel);
+      if (lessonData.subjectFocus) handleFormChange('subjectFocus', lessonData.subjectFocus);
+      if (lessonData.language) handleFormChange('language', lessonData.language);
+      if (lessonData.lessonTopic) handleFormChange('lessonTopic', lessonData.lessonTopic);
+      if (lessonData.numSlides) handleFormChange('numSlides', lessonData.numSlides);
+      if (lessonData.includeImages !== undefined) handleFormChange('includeImages', lessonData.includeImages);
+      if (lessonData.customPrompt) handleFormChange('customPrompt', lessonData.customPrompt);
+      if (lessonData.selectedStandards && Array.isArray(lessonData.selectedStandards)) {
+        handleFormChange('selectedStandards', lessonData.selectedStandards);
+      }
+      
+      // Update content state if structured content is available
+      if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
+        setContentState(prev => ({
+          ...prev,
+          structuredContent: lessonData.structuredContent,
+          finalOutline: lessonData.finalOutline || ''
+        }));
+        
+        // Update UI state to show the loaded content
+        setUiState(prev => ({
+          ...prev,
+          outlineConfirmed: true,
+          isLoading: false,
+          error: ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading lesson from history:', error);
+      setUiState(prev => ({
+        ...prev,
+        error: 'Failed to load lesson from history'
+      }));
+    }
+  };
+  
+  // Add this function to track lesson generation in history
+  const trackLessonInHistory = async () => {
+    // Only track if we have structured content
+    if (!contentState.structuredContent || contentState.structuredContent.length === 0) {
+      return;
+    }
+    
+    try {
+      await historyService.trackLessonGeneration(formState, contentState);
+      console.log('Lesson tracked in history');
+    } catch (error) {
+      console.error('Failed to track lesson in history:', error);
+      // Continue without failing the main flow
+    }
+  };
+
   // Show loading state while auth is being checked
   if (isLoading) {
     return (
@@ -127,6 +241,7 @@ const LessonBuilder = () => {
         defaultSettings={userSettings}
         onSettingsChange={handleSettingsChange}
         onLogoReset={resetForm}
+        onHistoryItemSelect={handleHistoryItemSelect}
       />
 
       {/* Main Content */}
@@ -189,6 +304,7 @@ const LessonBuilder = () => {
               setIsExample={(isChecked) => toggleExample(isChecked)}
               onSubmit={handleGenerateOutline}
               isLoading={uiState.isLoading || outlineLoading}
+              error={uiState.error}
             />
 
             {contentState.structuredContent.length > 0 && (
@@ -229,6 +345,7 @@ const LessonBuilder = () => {
           setContentState={setContentState}
           handleRegenerateOutline={handleRegenerateOutline}
           handleDownload={generatePresentation}
+          onFinalize={trackLessonInHistory}  // Add this line
         />
 
         <UpgradeModal 
