@@ -1,28 +1,7 @@
+// src/components/form/CustomizationForm.jsx
 import React from 'react';
-import { Box, TextField, Switch, Paper, Button, Typography } from '@mui/material';
+import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress } from '@mui/material';
 import { Rocket, Sparkles, AlertCircle } from 'lucide-react';
-// import { styled } from '@mui/system';
-
-// const CreateButton = styled(Button)(({ theme }) => ({
-//   backgroundColor: '#035073',
-//   color: '#FFFFFF',
-//   borderRadius: '8px',
-//   textTransform: 'none',       // no ALL CAPS
-//   fontWeight: 500,
-//   padding: '6px 16px',
-//   transition: 'transform 0.15s ease-in-out',
-//   '&:hover': {
-//     backgroundColor: 'rgb(45, 147, 249)',
-//     transform: 'translateY(-2px)',
-//     boxShadow: '0 4px 12px rgba(69, 162, 244, 0.1)',
-//   },
-//   '&.Mui-disabled': {
-//     backgroundColor: '#94A3B8',
-//     color: '#FFFFFF',
-//     boxShadow: 'none',
-//     transform: 'none',
-//   },
-// }));
 
 const CustomizationForm = ({ 
   value,
@@ -156,14 +135,17 @@ const CustomizationForm = ({
           type="submit"
           disabled={isLoading}
           variant="contained"
-          endIcon={<Rocket size={20} />}
+          endIcon={!isLoading && <Rocket size={20} />}
           sx={{
             backgroundColor: '#035073',
             color: '#FFFFFF',
             borderRadius: '8px',
             textTransform: 'none',
             fontWeight: 500,
-            padding: '6px 16px',
+            padding: isLoading ? '6px 20px' : '6px 16px',
+            minWidth: '120px',
+            position: 'relative',
+            overflow: 'hidden',
             transition: 'all 0.15s ease-in-out',
             '&:hover': {
               backgroundColor: 'rgb(45, 147, 249)',
@@ -171,19 +153,45 @@ const CustomizationForm = ({
               boxShadow: '0 4px 12px rgba(69, 162, 244, 0.1)'
             },
             '&.Mui-disabled': {
-              backgroundColor: '#94A3B8',
+              backgroundColor: isLoading ? '#035073' : '#94A3B8',
               color: '#FFFFFF',
               boxShadow: 'none',
               transform: 'none'
-            }
+            },
+            '&::after': isLoading ? {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '200%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+              animation: 'loading-shimmer 1.5s infinite'
+            } : {}
           }}
         >
-          {isLoading ? 'Creating...' : 'Create'}
+          {isLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={20} color="inherit" />
+              <span>Creating...</span>
+            </Box>
+          ) : 'Create'}
         </Button>
       </Box>
+
+      {/* Add keyframes for the shimmer effect */}
+      <style jsx>{`
+        @keyframes loading-shimmer {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
+          }
+        }
+      `}</style>
     </Paper>
   );
 };
 
 export default CustomizationForm;
-
