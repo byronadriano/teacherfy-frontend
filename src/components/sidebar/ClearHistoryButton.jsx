@@ -54,7 +54,7 @@ const ClearHistoryButton = ({ onHistoryCleared }) => {
         <DialogTitle>Clear History?</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to clear your browsing history? This action cannot be undone.
+            Are you sure you want to clear your history? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -1,9 +1,10 @@
 // src/components/sidebar/RecentsList.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Chip, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, Chip, CircularProgress, Alert, Divider } from '@mui/material';
 import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files } from 'lucide-react';
 import { historyService } from '../../services/history';
 import { useAuth } from '../../contexts/AuthContext';
+import ClearHistoryButton from './ClearHistoryButton';
 
 const RESOURCE_TYPES = {
   PRESENTATION: {
@@ -45,7 +46,15 @@ const getResourceTypeInfo = (resourceType) => {
 
 const RecentItem = ({ item, onClick }) => {
   // Extract info from the history item
+  const lessonData = item.lessonData || {};
+  
+  // Use subject as the main title, fallback to regular title if not available
+  const subject = lessonData.subjectFocus || 'Subject';
   const title = item.title || 'Untitled Lesson';
+  
+  // Get first slide title if available
+  const firstSlideTitle = lessonData.structuredContent?.[0]?.title || '';
+  
   // Handle both string and array formats for types
   const types = Array.isArray(item.types) ? item.types : [item.types || 'PRESENTATION'];
   const date = item.date || 'Today';
@@ -60,8 +69,8 @@ const RecentItem = ({ item, onClick }) => {
       sx={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 1.5,  // Reduced gap
-        p: 1.5,    // Reduced padding
+        gap: 1.5,
+        p: 1.5,
         borderRadius: '6px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -73,44 +82,61 @@ const RecentItem = ({ item, onClick }) => {
     >
       <Icon size={16} color={resourceType.color} />
       <Box sx={{ flex: 1 }}>
+        {/* Subject as main title */}
         <Typography sx={{ 
-          fontSize: '0.75rem',  // Reduced font size
+          fontSize: '0.8rem',
           color: '#374151',
-          fontWeight: '500',
-          mb: 0.5  // Reduced margin
+          fontWeight: '600',
+          mb: 0.5,
+          textTransform: 'capitalize'
         }}>
-          {title}
+          {subject}
         </Typography>
+        
+        {/* First slide title as subtitle */}
+        {firstSlideTitle && (
+          <Typography sx={{ 
+            fontSize: '0.7rem',
+            color: '#6b7280',
+            mb: 0.5,
+            lineHeight: 1.2,
+            // Limit to 2 lines with ellipsis
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {firstSlideTitle}
+          </Typography>
+        )}
+        
+        {/* Type and date info */}
         <Box sx={{ 
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: 0.5,  // Reduced gap
-          mb: 0.5   // Reduced margin
+          alignItems: 'center',
+          gap: 1,
+          mt: 0.5
         }}>
-          {types.map((type, index) => {
-            const typeInfo = getResourceTypeInfo(type);
-            return (
-              <Chip
-                key={index}
-                label={typeInfo.label}
-                size="small"
-                sx={{
-                  height: '20px',  // Smaller chip height
-                  fontSize: '0.625rem',  // Smaller font size
-                  backgroundColor: `${typeInfo.color}15`,
-                  color: typeInfo.color,
-                  fontWeight: '500'
-                }}
-              />
-            );
-          })}
+          <Chip
+            label={resourceType.label}
+            size="small"
+            sx={{
+              height: '18px',
+              fontSize: '0.625rem',
+              backgroundColor: `${resourceType.color}15`,
+              color: resourceType.color,
+              fontWeight: '500'
+            }}
+          />
+          
+          <Typography sx={{ 
+            fontSize: '0.625rem',
+            color: '#94a3b8'
+          }}>
+            {date}
+          </Typography>
         </Box>
-        <Typography sx={{ 
-          fontSize: '0.625rem',  // Reduced font size
-          color: '#6b7280'
-        }}>
-          {date}
-        </Typography>
       </Box>
     </Box>
   );
@@ -194,10 +220,7 @@ const RecentsList = ({ onSelectItem }) => {
     return () => {
       isMounted.current = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]); // Only re-fetch when auth state changes
-  // We're disabling the exhaustive-deps warning because we intentionally don't want to include
-  // the fetchHistory function in the dependencies, and loading is handled through the condition checks
 
   const handleItemClick = (item) => {
     if (onSelectItem) {
@@ -205,20 +228,32 @@ const RecentsList = ({ onSelectItem }) => {
     }
   };
 
+  const handleHistoryCleared = () => {
+    setHistoryItems([]);
+    hasInitiallyFetched.current = false;
+    fetchHistory();
+  };
+
   return (
     <Box sx={{ mt: 2, px: 1 }}>
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          mb: 1,
-          px: 1.5,
-          color: '#4b5563',
-          fontSize: '0.875rem',
-          fontWeight: '600'
-        }}
-      >
-        Recent Resources
-      </Typography>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        px: 1.5,
+        mb: 1
+      }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#4b5563',
+            fontSize: '0.875rem',
+            fontWeight: '600'
+          }}
+        >
+          Recent Resources
+        </Typography>
+      </Box>
       
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -265,6 +300,14 @@ const RecentsList = ({ onSelectItem }) => {
           onClick={() => handleItemClick(item)}
         />
       ))}
+      
+      {historyItems.length > 0 && (
+        <Divider sx={{ my: 1.5 }} />
+      )}
+      
+      {historyItems.length > 0 && (
+        <ClearHistoryButton onHistoryCleared={handleHistoryCleared} />
+      )}
     </Box>
   );
 };
