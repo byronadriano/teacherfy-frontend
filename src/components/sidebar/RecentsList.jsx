@@ -1,5 +1,5 @@
 // src/components/sidebar/RecentsList.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert, Divider } from '@mui/material';
 import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files } from 'lucide-react';
 import { historyService } from '../../services/history';
@@ -50,7 +50,6 @@ const RecentItem = ({ item, onClick }) => {
   
   // Use subject as the main title, fallback to regular title if not available
   const subject = lessonData.subjectFocus || 'Subject';
-  const title = item.title || 'Untitled Lesson';
   
   // Get first slide title if available
   const firstSlideTitle = lessonData.structuredContent?.[0]?.title || '';
@@ -154,8 +153,8 @@ const RecentsList = ({ onSelectItem }) => {
   // Add a ref to track if we've already fetched history
   const hasInitiallyFetched = useRef(false);
 
-  // Define fetchHistory outside useEffect to avoid missing dependency warnings
-  const fetchHistory = async () => {
+  // Wrap fetchHistory with useCallback to prevent recreation on every render
+  const fetchHistory = useCallback(async () => {
     // Don't fetch if we've already done the initial fetch and auth hasn't changed
     if (hasInitiallyFetched.current && !loading) {
       return;
@@ -205,7 +204,7 @@ const RecentsList = ({ onSelectItem }) => {
         setLoading(false);
       }
     }
-  };
+  }, [isAuthenticated, loading]); // Include dependencies the function relies on
 
   useEffect(() => {
     // Set up the mounted ref
@@ -220,7 +219,7 @@ const RecentsList = ({ onSelectItem }) => {
     return () => {
       isMounted.current = false;
     };
-  }, [isAuthenticated]); // Only re-fetch when auth state changes
+  }, [isAuthenticated, fetchHistory, loading]); // Added fetchHistory and loading as dependencies
 
   const handleItemClick = (item) => {
     if (onSelectItem) {
