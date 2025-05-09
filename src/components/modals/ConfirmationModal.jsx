@@ -20,10 +20,11 @@ const ConfirmationModal = ({
   setContentState, 
   handleRegenerateOutline,
   handleDownload,
-  onFinalize  // Add this prop
+  onFinalize  // This prop is crucial for tracking
 }) => {
   const [localModifiedPrompt, setLocalModifiedPrompt] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const handleModifiedPromptChange = (e) => {
     setLocalModifiedPrompt(e.target.value);
@@ -60,6 +61,7 @@ const ConfirmationModal = ({
       return;
     }
     
+    setIsFinalizing(true);
     console.log('Finalizing outline with structured content:', 
       contentState.structuredContent.map(slide => ({
         title: slide.title,
@@ -68,47 +70,56 @@ const ConfirmationModal = ({
       }))
     );
     
-    // Make a deep copy of structured content to avoid reference issues
-    const validatedContent = contentState.structuredContent.map(slide => ({
-      // Ensure all required fields exist with proper defaults
-      title: slide.title || `Untitled Slide`,
-      layout: slide.layout || 'TITLE_AND_CONTENT',
-      content: Array.isArray(slide.content) ? [...slide.content] : [],
-      teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
-      visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
-      left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
-      right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-    }));
-    
-    // Ensure the data is properly set for the next step
-    setContentState(prev => ({ 
-      ...prev, 
-      finalOutline: contentState.outlineToConfirm,
-      structuredContent: validatedContent
-    }));
-    
-    // Close the modal and update UI state
-    setUiState(prev => ({ 
-      ...prev, 
-      outlineConfirmed: true,
-      outlineModalOpen: false,
-      isLoading: false
-    }));
-    
-    console.log('Outline finalized and ready for presentation generation');
-    
-    // Call the tracking function
-    if (onFinalize) {
-      try {
-        await onFinalize();
-        console.log('Lesson tracked in history successfully');
-      } catch (error) {
-        console.error('Error tracking lesson in history:', error);
-        // Continue even if tracking fails
+    try {
+      // Make a deep copy of structured content to avoid reference issues
+      const validatedContent = contentState.structuredContent.map(slide => ({
+        // Ensure all required fields exist with proper defaults
+        title: slide.title || `Untitled Slide`,
+        layout: slide.layout || 'TITLE_AND_CONTENT',
+        content: Array.isArray(slide.content) ? [...slide.content] : [],
+        teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
+        visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
+        left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
+        right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
+      }));
+      
+      // Ensure the data is properly set for the next step
+      setContentState(prev => ({ 
+        ...prev, 
+        finalOutline: contentState.outlineToConfirm,
+        structuredContent: validatedContent
+      }));
+      
+      // Close the modal and update UI state
+      setUiState(prev => ({ 
+        ...prev, 
+        outlineConfirmed: true,
+        outlineModalOpen: false,
+        isLoading: false
+      }));
+      
+      console.log('Outline finalized and ready for presentation generation');
+      
+      // Call the tracking function
+      if (onFinalize) {
+        try {
+          await onFinalize();
+          console.log('Lesson tracked in history successfully');
+        } catch (error) {
+          console.error('Error tracking lesson in history:', error);
+          // Continue even if tracking fails
+        }
       }
+    } catch (error) {
+      console.error('Error finalizing outline:', error);
+      setUiState(prev => ({
+        ...prev,
+        error: "Failed to finalize outline. Please try again."
+      }));
+    } finally {
+      setIsFinalizing(false);
     }
   };
-  
 
   const handleClose = () => {
     setUiState(prev => ({ 
@@ -229,13 +240,14 @@ const ConfirmationModal = ({
         <Button 
           onClick={handleClose}
           color="inherit"
+          disabled={isFinalizing}
         >
           Cancel
         </Button>
         {uiState.regenerationCount < 3 && (
           <Button 
             onClick={handleRegenerateClick}
-            disabled={!localModifiedPrompt.trim() || isRegenerating || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
+            disabled={!localModifiedPrompt.trim() || isRegenerating || isFinalizing || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
           >
             {isRegenerating ? <CircularProgress size={24} /> : "Regenerate Outline"}
           </Button>
@@ -244,9 +256,9 @@ const ConfirmationModal = ({
           onClick={handleFinalize}
           variant="contained" 
           color="primary"
-          disabled={isRegenerating}
+          disabled={isRegenerating || isFinalizing}
         >
-          Finalize Outline
+          {isFinalizing ? <CircularProgress size={24} /> : "Finalize Outline"}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,5 +1,5 @@
 // src/components/sidebar/RecentsList.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert } from '@mui/material';
 import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files } from 'lucide-react';
 import { historyService } from '../../services/history';
@@ -121,46 +121,83 @@ const RecentsList = ({ onSelectItem }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isAuthenticated } = useAuth();
+  
+  // Add a ref to track if the component is mounted
+  const isMounted = useRef(true);
+  
+  // Add a ref to track if we've already fetched history
+  const hasInitiallyFetched = useRef(false);
 
-  useEffect(() => {
-    // Function to fetch history
-    const fetchHistory = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch history from server
-        const response = await historyService.getUserHistory();
-        
-        if (response.error) {
-          throw new Error(response.error);
-        }
-        
-        // If authenticated user and history returned
-        if (response.history && Array.isArray(response.history)) {
-          setHistoryItems(response.history);
-        } 
-        // For anonymous users, try to get from local storage as fallback
-        else if (!isAuthenticated) {
-          const localHistory = historyService.getLocalHistory();
-          setHistoryItems(localHistory);
-        }
-      } catch (err) {
-        console.error('Error fetching history:', err);
-        setError('Failed to load history. Please try again later.');
-        
-        // Use local storage as fallback
-        if (!isAuthenticated) {
-          const localHistory = historyService.getLocalHistory();
-          setHistoryItems(localHistory);
-        }
-      } finally {
+  // Define fetchHistory outside useEffect to avoid missing dependency warnings
+  const fetchHistory = async () => {
+    // Don't fetch if we've already done the initial fetch and auth hasn't changed
+    if (hasInitiallyFetched.current && !loading) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch history from server
+      const response = await historyService.getUserHistory();
+      
+      // Check if component is still mounted before updating state
+      if (!isMounted.current) return;
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      // If authenticated user and history returned
+      if (response.history && Array.isArray(response.history)) {
+        setHistoryItems(response.history);
+      } 
+      // For anonymous users, try to get from local storage as fallback
+      else if (!isAuthenticated) {
+        const localHistory = historyService.getLocalHistory();
+        setHistoryItems(localHistory);
+      }
+      
+      // Mark that we've done the initial fetch
+      hasInitiallyFetched.current = true;
+    } catch (err) {
+      // Check if component is still mounted before updating state
+      if (!isMounted.current) return;
+      
+      console.error('Error fetching history:', err);
+      setError('Failed to load history. Please try again later.');
+      
+      // Use local storage as fallback
+      if (!isAuthenticated) {
+        const localHistory = historyService.getLocalHistory();
+        setHistoryItems(localHistory);
+      }
+    } finally {
+      // Check if component is still mounted before updating state
+      if (isMounted.current) {
         setLoading(false);
       }
-    };
+    }
+  };
+
+  useEffect(() => {
+    // Set up the mounted ref
+    isMounted.current = true;
     
-    fetchHistory();
-  }, [isAuthenticated]);  // Re-fetch when auth state changes
+    // Only fetch if we haven't already or if auth state changed
+    if (!hasInitiallyFetched.current || loading) {
+      fetchHistory();
+    }
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]); // Only re-fetch when auth state changes
+  // We're disabling the exhaustive-deps warning because we intentionally don't want to include
+  // the fetchHistory function in the dependencies, and loading is handled through the condition checks
 
   const handleItemClick = (item) => {
     if (onSelectItem) {

@@ -103,38 +103,74 @@ const LessonBuilder = () => {
   const saveToHistory = useCallback(async () => {
     if (contentState.structuredContent?.length > 0) {
       try {
-        const historyData = {
-          title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+        console.log('Saving lesson to history...');
+        
+        // Create a clean version of the form state to save
+        const cleanFormState = {
           resourceType: formState.resourceType || 'PRESENTATION',
-          lessonData: {
-            ...formState,
-            structuredContent: contentState.structuredContent,
-            finalOutline: contentState.finalOutline
-          }
+          gradeLevel: formState.gradeLevel || '',
+          subjectFocus: formState.subjectFocus || '',
+          language: formState.language || '',
+          lessonTopic: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+          numSlides: formState.numSlides || 5,
+          includeImages: Boolean(formState.includeImages),
+          customPrompt: formState.customPrompt || '',
+          selectedStandards: Array.isArray(formState.selectedStandards) ? [...formState.selectedStandards] : []
         };
         
-        await historyService.saveHistoryItem(historyData);
+        // Create a clean version of the structured content
+        const cleanStructuredContent = contentState.structuredContent.map(slide => ({
+          title: slide.title || 'Untitled Slide',
+          layout: slide.layout || 'TITLE_AND_CONTENT',
+          content: Array.isArray(slide.content) ? [...slide.content] : [],
+          teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
+          visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
+          left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
+          right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
+        }));
         
-        // Also save to local storage for anonymous users
-        if (!isAuthenticated) {
+        // const historyData = {
+        //   title: cleanFormState.lessonTopic,
+        //   resourceType: cleanFormState.resourceType,
+        //   lessonData: {
+        //     ...cleanFormState,
+        //     structuredContent: cleanStructuredContent,
+        //     finalOutline: contentState.finalOutline || ''
+        //   }
+        // };
+        
+        // Use the trackLessonGeneration method for comprehensive tracking
+        await historyService.trackLessonGeneration(cleanFormState, {
+          structuredContent: cleanStructuredContent,
+          finalOutline: contentState.finalOutline || ''
+        });
+        
+        console.log('Lesson successfully saved to history');
+      } catch (error) {
+        console.error('Error saving to history:', error);
+        
+        // If the server call fails, save directly to local storage
+        try {
           const localHistoryItem = {
-            id: Date.now(), // Use timestamp as ID
-            title: historyData.title,
-            types: [historyData.resourceType],
+            id: Date.now(),
+            title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+            types: [formState.resourceType || 'PRESENTATION'],
             date: 'Today',
-            lessonData: historyData.lessonData
+            lessonData: {
+              ...formState,
+              structuredContent: contentState.structuredContent,
+              finalOutline: contentState.finalOutline
+            }
           };
           
           historyService.saveLocalHistory(localHistoryItem);
+          console.log('Lesson saved to local history as fallback');
+        } catch (localError) {
+          console.error('Failed to save to local history:', localError);
         }
-        
-        console.log('Lesson saved to history');
-      } catch (error) {
-        console.error('Error saving to history:', error);
-        // Continue even if history saving fails
       }
     }
-  }, [formState, contentState, isAuthenticated]);
+  }, [formState, contentState]);
 
   // After outline is confirmed, save to history
   useEffect(() => {
