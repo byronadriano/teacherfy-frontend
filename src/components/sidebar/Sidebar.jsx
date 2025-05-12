@@ -1,8 +1,8 @@
-// src/components/sidebar/Sidebar.jsx
+// Updated Sidebar.jsx with floating toggle button
 import React, { useState } from 'react';
-import { Box, Typography, Button, Avatar, IconButton } from '@mui/material';
+import { Box, Typography, Button, Avatar, IconButton, Divider, Paper } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, Settings, Stars } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Stars } from 'lucide-react';
 import RecentsList from './RecentsList';
 import UserSettingsModal from '../modals/UserSettingsModal';
 import PricingModal from '../modals/PricingModal';
@@ -18,15 +18,16 @@ const Sidebar = ({
     defaultSettings,
     onSettingsChange,
     onLogoReset,
-    onHistoryItemSelect  // Add this prop
+    onHistoryItemSelect
 }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [isLogoHovered, setIsLogoHovered] = useState(false);
+    const [isToggleHovered, setIsToggleHovered] = useState(false);
 
     const handleLogoClick = () => {
-        console.log("Logo clicked"); // Debug log
-        onLogoReset && onLogoReset(); // Call reset method
+        console.log("Logo clicked");
+        onLogoReset && onLogoReset();
     };
 
     const handleSettingsSave = (newSettings) => {
@@ -40,23 +41,25 @@ const Sidebar = ({
         }
     };
 
-    // Add this function to handle history item selection
     const handleHistoryItemSelect = (item) => {
         if (onHistoryItemSelect) {
             onHistoryItemSelect(item);
         }
     };
 
+    // Sidebar background color - using the original color that matches the logo
+    const sidebarColor = '#f5f5f5';
+
     return (
         <>
             <Box
                 sx={{
                     width: isCollapsed ? '20px' : '240px',
-                    height: '100vh',  // This ensures full viewport height
+                    height: '100vh',
                     position: 'fixed',
                     left: 0,
                     top: 0,
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: sidebarColor, // Use the original color
                     borderRight: '1px solid #e5e7eb',
                     display: 'flex',
                     flexDirection: 'column',
@@ -64,27 +67,28 @@ const Sidebar = ({
                     zIndex: 10,
                     overflow: 'hidden'
                 }}
+                className="sidebar"
             >
-            {/* Logo Section */}
-            {!isCollapsed && (
-                <Box 
-                    sx={{ 
-                        p: 2,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        // borderBottom: '1px solid #e5e7eb',
-                        cursor: 'pointer',
-                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                        transform: isLogoHovered ? 'scale(1.05)' : 'scale(1)',
-                        boxShadow: isLogoHovered 
-                            ? '0 4px 15px rgba(37, 99, 235, 0.3)' 
-                            : 'none',
-                        borderRadius: '8px'
-                    }}
-                    onClick={handleLogoClick}
-                    onMouseEnter={() => setIsLogoHovered(true)}
-                    onMouseLeave={() => setIsLogoHovered(false)}
-                >
+                {/* Logo Section */}
+                {!isCollapsed && (
+                    <Box 
+                        sx={{ 
+                            p: 2,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                            transform: isLogoHovered ? 'scale(1.05)' : 'scale(1)',
+                            boxShadow: isLogoHovered 
+                                ? '0 4px 15px rgba(37, 99, 235, 0.3)' 
+                                : 'none',
+                            borderRadius: '8px',
+                            backgroundColor: 'transparent'
+                        }}
+                        onClick={handleLogoClick}
+                        onMouseEnter={() => setIsLogoHovered(true)}
+                        onMouseLeave={() => setIsLogoHovered(false)}
+                    >
                         <Box sx={{ 
                             position: 'relative', 
                             display: 'flex', 
@@ -115,64 +119,53 @@ const Sidebar = ({
                     </Box>
                 )}
 
-                {/* Toggle Button */}
-                <Box
-                    onClick={toggleSidebar}
-                    sx={{
-                        position: 'absolute',
-                        right: -2,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        color: '#9ca3af',
-                        transition: 'color 0.2s ease',
-                        '&:hover': {
-                            color: '#6b7280'
-                        },
-                        bgcolor: 'transparent'
-                    }}
-                >
-                    <ChevronLeft 
-                        size={20} 
-                        style={{
-                            transform: isCollapsed ? 'rotate(180deg)' : 'none',
-                            transition: 'transform 0.3s ease'
-                        }}
-                    />
-                </Box>
-
                 {/* Content */}
-                <Box sx={{ flex: 1, overflow: 'auto' }}>
-                    {/* Update this line to pass the handler */}
-                    {!isCollapsed && <RecentsList onSelectItem={handleHistoryItemSelect} />}
+                <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    {/* Recents List - Scrollable */}
+                    {!isCollapsed && (
+                        <Box sx={{ 
+                            overflowY: 'auto',
+                            flex: 1,
+                            '&::-webkit-scrollbar': {
+                                width: '4px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                                background: 'transparent',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                                background: '#cbd5e1',
+                                borderRadius: '4px',
+                            },
+                        }}>
+                            <RecentsList onSelectItem={handleHistoryItemSelect} />
+                        </Box>
+                    )}
                 </Box>
 
-                {/* Footer Section */}
+                {/* Footer Section with clear divider */}
                 {!isCollapsed && (
-                    <Box sx={{ 
-                        borderTop: '1px solid #e5e7eb',
-                        mt: 'auto'
-                    }}>
-                        {/* Upgrade Section */}
+                    <>
+                        <Divider sx={{ mb: 2 }} />
+                        
+                        {/* Upgrade Section in a nicer card */}
                         <Box sx={{ 
-                            p: 3,
-                            pb: 2,
-                            display: 'flex',
-                            justifyContent: 'center' // Center the upgrade section
+                            px: 3,
+                            pb: 2
                         }}>
-                            <Box 
+                            <Paper
+                                elevation={0}
                                 onClick={() => setShowPricing(true)}
                                 sx={{ 
                                     p: 2,
-                                    bgcolor: '#f3f4f6',
+                                    bgcolor: '#f1f5f9',
                                     borderRadius: '8px',
                                     cursor: 'pointer',
-                                    textAlign: 'center', // Center the text
-                                    maxWidth: '200px', // Optional: limit width
+                                    textAlign: 'center',
+                                    border: '1px solid #e2e8f0',
                                     transition: 'all 0.2s ease',
                                     '&:hover': {
-                                        bgcolor: '#e5e7eb'
+                                        bgcolor: '#e2e8f0',
+                                        transform: 'translateY(-2px)'
                                     }
                                 }}
                             >
@@ -192,20 +185,25 @@ const Sidebar = ({
                                 >
                                     View Plans
                                 </Typography>
-                            </Box>
+                            </Paper>
                         </Box>
+
+                        <Divider sx={{ mb: 2 }} />
 
                         {/* User Info Section */}
                         {user && (
                             <Box sx={{ 
                                 px: 3,
-                                pb: 2
+                                pb: 3
                             }}>
                                 <Box sx={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 2,
-                                    mb: 2
+                                    mb: 2,
+                                    p: 1,
+                                    borderRadius: '8px',
+                                    backgroundColor: '#ffffff'
                                 }}>
                                     <Avatar 
                                         src={user.picture}
@@ -278,7 +276,57 @@ const Sidebar = ({
                                 </GoogleOAuthProvider>
                             </Box>
                         )}
-                    </Box>
+                    </>
+                )}
+            </Box>
+
+            {/* Floating Toggle Button - Completely outside the sidebar */}
+            <Box
+                onClick={toggleSidebar}
+                onMouseEnter={() => setIsToggleHovered(true)}
+                onMouseLeave={() => setIsToggleHovered(false)}
+                className="sidebar-floating-toggle"
+                sx={{
+                    position: 'fixed',
+                    left: isCollapsed ? '22px' : '242px', // Just outside the sidebar
+                    top: '170px', // Positioned at eye level
+                    transform: 'translateX(-50%)', // Center horizontally on the edge
+                    cursor: 'pointer',
+                    zIndex: 1100, // Higher z-index to stay on top
+                    backgroundColor: isToggleHovered ? '#f0f9ff' : '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32, // Smaller, more discrete size
+                    height: 32, // Smaller, more discrete size
+                    boxShadow: isToggleHovered 
+                        ? '0 0 12px rgba(37, 99, 235, 0.4)' 
+                        : '0 2px 6px rgba(0,0,0,0.1)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        backgroundColor: '#e0f2fe',
+                        transform: 'translateX(-50%) scale(1.1)'
+                    }
+                }}
+            >
+                {isCollapsed ? (
+                    <ChevronRight 
+                        size={18} 
+                        color="#1e3a8a"
+                        style={{
+                            transition: 'all 0.3s ease'
+                        }}
+                    />
+                ) : (
+                    <ChevronLeft 
+                        size={18} 
+                        color="#1e3a8a"
+                        style={{
+                            transition: 'all 0.3s ease'
+                        }}
+                    />
                 )}
             </Box>
 
@@ -296,11 +344,22 @@ const Sidebar = ({
                 onSelectPlan={handlePlanSelect}
             />
 
-            {/* Global style for twinkle animation */}
+            {/* Global style for animations */}
             <style>{`
                 @keyframes twinkle {
                     from { opacity: 0.6; transform: scale(0.8); }
                     to { opacity: 1; transform: scale(1); }
+                }
+                
+                /* Add pulse animation for the toggle button */
+                @keyframes pulse-toggle {
+                    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+                }
+                
+                .sidebar-floating-toggle {
+                    animation: pulse-toggle 2s infinite;
                 }
             `}</style>
         </>

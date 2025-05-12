@@ -1,24 +1,103 @@
-/* global.css */
+/* Updated global.css */
 
-/* 
-  Keep global resets and minimal base styles here.
-  This helps avoid conflicts if you import it everywhere.
-*/
+/* Base reset and defaults */
+html {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-x: hidden; /* Prevents horizontal scrolling */
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
 
 body {
   margin: 0;
   padding: 0;
-
-  /* Use a neutral font-family or your desired system font stack. 
-     If you want to unify across the app, do it here or in your MUI theme. */
+  min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 
                'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 
                'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  color: #1e293b;
+  position: relative;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+/* Root container */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 600px) {
+  body {
+    padding-bottom: 70px; /* Extra padding for footer on mobile */
+  }
+  
+  /* Prevent zooming on inputs in mobile Safari */
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="password"] {
+    font-size: 16px;
+  }
+  
+  /* Fix for footer overlapping content */
+  .MuiBox-root[component="footer"] {
+    position: relative;
+    margin-top: 2rem;
+  }
+}
+
+/* Fix for Google Sign-in button */
+#google-sign-in-button {
+  width: 100% !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Improve scrollbar appearance */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Fix for sidebar toggle button */
+.sidebar-toggle {
+  z-index: 100;
+  background-color: white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Animation for loading effects */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Ensure proper spacing at the bottom for the footer */
+.main-content-wrapper {
+  padding-bottom: 60px; /* Adjust as needed */
 }

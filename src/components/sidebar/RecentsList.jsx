@@ -1,10 +1,9 @@
-// src/components/sidebar/RecentsList.jsx
+// Updated RecentsList.jsx with ESLint fixes
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Chip, CircularProgress, Alert, Divider } from '@mui/material';
-import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files } from 'lucide-react';
+import { Box, Typography, Chip, CircularProgress, Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
 import { historyService } from '../../services/history';
 import { useAuth } from '../../contexts/AuthContext';
-import ClearHistoryButton from './ClearHistoryButton';
 
 const RESOURCE_TYPES = {
   PRESENTATION: {
@@ -49,10 +48,8 @@ const RecentItem = ({ item, onClick }) => {
   const lessonData = item.lessonData || {};
   
   // Use subject as the main title, fallback to regular title if not available
-  const subject = lessonData.subjectFocus || 'Subject';
-  
-  // Get first slide title if available
-  const firstSlideTitle = lessonData.structuredContent?.[0]?.title || '';
+  const title = item.title || 'Untitled Lesson';
+  const subject = lessonData.subjectFocus || '';
   
   // Handle both string and array formats for types
   const types = Array.isArray(item.types) ? item.types : [item.types || 'PRESENTATION'];
@@ -70,43 +67,35 @@ const RecentItem = ({ item, onClick }) => {
         alignItems: 'flex-start',
         gap: 1.5,
         p: 1.5,
-        borderRadius: '6px',
+        borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         '&:hover': {
-          backgroundColor: '#f3f4f6'
+          backgroundColor: '#f1f5f9'
         }
       }}
       onClick={() => onClick && onClick(item)}
     >
       <Icon size={16} color={resourceType.color} />
       <Box sx={{ flex: 1 }}>
-        {/* Subject as main title */}
+        {/* Main title */}
         <Typography sx={{ 
           fontSize: '0.8rem',
           color: '#374151',
           fontWeight: '600',
-          mb: 0.5,
-          textTransform: 'capitalize'
+          mb: 0.5
         }}>
-          {subject}
+          {title}
         </Typography>
         
-        {/* First slide title as subtitle */}
-        {firstSlideTitle && (
+        {/* Subject if available */}
+        {subject && (
           <Typography sx={{ 
             fontSize: '0.7rem',
             color: '#6b7280',
-            mb: 0.5,
-            lineHeight: 1.2,
-            // Limit to 2 lines with ellipsis
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            mb: 0.5
           }}>
-            {firstSlideTitle}
+            {subject}
           </Typography>
         )}
         
@@ -145,6 +134,8 @@ const RecentsList = ({ onSelectItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { isAuthenticated } = useAuth();
   
   // Add a ref to track if the component is mounted
@@ -227,10 +218,36 @@ const RecentsList = ({ onSelectItem }) => {
     }
   };
 
-  const handleHistoryCleared = () => {
-    setHistoryItems([]);
-    hasInitiallyFetched.current = false;
-    fetchHistory();
+  const openConfirmDialog = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+  };
+
+  const handleClearHistory = async () => {
+    try {
+      setIsClearingHistory(true);
+      
+      // Clear history through the service
+      await historyService.clearHistory();
+      
+      // Update local state
+      setHistoryItems([]);
+      
+      // Refetch to ensure we have the latest
+      hasInitiallyFetched.current = false;
+      await fetchHistory();
+      
+      // Close the dialog
+      closeConfirmDialog();
+    } catch (error) {
+      console.error('Error clearing history:', error);
+      setError('Failed to clear history. Please try again later.');
+    } finally {
+      setIsClearingHistory(false);
+    }
   };
 
   return (
@@ -252,6 +269,24 @@ const RecentsList = ({ onSelectItem }) => {
         >
           Recent Resources
         </Typography>
+        
+        {historyItems.length > 0 && (
+          <Button
+            size="small"
+            variant="text"
+            color="error"
+            disabled={isClearingHistory}
+            onClick={openConfirmDialog}
+            startIcon={<Trash2 size={14} />}
+            sx={{ 
+              fontSize: '0.7rem',
+              textTransform: 'none',
+              p: 0.5
+            }}
+          >
+            {isClearingHistory ? 'Clearing...' : 'Clear'}
+          </Button>
+        )}
       </Box>
       
       {loading && (
@@ -274,7 +309,13 @@ const RecentsList = ({ onSelectItem }) => {
       )}
       
       {!loading && !error && historyItems.length === 0 && (
-        <Box sx={{ p: 1.5, textAlign: 'center' }}>
+        <Box sx={{ 
+          p: 3, 
+          textAlign: 'center',
+          border: '1px dashed #cbd5e1',
+          borderRadius: '8px',
+          mx: 1.5
+        }}>
           <Typography 
             sx={{ 
               fontSize: '0.75rem',
@@ -292,21 +333,50 @@ const RecentsList = ({ onSelectItem }) => {
         </Box>
       )}
       
-      {historyItems.map((item, index) => (
-        <RecentItem 
-          key={item.id || index} 
-          item={item} 
-          onClick={() => handleItemClick(item)}
-        />
-      ))}
+      <Box sx={{ 
+        mt: 1, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 0.5 
+      }}>
+        {historyItems.map((item, index) => (
+          <RecentItem 
+            key={item.id || index} 
+            item={item} 
+            onClick={() => handleItemClick(item)}
+          />
+        ))}
+      </Box>
       
-      {historyItems.length > 0 && (
-        <Divider sx={{ my: 1.5 }} />
-      )}
-      
-      {historyItems.length > 0 && (
-        <ClearHistoryButton onHistoryCleared={handleHistoryCleared} />
-      )}
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={closeConfirmDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Clear History?
+        </DialogTitle>
+        <DialogContent>
+          <Typography id="alert-dialog-description">
+            Are you sure you want to clear your history? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeConfirmDialog} color="inherit" disabled={isClearingHistory}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleClearHistory} 
+            color="error" 
+            autoFocus
+            disabled={isClearingHistory}
+          >
+            {isClearingHistory ? 'Clearing...' : 'Clear History'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

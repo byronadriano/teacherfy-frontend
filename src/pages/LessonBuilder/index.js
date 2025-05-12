@@ -10,7 +10,6 @@ import UpgradeModal from '../../components/modals/UpgradeModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
 import OutlineDisplay from './components/OutlineDisplay';
 import DebugPanel from '../../components/debug/DebugPanel';
-import AppFooter from '../../components/common/AppFooter';
 
 import { useAuth } from '../../contexts/AuthContext';
 import useForm from './hooks/useForm';
@@ -44,7 +43,6 @@ const LessonBuilder = () => {
     contentState,
     setUiState,
     setContentState,
-    // setFormState,
     handleFormChange,
     toggleExample,
     handleGenerateOutline,
@@ -129,16 +127,6 @@ const LessonBuilder = () => {
           right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
         }));
         
-        // const historyData = {
-        //   title: cleanFormState.lessonTopic,
-        //   resourceType: cleanFormState.resourceType,
-        //   lessonData: {
-        //     ...cleanFormState,
-        //     structuredContent: cleanStructuredContent,
-        //     finalOutline: contentState.finalOutline || ''
-        //   }
-        // };
-        
         // Use the trackLessonGeneration method for comprehensive tracking
         await historyService.trackLessonGeneration(cleanFormState, {
           structuredContent: cleanStructuredContent,
@@ -193,7 +181,6 @@ const LessonBuilder = () => {
       const { lessonData } = historyItem;
       
       // Method 1: Using individual handleFormChange calls
-      // This is the safer approach since we're using a function we know exists
       if (lessonData.resourceType) handleFormChange('resourceType', lessonData.resourceType);
       if (lessonData.gradeLevel) handleFormChange('gradeLevel', lessonData.gradeLevel);
       if (lessonData.subjectFocus) handleFormChange('subjectFocus', lessonData.subjectFocus);
@@ -233,7 +220,6 @@ const LessonBuilder = () => {
   
   // Add this function to track lesson generation in history
   const trackLessonInHistory = async () => {
-    // Only track if we have structured content
     if (!contentState.structuredContent || contentState.structuredContent.length === 0) {
       return;
     }
@@ -266,7 +252,8 @@ const LessonBuilder = () => {
       display: 'flex',
       minHeight: '100vh',
       bgcolor: '#ffffff',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      position: 'relative' // Add position relative
     }}>
       <Sidebar
         isCollapsed={isSidebarCollapsed}
@@ -280,7 +267,7 @@ const LessonBuilder = () => {
         onHistoryItemSelect={handleHistoryItemSelect}
       />
 
-      {/* Main Content */}
+      {/* Main Content - Improved center alignment */}
       <Box 
         component="main"
         sx={{ 
@@ -291,42 +278,47 @@ const LessonBuilder = () => {
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          pb: '60px' // Space for footer
+          pb: { xs: '120px', sm: '80px' }, // Extra padding for footer
+          pt: 2 // Add padding top
         }}
       >
-        {/* Content Container */}
+        {/* Content Container - Fixed vertical and horizontal centering */}
         <Box sx={{ 
-          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          p: { xs: 2, sm: 4, md: 6 },
+          justifyContent: 'center', // Add this for vertical centering
+          px: { xs: 2, sm: 4, md: 6 }, // Responsive padding
+          py: { xs: 3, md: 4 }, // Add vertical padding
           maxWidth: '1200px',
-          mx: 'auto',
-          width: '100%'
+          width: '100%',
+          mx: 'auto', // Auto margins for horizontal centering
+          height: 'calc(100vh - 150px)', // Subtract footer height and some padding
+          minHeight: '600px' // Ensure enough height on smaller screens
         }}>
-          {/* Title */}
+          {/* Title - Responsive size */}
           <Typography 
             variant="h1" 
             sx={{ 
               color: '#1e3a8a',
-              fontSize: { xs: '2rem', sm: '2.5rem' },
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
               fontWeight: '300',
               textAlign: 'center',
-              mb: 6
+              mb: { xs: 3, sm: 4, md: 6 },
+              mt: { xs: 0, sm: 0, md: 0 } // Remove top margin for better centering
             }}
           >
             What would you like to create?
           </Typography>
 
-          {/* Form Section */}
+          {/* Form Section - Center in page */}
           <Box sx={{ 
             width: '100%',
             maxWidth: '800px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 3
+            gap: 3,
+            mx: 'auto' // Center horizontally
           }}>
             <FiltersBar 
               formState={formState}
@@ -381,7 +373,7 @@ const LessonBuilder = () => {
           setContentState={setContentState}
           handleRegenerateOutline={handleRegenerateOutline}
           handleDownload={generatePresentation}
-          onFinalize={trackLessonInHistory}  // Add this line
+          onFinalize={trackLessonInHistory}
         />
 
         <UpgradeModal 
@@ -389,16 +381,15 @@ const LessonBuilder = () => {
           onClose={() => setUiState(prev => ({ ...prev, showUpgradeModal: false }))}
         />
 
-        <DebugPanel 
-          contentState={contentState}
-          uiState={{
-            ...uiState,
-            isLoading: outlineLoading || presentationLoading
-          }}
-        />
-
-        {/* Footer */}
-        <AppFooter />
+        {process.env.NODE_ENV === 'development' && (
+          <DebugPanel 
+            contentState={contentState}
+            uiState={{
+              ...uiState,
+              isLoading: outlineLoading || presentationLoading
+            }}
+          />
+        )}
       </Box>
     </Box>
   );
