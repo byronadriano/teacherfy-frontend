@@ -1,4 +1,4 @@
-// src/pages/LessonBuilder/index.js
+// Properly centered LessonBuilder component
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
 
@@ -250,10 +250,10 @@ const LessonBuilder = () => {
   return (
     <Box sx={{ 
       display: 'flex',
-      minHeight: '100vh',
+      height: '100vh',
       bgcolor: '#ffffff',
-      overflow: 'hidden',
-      position: 'relative' // Add position relative
+      overflow: 'hidden', // Hide overflow at the root level
+      position: 'relative'
     }}>
       <Sidebar
         isCollapsed={isSidebarCollapsed}
@@ -267,74 +267,84 @@ const LessonBuilder = () => {
         onHistoryItemSelect={handleHistoryItemSelect}
       />
 
-      {/* Main Content - Improved center alignment */}
+      {/* Main Content - Single scrollable container */}
       <Box 
         component="main"
         sx={{ 
           marginLeft: isSidebarCollapsed ? '20px' : '240px',
           flex: 1,
-          minHeight: '100vh',
+          height: '100vh',
           transition: 'margin-left 0.3s ease',
-          display: 'flex',
+          display: 'flex', 
           flexDirection: 'column',
           position: 'relative',
-          pb: { xs: '120px', sm: '80px' }, // Extra padding for footer
-          pt: 2 // Add padding top
+          overflowY: 'auto', // Only this should scroll
+          overflowX: 'hidden',
+          paddingBottom: '80px', // Add padding for footer
         }}
       >
-        {/* Content Container - Fixed vertical and horizontal centering */}
+        {/* Center all content vertically when no content is displayed */}
         <Box sx={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center', // Add this for vertical centering
-          px: { xs: 2, sm: 4, md: 6 }, // Responsive padding
-          py: { xs: 3, md: 4 }, // Add vertical padding
-          maxWidth: '1200px',
+          justifyContent: contentState.structuredContent.length > 0 ? 'flex-start' : 'center',
+          minHeight: contentState.structuredContent.length > 0 ? 'auto' : '100%',
           width: '100%',
-          mx: 'auto', // Auto margins for horizontal centering
-          height: 'calc(100vh - 150px)', // Subtract footer height and some padding
-          minHeight: '600px' // Ensure enough height on smaller screens
+          pt: contentState.structuredContent.length > 0 ? { xs: 3, md: 4 } : 0,
         }}>
-          {/* Title - Responsive size */}
-          <Typography 
-            variant="h1" 
-            sx={{ 
-              color: '#1e3a8a',
-              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-              fontWeight: '300',
-              textAlign: 'center',
-              mb: { xs: 3, sm: 4, md: 6 },
-              mt: { xs: 0, sm: 0, md: 0 } // Remove top margin for better centering
-            }}
-          >
-            What would you like to create?
-          </Typography>
-
-          {/* Form Section - Center in page */}
+          {/* Content wrapper - centers horizontally */}
           <Box sx={{ 
-            width: '100%',
-            maxWidth: '800px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 3,
-            mx: 'auto' // Center horizontally
+            alignItems: 'center',
+            width: '100%',
+            maxWidth: '1200px',
+            mx: 'auto', // Center horizontally
+            px: { xs: 2, sm: 4, md: 6 },
           }}>
-            <FiltersBar 
-              formState={formState}
-              handleFormChange={handleFormChange}
-            />
+            {/* Title */}
+            {!contentState.structuredContent.length > 0 && (
+              <Typography 
+                variant="h1" 
+                sx={{ 
+                  color: '#1e3a8a',
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                  fontWeight: '300',
+                  textAlign: 'center',
+                  mb: { xs: 3, sm: 4, md: 6 },
+                }}
+              >
+                What would you like to create?
+              </Typography>
+            )}
 
-            <CustomizationForm 
-              value={formState.customPrompt}
-              onChange={handleInputChange}
-              isExample={uiState.isExample}
-              setIsExample={(isChecked) => toggleExample(isChecked)}
-              onSubmit={handleGenerateOutline}
-              isLoading={uiState.isLoading || outlineLoading}
-              error={uiState.error}
-            />
+            {/* Form container - Always centered */}
+            <Box sx={{
+              width: '100%',
+              maxWidth: '800px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              mb: contentState.structuredContent.length > 0 ? 4 : 0,
+            }}>
+              <FiltersBar 
+                formState={formState}
+                handleFormChange={handleFormChange}
+              />
 
+              <CustomizationForm 
+                value={formState.customPrompt}
+                onChange={handleInputChange}
+                isExample={uiState.isExample}
+                setIsExample={(isChecked) => toggleExample(isChecked)}
+                onSubmit={handleGenerateOutline}
+                isLoading={uiState.isLoading || outlineLoading}
+                error={uiState.error}
+              />
+            </Box>
+
+            {/* Show the generated content */}
             {contentState.structuredContent.length > 0 && (
               <OutlineDisplay
                 contentState={contentState}
@@ -351,7 +361,7 @@ const LessonBuilder = () => {
             )}
           </Box>
         </Box>
-
+        
         {/* Modals */}
         <SignInPrompt
           open={uiState.showSignInPrompt}

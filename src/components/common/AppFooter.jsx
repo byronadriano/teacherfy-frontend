@@ -1,4 +1,4 @@
-// Fixed AppFooter.jsx with correct closing tags
+// Complete AppFooter.jsx with proper styling
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Box, Typography, Link, useMediaQuery, useTheme } from '@mui/material';
@@ -26,25 +26,23 @@ const AppFooter = () => {
       component="footer"
       className="app-footer"
       sx={{
-        position: isMobileDevice ? 'relative' : 'fixed',
+        position: 'fixed', // Always fixed to bottom
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 5, // Lower z-index so it doesn't cover important elements
+        zIndex: 50, // High enough but lower than buttons (100)
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         py: 1.5,
         px: 2,
         paddingBottom: `calc(${isMobileDevice ? '20px' : '10px'} + ${getSafeAreaBottom()})`,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', // Semi-transparent background
         borderTop: '1px solid #e5e7eb',
         marginLeft: isMobileDevice ? 0 : (isSidebarCollapsed ? '20px' : (isSmallScreen ? '0' : '240px')),
         transition: 'margin-left 0.3s ease',
         width: isMobileDevice ? '100%' : (isSidebarCollapsed ? 'calc(100% - 20px)' : (isSmallScreen ? '100%' : 'calc(100% - 240px)')),
-        // Add box shadow for better separation
         boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.05)',
-        // Ensure content is visible on mobile
         fontSize: isMobileDevice ? '0.75rem' : 'inherit'
       }}
     >
@@ -57,7 +55,6 @@ const AppFooter = () => {
           width: '100%',
           justifyContent: 'center',
           flexWrap: isMobileDevice ? 'wrap' : 'nowrap', // Allow wrapping on small devices
-          // Add padding to ensure visibility
           py: isMobileDevice ? 1 : 0
         }}
       >
@@ -73,7 +70,6 @@ const AppFooter = () => {
             '&:hover': {
               color: theme.palette.primary.main
             },
-            // Add padding for better touch target on mobile
             py: isMobileDevice ? 0.5 : 0
           }}
         >
@@ -102,7 +98,6 @@ const AppFooter = () => {
             '&:hover': {
               color: theme.palette.primary.main
             },
-            // Add padding for better touch target on mobile
             py: isMobileDevice ? 0.5 : 0
           }}
         >

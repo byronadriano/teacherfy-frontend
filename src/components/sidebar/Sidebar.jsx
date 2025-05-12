@@ -1,4 +1,4 @@
-// Updated Sidebar.jsx with floating toggle button
+// Updated Sidebar.jsx with scrolling fixes
 import React, { useState } from 'react';
 import { Box, Typography, Button, Avatar, IconButton, Divider, Paper } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
@@ -59,13 +59,13 @@ const Sidebar = ({
                     position: 'fixed',
                     left: 0,
                     top: 0,
-                    backgroundColor: sidebarColor, // Use the original color
+                    backgroundColor: sidebarColor,
                     borderRight: '1px solid #e5e7eb',
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',
                     zIndex: 10,
-                    overflow: 'hidden'
+                    overflow: 'hidden' // Keep parent container from scrolling
                 }}
                 className="sidebar"
             >
@@ -120,11 +120,16 @@ const Sidebar = ({
                 )}
 
                 {/* Content */}
-                <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    {/* Recents List - Scrollable */}
+                <Box sx={{ 
+                    flex: 1, 
+                    overflow: 'hidden', // Keep this as hidden
+                    display: 'flex', 
+                    flexDirection: 'column' 
+                }}>
+                    {/* Recents List - This is the only scrollable part */}
                     {!isCollapsed && (
                         <Box sx={{ 
-                            overflowY: 'auto',
+                            overflowY: 'auto', // Only this section should scroll
                             flex: 1,
                             '&::-webkit-scrollbar': {
                                 width: '4px',
@@ -142,9 +147,9 @@ const Sidebar = ({
                     )}
                 </Box>
 
-                {/* Footer Section with clear divider */}
+                {/* Footer Section with clear divider - Non-scrollable */}
                 {!isCollapsed && (
-                    <>
+                    <Box sx={{ flexShrink: 0 }}> {/* Add flexShrink to prevent this section from scrolling */}
                         <Divider sx={{ mb: 2 }} />
                         
                         {/* Upgrade Section in a nicer card */}
@@ -203,7 +208,7 @@ const Sidebar = ({
                                     mb: 2,
                                     p: 1,
                                     borderRadius: '8px',
-                                    backgroundColor: '#ffffff'
+                                    backgroundColor: '#f5f5f5' // Match with sidebar background
                                 }}>
                                     <Avatar 
                                         src={user.picture}
@@ -276,7 +281,7 @@ const Sidebar = ({
                                 </GoogleOAuthProvider>
                             </Box>
                         )}
-                    </>
+                    </Box>
                 )}
             </Box>
 
