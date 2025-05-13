@@ -97,10 +97,10 @@ export default function useForm({ setShowSignInPrompt }) {
     if (isChecked) {
       setFormState(prev => ({
         ...EXAMPLE_FORM_DATA,
-        // Preserve any current settings that shouldn't be overwritten
-        resourceType: prev.resourceType,
-        numSlides: prev.numSlides,
-        includeImages: prev.includeImages
+        // Only preserve these if they're already set and valid, otherwise use example values
+        numSlides: (prev.numSlides && prev.numSlides > 0) ? prev.numSlides : EXAMPLE_FORM_DATA.numSlides,
+        includeImages: prev.includeImages !== undefined ? prev.includeImages : EXAMPLE_FORM_DATA.includeImages
+        // Note: We're no longer preserving resourceType, so it will always come from the example data
       }));
       setUiState(prev => ({ ...prev, isExample: true }));
     } else {
@@ -110,7 +110,6 @@ export default function useForm({ setShowSignInPrompt }) {
 
   const handleGenerateOutline = useCallback(async () => {
     // Validate only the essential required fields
-    // Note: We're no longer requiring lessonTopic as a separate field
     if (!formState.resourceType || !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
       const missingFields = [
         !formState.resourceType && 'resource type',
@@ -242,7 +241,6 @@ export default function useForm({ setShowSignInPrompt }) {
     }
   }, [formState, uiState.isExample]);
   
-
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
       setUiState(prev => ({
