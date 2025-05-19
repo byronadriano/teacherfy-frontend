@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// src/pages/LessonBuilder/hooks/usePresentation.js
+import { useState, useCallback } from 'react';
 import { presentationService } from '../../../services';
 import { API } from '../../../utils/constants';
 
@@ -12,6 +13,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
     downloadCount: 0 
   });
 
+  // Generate a single presentation (legacy support)
   const generatePresentation = async (formState, contentState) => {
     try {
       setIsLoading(true);
@@ -46,7 +48,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       a.click();
       window.URL.revokeObjectURL(url);
 
-      alert('Presentation downloaded successfully!');
+      return { status: 'success' };
     } catch (error) {
       console.error('Complete presentation generation error:', {
         name: error.name,
@@ -58,8 +60,53 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         ? 'Unable to connect to the server. Please check your internet connection or try again later.' 
         : error.message;
       
-      alert(`Presentation Generation Error: ${errorMessage}`);
-      throw error;
+      return { 
+        status: 'error',
+        message: errorMessage
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Generate multiple resources
+  const generateMultiResource = async (formState, contentState) => {
+    try {
+      setIsLoading(true);
+      
+      // Check if we have valid content
+      if (!contentState.structuredContent?.length) {
+        throw new Error('No content available to generate resources');
+      }
+      
+      // Check for authentication if needed
+      if (!isAuthenticated && subscriptionState.downloadCount >= 5) {
+        setShowSignInPrompt();
+        throw new Error('Download limit reached. Please sign in or upgrade.');
+      }
+      
+      // Log generation details
+      console.log('Generating multiple resources with:', {
+        resourceTypes: formState.resourceType,
+        contentState: {
+          hasStructuredContent: Boolean(contentState.structuredContent),
+          structuredContentLength: contentState.structuredContent?.length || 0,
+          generatedResourcesCount: Object.keys(contentState.generatedResources || {}).length
+        }
+      });
+      
+      // Call the service to generate resources
+      const results = await presentationService.generateMultiResource(formState, contentState);
+      
+      return results;
+    } catch (error) {
+      console.error('Multi-resource generation error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      throw new Error(`Failed to generate resources: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -74,10 +121,15 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
 
       setGoogleSlidesState(prev => ({ ...prev, isGenerating: true }));
       await presentationService.generateGoogleSlides(formState, contentState, token);
+      
+      return { status: 'success' };
     } catch (error) {
       console.error('Error generating Google Slides:', error);
-      alert(`Google Slides Generation Error: ${error.message}`);
-      throw error;
+      
+      return { 
+        status: 'error',
+        message: `Google Slides Generation Error: ${error.message}`
+      };
     } finally {
       setGoogleSlidesState(prev => ({ ...prev, isGenerating: false }));
     }
@@ -88,6 +140,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
     googleSlidesState,
     subscriptionState,
     generatePresentation,
+    generateMultiResource,
     generateGoogleSlides,
   };
 };

@@ -1,23 +1,66 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Button,
   CircularProgress,
-  Paper
+  Paper,
+  Tabs,
+  Tab,
+  Chip,
+  Alert,
+  AlertTitle
 } from "@mui/material";
-import { Download, Presentation } from 'lucide-react';
+import { Download, Presentation, BookOpen, FileText, Check, X, AlertCircle } from 'lucide-react';
+
+const ResourceIcon = ({ resourceType, size = 18 }) => {
+  switch(resourceType) {
+    case 'Presentation':
+      return <Presentation size={size} />;
+    case 'Lesson Plan':
+      return <BookOpen size={size} />;
+    case 'Quiz/Test':
+      return <FileText size={size} />;
+    case 'Worksheet':
+      return <FileText size={size} />;
+    default:
+      return <FileText size={size} />;
+  }
+};
 
 const OutlineDisplay = ({ 
   contentState,
   uiState,
   subscriptionState = { isPremium: false, downloadCount: 0 },
   isAuthenticated = false,
-  googleSlidesState = { isGenerating: false }, // Add default value here
+  googleSlidesState = { isGenerating: false },
+  resourceStatus = {},
   onGeneratePresentation,
   onGenerateGoogleSlides
 }) => {
+  const [activeTab, setActiveTab] = useState(0);
+  
   if (!uiState.outlineConfirmed) return null;
+
+  // Get all resource types from the generated resources or fall back to the main content
+  const resourceTypes = contentState.generatedResources 
+    ? Object.keys(contentState.generatedResources) 
+    : ['Presentation'];
+    
+  // Get the active resource type
+  const activeResourceType = resourceTypes[activeTab] || 'Presentation';
+  
+  // Get content for the active resource
+  const activeContent = contentState.generatedResources?.[activeResourceType] || 
+                       contentState.structuredContent;
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const handleGenerateResource = () => {
+    onGeneratePresentation();
+  };
 
   return (
     <Box 
@@ -35,11 +78,58 @@ const OutlineDisplay = ({
           fontSize: { xs: '2rem', sm: '2.5rem' },
           color: '#1e3a8a',
           textAlign: 'center', 
-          mb: 6
+          mb: 4
         }}
       >
-        Look What You've Created!
+        Your Resources Are Ready!
       </Typography>
+
+      {/* Resource status notifications */}
+      {Object.entries(resourceStatus).map(([resourceType, status]) => 
+        status?.status === 'error' && (
+          <Alert 
+            key={resourceType}
+            severity="error"
+            sx={{ mb: 2 }}
+          >
+            <AlertTitle>Error Generating {resourceType}</AlertTitle>
+            {status.message}
+          </Alert>
+        )
+      )}
+
+      {/* Tabs for different resource types */}
+      {resourceTypes.length > 1 && (
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+          >
+            {resourceTypes.map((type, index) => (
+              <Tab 
+                key={type} 
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ResourceIcon resourceType={type} size={16} />
+                    <span>{type}</span>
+                    {resourceStatus[type]?.status === 'success' && (
+                      <Check size={14} color="#16a34a" />
+                    )}
+                  </Box>
+                } 
+                sx={{ 
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }}
+              />
+            ))}
+          </Tabs>
+        </Box>
+      )}
 
       <Paper
         elevation={0}
@@ -66,7 +156,7 @@ const OutlineDisplay = ({
             borderRadius: '4px'
           }
         }}>
-          {contentState.structuredContent.map((slide, index) => (
+          {activeContent.map((slide, index) => (
             <Box 
               key={index} 
               sx={{ 
@@ -84,7 +174,7 @@ const OutlineDisplay = ({
                   mb: 2
                 }}
               >
-                Slide {index + 1}: {slide.title}
+                {activeResourceType === 'Presentation' ? `Slide` : `Section`} {index + 1}: {slide.title}
               </Typography>
 
               {/* Content Section */}
@@ -199,7 +289,7 @@ const OutlineDisplay = ({
                 )}
               </Box>
 
-              {index < contentState.structuredContent.length - 1 && (
+              {index < activeContent.length - 1 && (
                 <Box 
                   sx={{ 
                     my: 4,
@@ -215,6 +305,7 @@ const OutlineDisplay = ({
         <Box 
           sx={{ 
             display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
             gap: 2,
             p: 3,
             borderTop: '1px solid #e2e8f0',
@@ -223,7 +314,7 @@ const OutlineDisplay = ({
         >
           <Button
             variant="contained"
-            onClick={onGeneratePresentation}
+            onClick={handleGenerateResource}
             disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
             startIcon={uiState.isLoading ? <CircularProgress size={20} /> : <Download size={18} />}
             sx={{
@@ -239,12 +330,13 @@ const OutlineDisplay = ({
               fontWeight: 500,
               px: 3,
               py: 1.5,
-              borderRadius: '8px'
+              borderRadius: '8px',
+              flex: { xs: '1', sm: 'initial' }
             }}
           >
             {uiState.isLoading ? 'Generating...' : (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Open in PowerPoint
+                {resourceTypes.length > 1 ? 'Download All Resources' : `Open in ${activeResourceType === 'Presentation' ? 'PowerPoint' : 'Editor'}`}
                 {!subscriptionState.isPremium && (
                   <Typography 
                     component="span"
@@ -261,31 +353,34 @@ const OutlineDisplay = ({
             )}
           </Button>
           
-          <Button
-            variant="contained"
-            onClick={onGenerateGoogleSlides}
-            disabled={uiState.isLoading || googleSlidesState.isGenerating || !isAuthenticated}
-            startIcon={googleSlidesState.isGenerating ? <CircularProgress size={20} /> : <Presentation size={18} />}
-            sx={{
-              bgcolor: '#dc2626',
-              '&:hover': {
-                bgcolor: '#b91c1c'
-              },
-              '&:disabled': {
-                bgcolor: '#94a3b8'
-              },
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              px: 3,
-              py: 1.5,
-              borderRadius: '8px'
-            }}
-          >
-            {googleSlidesState.isGenerating ? 'Generating...' : 
-             !isAuthenticated ? 'Sign in for Google Slides' : 
-             'Open in Google Slides'}
-          </Button>
+          {activeResourceType === 'Presentation' && (
+            <Button
+              variant="contained"
+              onClick={onGenerateGoogleSlides}
+              disabled={uiState.isLoading || googleSlidesState.isGenerating || !isAuthenticated}
+              startIcon={googleSlidesState.isGenerating ? <CircularProgress size={20} /> : <Presentation size={18} />}
+              sx={{
+                bgcolor: '#dc2626',
+                '&:hover': {
+                  bgcolor: '#b91c1c'
+                },
+                '&:disabled': {
+                  bgcolor: '#94a3b8'
+                },
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                borderRadius: '8px',
+                flex: { xs: '1', sm: 'initial' }
+              }}
+            >
+              {googleSlidesState.isGenerating ? 'Generating...' : 
+               !isAuthenticated ? 'Sign in for Google Slides' : 
+               'Open in Google Slides'}
+            </Button>
+          )}
         </Box>
       </Paper>
     </Box>
