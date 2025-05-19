@@ -1,4 +1,3 @@
-// Place this file at src/pages/LessonBuilder/components/resources/ResourceCard.jsx
 import React from 'react';
 import { 
   Box, 
@@ -177,7 +176,7 @@ const ResourceCard = ({
       <Button
         variant={status === 'success' ? 'outlined' : 'contained'}
         startIcon={status === 'generating' ? <CircularProgress size={16} /> : <Download size={16} />}
-        disabled={isDisabled || status === 'generating'}
+        disabled={isDisabled || status === 'generating' || status === 'success'} // Added status === 'success' to disable after generation
         onClick={onGenerate}
         sx={{
           textTransform: 'none',

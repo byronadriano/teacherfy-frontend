@@ -1,6 +1,6 @@
 // src/pages/LessonBuilder/index.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
 import FiltersBar from '../../components/filters/FiltersBar';
@@ -31,6 +31,7 @@ const LessonBuilder = () => {
   
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
+  const [showResourceManager, setShowResourceManager] = useState(true);
 
   // Use auth context instead of hook
   const { user, isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
@@ -64,7 +65,7 @@ const LessonBuilder = () => {
     isLoading: presentationLoading,
     googleSlidesState,
     subscriptionState,
-    generatePresentation,
+    // generatePresentation,
     generateMultiResource, // New method for generating multiple resources
     generateGoogleSlides,
   } = usePresentation({
@@ -469,35 +470,71 @@ const LessonBuilder = () => {
               />
             </Box>
 
-            {/* Resource Manager - for multi-resource management */}
+            {/* Resource Manager and Content Display */}
             {contentState.structuredContent.length > 0 && (
-              <ResourceManager
-                formState={formState}
-                contentState={contentState}
-                resourceStatus={resourceStatus}
-                isLoading={presentationLoading}
-                onGenerateResource={handleGenerateResource}
-                downloadLimit={5}
-                isPremium={subscriptionState.isPremium}
-                downloadsRemaining={subscriptionState.downloadCount >= 5 ? 0 : 5 - subscriptionState.downloadCount}
-              />
-            )}
+              <>
+                {/* Toggle button between resources and content */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  mb: 3,
+                  gap: 2
+                }}>
+                  <Button 
+                    variant={showResourceManager ? "contained" : "outlined"}
+                    onClick={() => setShowResourceManager(true)}
+                    sx={{ 
+                      minWidth: '150px',
+                      textTransform: 'none'
+                    }}
+                  >
+                    Manage Resources
+                  </Button>
+                  <Button 
+                    variant={!showResourceManager ? "contained" : "outlined"}
+                    onClick={() => setShowResourceManager(false)}
+                    sx={{ 
+                      minWidth: '150px',
+                      textTransform: 'none'
+                    }}
+                  >
+                    View Content
+                  </Button>
+                </Box>
 
-            {/* Show the generated content */}
-            {contentState.structuredContent.length > 0 && (
-              <OutlineDisplay
-                contentState={contentState}
-                uiState={{
-                  ...uiState,
-                  isLoading: presentationLoading
-                }}
-                subscriptionState={subscriptionState}
-                isAuthenticated={isAuthenticated}
-                googleSlidesState={googleSlidesState}
-                resourceStatus={resourceStatus}
-                onGeneratePresentation={() => handleGenerateResource()}
-                onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
-              />
+                {/* Show either ResourceManager or OutlineDisplay based on state */}
+                {showResourceManager ? (
+                  <ResourceManager
+                    formState={formState}
+                    contentState={contentState}
+                    resourceStatus={resourceStatus}
+                    isLoading={presentationLoading}
+                    onGenerateResource={handleGenerateResource}
+                    downloadLimit={5}
+                    isPremium={subscriptionState.isPremium}
+                    downloadsRemaining={subscriptionState.isPremium ? 999 : (subscriptionState.downloadCount >= 5 ? 0 : 5 - subscriptionState.downloadCount)}
+                  />
+                ) : (
+                  <OutlineDisplay
+                    contentState={contentState}
+                    uiState={{
+                      ...uiState,
+                      isLoading: presentationLoading
+                    }}
+                    subscriptionState={subscriptionState}
+                    isAuthenticated={isAuthenticated}
+                    googleSlidesState={googleSlidesState}
+                    resourceStatus={resourceStatus}
+                    onGeneratePresentation={() => handleGenerateResource()}
+                    onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
+                    onRegenerateOutline={() => setUiState(prev => ({ 
+                      ...prev, 
+                      outlineModalOpen: true,
+                      regenerationCount: prev.regenerationCount
+                    }))}
+                  />
+                )}
+              </>
             )}
           </Box>
         </Box>

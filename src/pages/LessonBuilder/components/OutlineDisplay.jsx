@@ -7,11 +7,10 @@ import {
   Paper,
   Tabs,
   Tab,
-  Chip,
   Alert,
   AlertTitle
 } from "@mui/material";
-import { Download, Presentation, BookOpen, FileText, Check, X, AlertCircle } from 'lucide-react';
+import { Download, Presentation, BookOpen, FileText, Check, RefreshCw } from 'lucide-react';
 
 const ResourceIcon = ({ resourceType, size = 18 }) => {
   switch(resourceType) {
@@ -36,7 +35,8 @@ const OutlineDisplay = ({
   googleSlidesState = { isGenerating: false },
   resourceStatus = {},
   onGeneratePresentation,
-  onGenerateGoogleSlides
+  onGenerateGoogleSlides,
+  onRegenerateOutline
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   
@@ -174,8 +174,43 @@ const OutlineDisplay = ({
                   mb: 2
                 }}
               >
-                {activeResourceType === 'Presentation' ? `Slide` : `Section`} {index + 1}: {slide.title}
+                {activeResourceType === 'Presentation' ? 'Slide' : 'Section'} {index + 1}: {slide.title}
               </Typography>
+
+              {/* Instructions Section (for Worksheet) */}
+              {activeResourceType === 'Worksheet' && slide.instructions && slide.instructions.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#2563eb',
+                      mb: 1
+                    }}
+                  >
+                    Instructions
+                  </Typography>
+                  {slide.instructions.map((item, i) => (
+                    <Typography
+                      key={i}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: '#475569',
+                        pl: 2,
+                        mb: 0.75,
+                        position: 'relative',
+                        '&:before': {
+                          content: '"•"',
+                          position: 'absolute',
+                          left: '4px'
+                        }
+                      }}
+                    >
+                      {item}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
 
               {/* Content Section */}
               <Box sx={{ mb: 3 }}>
@@ -189,7 +224,7 @@ const OutlineDisplay = ({
                 >
                   Content
                 </Typography>
-                {slide.content.map((item, i) => (
+                {slide.content && slide.content.map((item, i) => (
                   <Typography
                     key={i}
                     sx={{
@@ -211,52 +246,89 @@ const OutlineDisplay = ({
               </Box>
 
               {/* Teacher Notes Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#2563eb',
-                    mb: 1
-                  }}
-                >
-                  Teacher Notes
-                </Typography>
-                {slide.teacher_notes.map((note, i) => (
+              {slide.teacher_notes && slide.teacher_notes.length > 0 && (
+                <Box sx={{ mb: 3 }}>
                   <Typography
-                    key={i}
                     sx={{
                       fontSize: '0.875rem',
-                      color: '#475569',
-                      pl: 2,
-                      mb: 0.75,
-                      position: 'relative',
-                      '&:before': {
-                        content: '"•"',
-                        position: 'absolute',
-                        left: '4px'
-                      }
+                      fontWeight: 600,
+                      color: '#2563eb',
+                      mb: 1
                     }}
                   >
-                    {note}
+                    Teacher Notes
                   </Typography>
-                ))}
-              </Box>
+                  {slide.teacher_notes.map((note, i) => (
+                    <Typography
+                      key={i}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: '#475569',
+                        pl: 2,
+                        mb: 0.75,
+                        position: 'relative',
+                        '&:before': {
+                          content: '"•"',
+                          position: 'absolute',
+                          left: '4px'
+                        }
+                      }}
+                    >
+                      {note}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {/* Answers Section (for Quiz/Test) */}
+              {activeResourceType === 'Quiz/Test' && slide.answers && slide.answers.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#2563eb',
+                      mb: 1
+                    }}
+                  >
+                    Answers
+                  </Typography>
+                  {slide.answers.map((item, i) => (
+                    <Typography
+                      key={i}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: '#475569',
+                        pl: 2,
+                        mb: 0.75,
+                        position: 'relative',
+                        '&:before': {
+                          content: '"•"',
+                          position: 'absolute',
+                          left: '4px'
+                        }
+                      }}
+                    >
+                      {item}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
 
               {/* Visual Elements Section */}
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#2563eb',
-                    mb: 1
-                  }}
-                >
-                  Visual Elements
-                </Typography>
-                {slide.visual_elements.length > 0 ? (
-                  slide.visual_elements.map((element, i) => (
+              {slide.visual_elements && slide.visual_elements.length > 0 && (
+                <Box>
+                  <Typography
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#2563eb',
+                      mb: 1
+                    }}
+                  >
+                    Visual Elements
+                  </Typography>
+                  {slide.visual_elements.map((element, i) => (
                     <Typography
                       key={i}
                       sx={{
@@ -274,20 +346,9 @@ const OutlineDisplay = ({
                     >
                       {element}
                     </Typography>
-                  ))
-                ) : (
-                  <Typography
-                    sx={{
-                      fontSize: '0.875rem',
-                      color: '#94a3b8',
-                      pl: 2,
-                      fontStyle: 'italic'
-                    }}
-                  >
-                    No visual elements specified
-                  </Typography>
-                )}
-              </Box>
+                  ))}
+                </Box>
+              )}
 
               {index < activeContent.length - 1 && (
                 <Box 
@@ -312,6 +373,23 @@ const OutlineDisplay = ({
             bgcolor: '#f8fafc'
           }}
         >
+          <Button
+            variant="outlined"
+            onClick={onRegenerateOutline}
+            startIcon={<RefreshCw size={18} />}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              px: 3,
+              py: 1.5,
+              borderRadius: '8px',
+              flex: { xs: '1', sm: 'initial' }
+            }}
+          >
+            Regenerate Content
+          </Button>
+          
           <Button
             variant="contained"
             onClick={handleGenerateResource}

@@ -1,4 +1,3 @@
-// Place this file at src/pages/LessonBuilder/components/resources/ResourceManager.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -7,7 +6,7 @@ import {
   Button,
   Alert,
   AlertTitle,
-  Divider
+  // Divider
 } from '@mui/material';
 import { Download, RefreshCw } from 'lucide-react';
 import ResourceCard from './ResourceCard';
@@ -39,8 +38,10 @@ const ResourceManager = ({
       });
     }
     
-    // Create status objects for each resource
-    const statusObjects = resourceTypes.map(type => {
+    // Create status objects for each resource - ensure uniqueness
+    const uniqueResourceTypes = [...new Set(resourceTypes)]; // Remove duplicates
+    
+    const statusObjects = uniqueResourceTypes.map(type => {
       const hasContent = contentState.generatedResources && 
                         contentState.generatedResources[type] && 
                         contentState.generatedResources[type].length > 0;
@@ -60,8 +61,43 @@ const ResourceManager = ({
 
   // Handle generating a specific resource
   const handleGenerateResource = (resourceType) => {
-    // Call the parent handler with the specific resource
-    onGenerateResource(resourceType);
+    // Skip if this resource is already generated
+    if (resourceStatus[resourceType]?.status === 'success') {
+      console.log(`Resource ${resourceType} already generated, triggering download`);
+      
+      // Directly trigger download for already generated resources
+      if (contentState.generatedResources?.[resourceType]) {
+        const blob = resourceStatus[resourceType]?.blob;
+        if (blob) {
+          // Create and trigger download
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          
+          // Create a meaningful filename
+          const topicSlug = formState.lessonTopic 
+            ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
+            : 'lesson';
+            
+          let fileExt = '.bin';
+          if (resourceType === 'Presentation') fileExt = '.pptx';
+          else fileExt = '.docx';
+          
+          a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          // Call the parent handler to regenerate if no blob exists
+          onGenerateResource(resourceType);
+        }
+      }
+    } else {
+      // Call the parent handler with the specific resource
+      onGenerateResource(resourceType);
+    }
   };
   
   // Handle generating all resources
@@ -84,6 +120,11 @@ const ResourceManager = ({
   
   // Check if we've reached the download limit
   const reachedLimit = !isPremium && downloadsRemaining <= 0;
+
+  // Create a unique resources array to prevent duplicates
+  const uniqueResources = resourcesWithStatus.filter((item, index, self) => 
+    index === self.findIndex((t) => t.resourceType === item.resourceType)
+  );
 
   return (
     <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto', mb: 4 }}>
@@ -116,8 +157,8 @@ const ResourceManager = ({
               fontSize: '0.875rem'
             }}
           >
-            {resourcesWithStatus.length > 0 
-              ? `You've selected ${resourcesWithStatus.length} resource${resourcesWithStatus.length !== 1 ? 's' : ''} for your lesson`
+            {uniqueResources.length > 0 
+              ? `You've selected ${uniqueResources.length} resource${uniqueResources.length !== 1 ? 's' : ''} for your lesson`
               : 'Select resources for your lesson'}
           </Typography>
         </Box>
@@ -145,9 +186,9 @@ const ResourceManager = ({
           </Box>
         )}
         
-        {/* Resources list */}
+        {/* Resources list - Use uniqueResources to prevent duplicates */}
         <Box sx={{ p: 3 }}>
-          {resourcesWithStatus.map(resource => (
+          {uniqueResources.map(resource => (
             <ResourceCard
               key={resource.resourceType}
               resourceType={resource.resourceType}
@@ -158,7 +199,7 @@ const ResourceManager = ({
             />
           ))}
           
-          {resourcesWithStatus.length === 0 && (
+          {uniqueResources.length === 0 && (
             <Typography sx={{ color: '#94a3b8', textAlign: 'center', py: 3 }}>
               No resources selected. Select resource types from the filters above.
             </Typography>
@@ -166,7 +207,7 @@ const ResourceManager = ({
         </Box>
         
         {/* Action buttons */}
-        {resourcesWithStatus.length > 0 && (
+        {uniqueResources.length > 0 && (
           <Box sx={{ 
             p: 3, 
             borderTop: '1px solid #e2e8f0',
@@ -178,7 +219,7 @@ const ResourceManager = ({
             <Button
               variant="contained"
               fullWidth={true}
-              disabled={reachedLimit || isGenerating}
+              disabled={reachedLimit || isGenerating || allGenerated}  // Disable if all are generated
               startIcon={isGenerating ? null : <Download />}
               onClick={handleGenerateAll}
               sx={{
