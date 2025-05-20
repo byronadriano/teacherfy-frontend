@@ -59,7 +59,36 @@ const OutlineDisplay = ({
   };
 
   const handleGenerateResource = () => {
-    onGeneratePresentation();
+    // Only generate if not already generated
+    if (resourceStatus[activeResourceType]?.status !== 'success') {
+      onGeneratePresentation(activeResourceType);
+    } else {
+      // If already generated, handle download
+      if (resourceStatus[activeResourceType]?.blob) {
+        const blob = resourceStatus[activeResourceType].blob;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        const topicSlug = contentState.lessonTopic 
+          ? contentState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
+          : 'lesson';
+          
+        let fileExt = '.bin';
+        if (activeResourceType === 'Presentation') fileExt = '.pptx';
+        else fileExt = '.docx';
+        
+        a.download = `${topicSlug}_${activeResourceType.toLowerCase()}${fileExt}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // If blob not available, re-generate
+        onGeneratePresentation(activeResourceType);
+      }
+    }
   };
 
   return (
@@ -393,8 +422,8 @@ const OutlineDisplay = ({
           <Button
             variant="contained"
             onClick={handleGenerateResource}
-            disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
-            startIcon={uiState.isLoading ? <CircularProgress size={20} /> : <Download size={18} />}
+            disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5) || (resourceStatus[activeResourceType]?.status === 'generating')}
+            startIcon={uiState.isLoading || resourceStatus[activeResourceType]?.status === 'generating' ? <CircularProgress size={20} /> : <Download size={18} />}
             sx={{
               bgcolor: '#2563eb',
               '&:hover': {
@@ -412,23 +441,9 @@ const OutlineDisplay = ({
               flex: { xs: '1', sm: 'initial' }
             }}
           >
-            {uiState.isLoading ? 'Generating...' : (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {resourceTypes.length > 1 ? 'Download All Resources' : `Open in ${activeResourceType === 'Presentation' ? 'PowerPoint' : 'Editor'}`}
-                {!subscriptionState.isPremium && (
-                  <Typography 
-                    component="span"
-                    sx={{ 
-                      fontSize: '0.75rem',
-                      opacity: 0.8,
-                      ml: 1
-                    }}
-                  >
-                    ({5 - subscriptionState.downloadCount} remaining)
-                  </Typography>
-                )}
-              </Box>
-            )}
+            {uiState.isLoading || resourceStatus[activeResourceType]?.status === 'generating' ? 'Generating...' : 
+             resourceStatus[activeResourceType]?.status === 'success' ? `Download ${activeResourceType === 'Presentation' ? '.pptx' : '.docx'}` : 
+             `Generate ${activeResourceType}`}
           </Button>
           
           {activeResourceType === 'Presentation' && (

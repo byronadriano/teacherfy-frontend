@@ -31,7 +31,7 @@ const LessonBuilder = () => {
   
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
-  const [showResourceManager, setShowResourceManager] = useState(true);
+  const [showResourceManager, setShowResourceManager] = useState(false);
 
   // Use auth context instead of hook
   const { user, isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
@@ -289,27 +289,38 @@ const LessonBuilder = () => {
   };
 
   // Handler for generating resources - can generate specific type or all
-  const handleGenerateResource = async (specificResourceType = null) => {
+  const handleGenerateResource = async (specificResourceTypes = null) => {
     try {
       setUiState(prev => ({
         ...prev,
         isLoading: true
       }));
       
-      // Update status for specified resources
-      const resourcesToGenerate = specificResourceType 
-        ? [specificResourceType] 
+      // Only process resources that were explicitly selected
+      const resourcesToGenerate = specificResourceTypes 
+        ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
         : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
-        
-      // Mark resources as generating
+      
+      // Filter out already generated resources to avoid hitting the API unnecessarily
+      const pendingResources = resourcesToGenerate.filter(type => 
+        resourceStatus[type]?.status !== 'success'
+      );
+      
+      if (pendingResources.length === 0) {
+        console.log('No new resources to generate, skipping API call');
+        setUiState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+      
+      // Mark pending resources as generating
       const newStatus = { ...resourceStatus };
-      resourcesToGenerate.forEach(type => {
+      pendingResources.forEach(type => {
         newStatus[type] = { status: 'generating' };
       });
       setResourceStatus(newStatus);
       
-      // Generate resources
-      const results = await generateMultiResource(formState, contentState);
+      // Only generate resources that need to be generated
+      const results = await generateMultiResource(formState, contentState, pendingResources);
       
       // Update status based on results
       const updatedStatus = { ...newStatus };
@@ -321,7 +332,9 @@ const LessonBuilder = () => {
           };
         } else {
           updatedStatus[type] = { 
-            status: 'success' 
+            status: 'success',
+            blob: result.blob,
+            contentType: result.contentType
           };
         }
       });
@@ -334,8 +347,8 @@ const LessonBuilder = () => {
       
       // Mark all resources as error
       const errorStatus = { ...resourceStatus };
-      const resourcesToGenerate = specificResourceType 
-        ? [specificResourceType] 
+      const resourcesToGenerate = specificResourceTypes 
+        ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
         : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
         
       resourcesToGenerate.forEach(type => {

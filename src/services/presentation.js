@@ -2,9 +2,14 @@
 import { config } from '../utils/config';
 
 export const presentationService = {
-  async generateMultiResource(formState, contentState) {
+  async generateMultiResource(formState, contentState, specificResources = null) {
     try {
+      // Get resources to generate - either specified or from form state
+      const resourceTypes = specificResources || 
+        (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+      
       console.log('Generating multiple resources with:', {
+        resourceTypes,
         formState: {
           resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel,
@@ -16,11 +21,6 @@ export const presentationService = {
           resourcesGenerated: Object.keys(contentState.generatedResources || {})
         }
       });
-      
-      // Get all resource types to generate
-      const resourceTypes = Array.isArray(formState.resourceType) 
-        ? formState.resourceType 
-        : [formState.resourceType];
       
       // For each resource type, generate the file
       const results = {};
@@ -119,7 +119,7 @@ export const presentationService = {
             continue;
           }
           
-          // Get the blob and create a download link
+          // Get the blob and store it in results
           const blob = await response.blob();
           console.log(`Got blob for ${resourceType} of size:`, blob.size);
           

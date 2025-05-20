@@ -6,7 +6,6 @@ import {
   Button,
   Alert,
   AlertTitle,
-  // Divider
 } from '@mui/material';
 import { Download, RefreshCw } from 'lucide-react';
 import ResourceCard from './ResourceCard';
@@ -102,7 +101,18 @@ const ResourceManager = ({
   
   // Handle generating all resources
   const handleGenerateAll = () => {
-    onGenerateResource();
+    // Only generate resources that haven't been generated yet
+    const pendingResources = resourcesWithStatus
+      .filter(r => r.status !== 'success')
+      .map(r => r.resourceType);
+    
+    if (pendingResources.length > 0) {
+      onGenerateResource(pendingResources);
+    } else {
+      // If all are already generated, just prompt to download them
+      // No API calls needed
+      console.log('All resources already generated, no API calls needed');
+    }
   };
   
   // Check if any resource has error status
@@ -219,7 +229,7 @@ const ResourceManager = ({
             <Button
               variant="contained"
               fullWidth={true}
-              disabled={reachedLimit || isGenerating || allGenerated}  // Disable if all are generated
+              disabled={reachedLimit || isGenerating || allGenerated}
               startIcon={isGenerating ? null : <Download />}
               onClick={handleGenerateAll}
               sx={{
@@ -228,7 +238,7 @@ const ResourceManager = ({
             >
               {isGenerating ? 'Generating...' : (
                 allGenerated 
-                  ? 'Download All Resources' 
+                  ? 'All Resources Generated' 
                   : someGenerated 
                     ? 'Generate Remaining Resources' 
                     : 'Generate All Resources'

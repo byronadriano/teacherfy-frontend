@@ -176,7 +176,7 @@ const ResourceCard = ({
       <Button
         variant={status === 'success' ? 'outlined' : 'contained'}
         startIcon={status === 'generating' ? <CircularProgress size={16} /> : <Download size={16} />}
-        disabled={isDisabled || status === 'generating' || status === 'success'} // Added status === 'success' to disable after generation
+        disabled={isDisabled || status === 'generating' || status === 'success'} 
         onClick={onGenerate}
         sx={{
           textTransform: 'none',
