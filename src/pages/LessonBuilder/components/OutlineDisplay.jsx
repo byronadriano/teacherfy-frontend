@@ -1,3 +1,4 @@
+// src/pages/LessonBuilder/components/OutlineDisplay.jsx
 import React, { useState } from 'react';
 import {
   Box,
@@ -8,9 +9,152 @@ import {
   Tabs,
   Tab,
   Alert,
-  AlertTitle
+  AlertTitle,
+  TextField,
+  IconButton
 } from "@mui/material";
-import { Download, Presentation, BookOpen, FileText, Check, RefreshCw } from 'lucide-react';
+import { 
+  Download, 
+  Presentation, 
+  BookOpen, 
+  FileText, 
+  FileQuestion,
+  Check, 
+  RefreshCw,
+  Edit,
+  Save,
+  Plus,
+  Trash2
+} from 'lucide-react';
+
+// Helper component for editable content sections
+const EditableContentSection = ({ 
+  title, 
+  items = [], 
+  color = '#2563eb', 
+  onUpdate,
+  sectionIndex,
+  sectionKey
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localItems, setLocalItems] = useState([...items]);
+  
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+  
+  const handleSave = () => {
+    setIsEditing(false);
+    if (onUpdate) {
+      onUpdate(sectionIndex, sectionKey, localItems);
+    }
+  };
+  
+  const handleItemChange = (index, value) => {
+    const newItems = [...localItems];
+    newItems[index] = value;
+    setLocalItems(newItems);
+  };
+  
+  const handleAddItem = () => {
+    setLocalItems([...localItems, '']);
+  };
+  
+  const handleRemoveItem = (index) => {
+    const newItems = [...localItems];
+    newItems.splice(index, 1);
+    setLocalItems(newItems);
+  };
+  
+  if (!items || (items.length === 0 && !isEditing)) return null;
+  
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 1
+      }}>
+        <Typography
+          sx={{
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            color: color,
+          }}
+        >
+          {title}
+        </Typography>
+        
+        <Button
+          size="small"
+          startIcon={isEditing ? <Save size={16} /> : <Edit size={16} />}
+          onClick={isEditing ? handleSave : handleEdit}
+          sx={{ 
+            minWidth: 0, 
+            p: 0.5,
+            textTransform: 'none'
+          }}
+        >
+          {isEditing ? 'Save' : 'Edit'}
+        </Button>
+      </Box>
+      
+      {isEditing ? (
+        <Box sx={{ pl: 2 }}>
+          {localItems.map((item, i) => (
+            <Box key={i} sx={{ display: 'flex', mb: 1, gap: 1 }}>
+              <TextField
+                fullWidth
+                value={item}
+                onChange={(e) => handleItemChange(i, e.target.value)}
+                variant="outlined"
+                size="small"
+              />
+              <IconButton 
+                onClick={() => handleRemoveItem(i)}
+                size="small"
+                sx={{ color: '#ef4444' }}
+              >
+                <Trash2 size={16} />
+              </IconButton>
+            </Box>
+          ))}
+          
+          <Button
+            startIcon={<Plus size={16} />}
+            onClick={handleAddItem}
+            size="small"
+            sx={{ mt: 1, textTransform: 'none' }}
+          >
+            Add Item
+          </Button>
+        </Box>
+      ) : (
+        localItems.map((item, i) => (
+          <Typography
+            key={i}
+            sx={{
+              fontSize: '0.875rem',
+              color: '#475569',
+              pl: 2,
+              mb: 0.75,
+              position: 'relative',
+              '&:before': {
+                content: '"•"',
+                position: 'absolute',
+                left: '4px'
+              }
+            }}
+          >
+            {item}
+          </Typography>
+        ))
+      )}
+    </Box>
+  );
+};
+
 
 const ResourceIcon = ({ resourceType, size = 18 }) => {
   switch(resourceType) {
@@ -19,7 +163,7 @@ const ResourceIcon = ({ resourceType, size = 18 }) => {
     case 'Lesson Plan':
       return <BookOpen size={size} />;
     case 'Quiz/Test':
-      return <FileText size={size} />;
+      return <FileQuestion size={size} />;
     case 'Worksheet':
       return <FileText size={size} />;
     default:
@@ -36,7 +180,8 @@ const OutlineDisplay = ({
   resourceStatus = {},
   onGeneratePresentation,
   onGenerateGoogleSlides,
-  onRegenerateOutline
+  onRegenerateOutline,
+  onContentUpdate
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   
@@ -82,13 +227,35 @@ const OutlineDisplay = ({
         a.download = `${topicSlug}_${activeResourceType.toLowerCase()}${fileExt}`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        
+        // Use a longer timeout to ensure download completes
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 5000);
       } else {
         // If blob not available, re-generate
         onGeneratePresentation(activeResourceType);
       }
     }
+  };
+
+  // Handler for updating content sections
+  const handleContentUpdate = (itemIndex, sectionKey, newItems) => {
+    if (!onContentUpdate) return;
+    
+    const updatedContent = [...activeContent];
+    updatedContent[itemIndex] = {
+      ...updatedContent[itemIndex],
+      [sectionKey]: newItems
+    };
+    
+    const updatedResources = {
+      ...contentState.generatedResources,
+      [activeResourceType]: updatedContent
+    };
+    
+    onContentUpdate(updatedResources);
   };
 
   return (
@@ -185,11 +352,14 @@ const OutlineDisplay = ({
             borderRadius: '4px'
           }
         }}>
-          {activeContent.map((slide, index) => (
+          {activeContent.map((item, index) => (
             <Box 
               key={index} 
               sx={{ 
                 mb: 4,
+                p: 3,
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
                 '&:last-child': {
                   mb: 0
                 }
@@ -200,193 +370,164 @@ const OutlineDisplay = ({
                   fontSize: '1.25rem',
                   fontWeight: 500,
                   color: '#1e293b',
-                  mb: 2
+                  mb: 2,
+                  pb: 2,
+                  borderBottom: '1px solid #f1f5f9'
                 }}
               >
-                {activeResourceType === 'Presentation' ? 'Slide' : 'Section'} {index + 1}: {slide.title}
+                {activeResourceType === 'Presentation' ? 'Slide' : 'Section'} {index + 1}: {item.title}
               </Typography>
 
-              {/* Instructions Section (for Worksheet) */}
-              {activeResourceType === 'Worksheet' && slide.instructions && slide.instructions.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#2563eb',
-                      mb: 1
-                    }}
-                  >
-                    Instructions
-                  </Typography>
-                  {slide.instructions.map((item, i) => (
-                    <Typography
-                      key={i}
-                      sx={{
-                        fontSize: '0.875rem',
-                        color: '#475569',
-                        pl: 2,
-                        mb: 0.75,
-                        position: 'relative',
-                        '&:before': {
-                          content: '"•"',
-                          position: 'absolute',
-                          left: '4px'
-                        }
-                      }}
-                    >
-                      {item}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-
-              {/* Content Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#2563eb',
-                    mb: 1
-                  }}
-                >
-                  Content
-                </Typography>
-                {slide.content && slide.content.map((item, i) => (
-                  <Typography
-                    key={i}
-                    sx={{
-                      fontSize: '0.875rem',
-                      color: '#475569',
-                      pl: 2,
-                      mb: 0.75,
-                      position: 'relative',
-                      '&:before': {
-                        content: '"•"',
-                        position: 'absolute',
-                        left: '4px'
-                      }
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Box>
-
-              {/* Teacher Notes Section */}
-              {slide.teacher_notes && slide.teacher_notes.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#2563eb',
-                      mb: 1
-                    }}
-                  >
-                    Teacher Notes
-                  </Typography>
-                  {slide.teacher_notes.map((note, i) => (
-                    <Typography
-                      key={i}
-                      sx={{
-                        fontSize: '0.875rem',
-                        color: '#475569',
-                        pl: 2,
-                        mb: 0.75,
-                        position: 'relative',
-                        '&:before': {
-                          content: '"•"',
-                          position: 'absolute',
-                          left: '4px'
-                        }
-                      }}
-                    >
-                      {note}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-
-              {/* Answers Section (for Quiz/Test) */}
-              {activeResourceType === 'Quiz/Test' && slide.answers && slide.answers.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#2563eb',
-                      mb: 1
-                    }}
-                  >
-                    Answers
-                  </Typography>
-                  {slide.answers.map((item, i) => (
-                    <Typography
-                      key={i}
-                      sx={{
-                        fontSize: '0.875rem',
-                        color: '#475569',
-                        pl: 2,
-                        mb: 0.75,
-                        position: 'relative',
-                        '&:before': {
-                          content: '"•"',
-                          position: 'absolute',
-                          left: '4px'
-                        }
-                      }}
-                    >
-                      {item}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-
-              {/* Visual Elements Section */}
-              {slide.visual_elements && slide.visual_elements.length > 0 && (
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#2563eb',
-                      mb: 1
-                    }}
-                  >
-                    Visual Elements
-                  </Typography>
-                  {slide.visual_elements.map((element, i) => (
-                    <Typography
-                      key={i}
-                      sx={{
-                        fontSize: '0.875rem',
-                        color: '#475569',
-                        pl: 2,
-                        mb: 0.75,
-                        position: 'relative',
-                        '&:before': {
-                          content: '"•"',
-                          position: 'absolute',
-                          left: '4px'
-                        }
-                      }}
-                    >
-                      {element}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-
-              {index < activeContent.length - 1 && (
-                <Box 
-                  sx={{ 
-                    my: 4,
-                    borderBottom: '1px solid #e2e8f0'
-                  }} 
-                />
-              )}
+              {/* Resource-specific sections based on type */}
+              {(() => {
+                // Different display based on resource type
+                switch(activeResourceType) {
+                  case 'Worksheet':
+                    return (
+                      <>
+                        {/* Instructions Section */}
+                        {item.instructions && item.instructions.length > 0 && (
+                          <EditableContentSection
+                            title="Instructions"
+                            items={item.instructions}
+                            color="#0284c7"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="instructions"
+                          />
+                        )}
+                        
+                        {/* Questions/Content Section */}
+                        <EditableContentSection
+                          title="Questions"
+                          items={item.content}
+                          color="#2563eb"
+                          onUpdate={handleContentUpdate}
+                          sectionIndex={index}
+                          sectionKey="content"
+                        />
+                      </>
+                    );
+                    
+                  case 'Quiz/Test':
+                    return (
+                      <>
+                        {/* Questions Section */}
+                        <EditableContentSection
+                          title="Questions"
+                          items={item.content}
+                          color="#2563eb"
+                          onUpdate={handleContentUpdate}
+                          sectionIndex={index}
+                          sectionKey="content"
+                        />
+                        
+                        {/* Answers Section */}
+                        {item.answers && (
+                          <EditableContentSection
+                            title="Answers"
+                            items={item.answers}
+                            color="#16a34a"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="answers"
+                          />
+                        )}
+                      </>
+                    );
+                    
+                  case 'Lesson Plan':
+                    return (
+                      <>
+                        {/* Duration if available */}
+                        {item.duration && (
+                          <Typography
+                            sx={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: '#7c3aed',
+                              mb: 2
+                            }}
+                          >
+                            Duration: {item.duration}
+                          </Typography>
+                        )}
+                        
+                        {/* Content Section */}
+                        <EditableContentSection
+                          title="Content"
+                          items={item.content}
+                          color="#2563eb"
+                          onUpdate={handleContentUpdate}
+                          sectionIndex={index}
+                          sectionKey="content"
+                        />
+                        
+                        {/* Procedure Section */}
+                        {item.procedure && (
+                          <EditableContentSection
+                            title="Procedure"
+                            items={item.procedure}
+                            color="#9333ea"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="procedure"
+                          />
+                        )}
+                        
+                        {/* Teacher Notes Section */}
+                        {item.teacher_notes && (
+                          <EditableContentSection
+                            title="Teacher Notes"
+                            items={item.teacher_notes}
+                            color="#16a34a"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="teacher_notes"
+                          />
+                        )}
+                      </>
+                    );
+                    
+                  default: // Presentation or fallback
+                    return (
+                      <>
+                        {/* Content Section */}
+                        <EditableContentSection
+                          title="Content"
+                          items={item.content}
+                          color="#2563eb"
+                          onUpdate={handleContentUpdate}
+                          sectionIndex={index}
+                          sectionKey="content"
+                        />
+                        
+                        {/* For backward compatibility */}
+                        {item.teacher_notes && item.teacher_notes.length > 0 && (
+                          <EditableContentSection
+                            title="Teacher Notes"
+                            items={item.teacher_notes}
+                            color="#16a34a"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="teacher_notes"
+                          />
+                        )}
+                        
+                        {item.visual_elements && item.visual_elements.length > 0 && (
+                          <EditableContentSection
+                            title="Visual Elements"
+                            items={item.visual_elements}
+                            color="#f59e0b"
+                            onUpdate={handleContentUpdate}
+                            sectionIndex={index}
+                            sectionKey="visual_elements"
+                          />
+                        )}
+                      </>
+                    );
+                }
+              })()}
             </Box>
           ))}
         </Box>

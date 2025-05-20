@@ -60,38 +60,47 @@ const ResourceManager = ({
 
   // Handle generating a specific resource
   const handleGenerateResource = (resourceType) => {
-    // Skip if this resource is already generated
-    if (resourceStatus[resourceType]?.status === 'success') {
+    // For already generated resources, trigger download directly if possible
+    if (resourceStatus[resourceType]?.status === 'success' && resourceStatus[resourceType]?.blob) {
       console.log(`Resource ${resourceType} already generated, triggering download`);
       
-      // Directly trigger download for already generated resources
-      if (contentState.generatedResources?.[resourceType]) {
-        const blob = resourceStatus[resourceType]?.blob;
-        if (blob) {
-          // Create and trigger download
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
+      try {
+        // Get the blob
+        const blob = resourceStatus[resourceType].blob;
+        
+        // Create a fresh URL
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create and configure the download link
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Create a meaningful filename
+        const topicSlug = formState?.lessonTopic 
+          ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
+          : 'lesson';
           
-          // Create a meaningful filename
-          const topicSlug = formState.lessonTopic 
-            ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
-            : 'lesson';
-            
-          let fileExt = '.bin';
-          if (resourceType === 'Presentation') fileExt = '.pptx';
-          else fileExt = '.docx';
-          
-          a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
-          document.body.appendChild(a);
-          a.click();
+        let fileExt = '.bin';
+        if (resourceType === 'Presentation') fileExt = '.pptx';
+        else fileExt = '.docx';
+        
+        a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
+        
+        // Add to document and click
+        document.body.appendChild(a);
+        a.click();
+        
+        // Use a longer timeout before cleanup
+        setTimeout(() => {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(a);
-        } else {
-          // Call the parent handler to regenerate if no blob exists
-          onGenerateResource(resourceType);
-        }
+          console.log(`Download triggered for ${resourceType}`);
+        }, 5000);
+      } catch (error) {
+        console.error('Error downloading resource:', error);
+        // Fallback to generating again
+        onGenerateResource(resourceType);
       }
     } else {
       // Call the parent handler with the specific resource

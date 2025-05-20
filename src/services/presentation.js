@@ -145,24 +145,29 @@ export const presentationService = {
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = url;
-          
+            
           // Create a meaningful filename
           const topicSlug = formState.lessonTopic 
             ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
             : 'lesson';
-            
+              
           a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
           document.body.appendChild(a);
-          
+            
           console.log(`Triggering download for ${resourceType} with filename:`, a.download);
           a.click();
-          
-          // Clean up
+            
+          // Replace the timeout block with this:
+          // Clean up with longer timeout and better error handling
           setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            console.log(`Download complete for ${resourceType} and resources cleaned up`);
-          }, 1000);
+            try {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              console.log(`Download complete for ${resourceType} and resources cleaned up`);
+            } catch (err) {
+              console.error('Error cleaning up download resources:', err);
+            }
+          }, 5000);
         } catch (resourceError) {
           console.error(`Error generating ${resourceType}:`, resourceError);
           results[resourceType] = { error: resourceError.message };

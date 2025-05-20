@@ -39,6 +39,12 @@ const ResourceCard = ({
         return <FileText size={24} />;
     }
   };
+
+  const handleDownload = () => {
+    if (status === 'success' && onGenerate) {
+      onGenerate(resourceType);
+    }
+  };
   
   // Determine status chip color and icon
   const getStatusChip = () => {
@@ -176,8 +182,8 @@ const ResourceCard = ({
       <Button
         variant={status === 'success' ? 'outlined' : 'contained'}
         startIcon={status === 'generating' ? <CircularProgress size={16} /> : <Download size={16} />}
-        disabled={isDisabled || status === 'generating' || status === 'success'} 
-        onClick={onGenerate}
+        disabled={isDisabled || status === 'generating'} 
+        onClick={handleDownload}
         sx={{
           textTransform: 'none',
           borderRadius: '6px',
