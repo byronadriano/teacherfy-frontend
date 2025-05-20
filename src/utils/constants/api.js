@@ -11,7 +11,7 @@ export const API = {
     USER_HISTORY: "/user/history",
     CLEAR_HISTORY: "/user/history/clear"
   },
-  TIMEOUT: 60000, // Increase the timeout to 60 seconds since OpenAI API calls can take time
+  TIMEOUT: 100000, // Increase the timeout to 100 seconds since OpenAI API calls can take time
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

@@ -1,7 +1,8 @@
+// src/components/filters/FiltersBar.jsx
 import React, { useState } from 'react';
-import { Box, Typography, Popover, Paper, Checkbox, FormControlLabel } from '@mui/material';
-import { ChevronRight, ChevronDown } from 'lucide-react';
-import { FORM } from '../../utils/constants/form';
+import { Box, Typography, Popover, Paper, Checkbox, FormControlLabel, Chip } from '@mui/material';
+import { ChevronRight, ChevronDown, X } from 'lucide-react';
+import { FORM } from '../../utils/constants';
 import StandardsModal from '../modals/StandardsModal';
 
 const MenuOption = ({ 
@@ -23,11 +24,11 @@ const MenuOption = ({
             py: 0.75,
             px: 2,
             cursor: disabled ? 'not-allowed' : 'pointer',
-            backgroundColor: 'transparent',
+            backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             transition: 'all 0.2s',
             opacity: disabled ? 0.5 : 1,
             '&:hover': {
-                backgroundColor: disabled ? 'transparent' : '#F1F5F9'
+                backgroundColor: disabled ? 'transparent' : (isSelected ? 'rgba(37, 99, 235, 0.15)' : '#F1F5F9')
             },
             ...style
         }}
@@ -55,7 +56,7 @@ const MenuOption = ({
     </Box>
 );
 
-const FilterButton = ({ label, isSelected, onClick }) => (
+const FilterButton = ({ label, isSelected, selectedCount, onClick }) => (
     <Box
         onClick={onClick}
         sx={{
@@ -66,23 +67,45 @@ const FilterButton = ({ label, isSelected, onClick }) => (
             py: 1.5,
             borderRadius: '8px',
             backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
+            border: isSelected ? '1px solid #2563EB' : '1px solid #E2E8F0',
             cursor: 'pointer',
             minWidth: '115px',
+            position: 'relative',
             '&:hover': {
                 backgroundColor: '#F8FAFC',
-                borderColor: '#CBD5E1'
+                borderColor: isSelected ? '#2563EB' : '#CBD5E1'
             }
         }}
     >
         <Typography sx={{ 
-            color: isSelected ? '#1E293B' : '#64748B',
+            color: isSelected ? '#2563EB' : '#64748B',
             fontSize: '0.9375rem',
             fontWeight: isSelected ? 600 : 500
         }}>
             {label}
         </Typography>
-        <ChevronDown size={18} color={isSelected ? '#1E293B' : '#94A3B8'} />
+        {selectedCount > 0 && (
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    backgroundColor: '#2563EB',
+                    color: 'white',
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold'
+                }}
+            >
+                {selectedCount}
+            </Box>
+        )}
+        <ChevronDown size={18} color={isSelected ? '#2563EB' : '#94A3B8'} />
     </Box>
 );
 
@@ -181,10 +204,14 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     };
 
     const handleOptionHover = (event, option) => {
-        if (option.hasSubmenu && option.type === 'presentation') {
-            setSubmenuAnchorEl(event.currentTarget);
-            setActiveSubmenu(option.type);
-        }
+    // Remove this code that shows submenu on hover
+    // if (option.hasSubmenu && option.type === 'presentation') {
+    //   setSubmenuAnchorEl(event.currentTarget);
+    //   setActiveSubmenu(option.type);
+    // }
+    
+    // Either leave it empty, or just track which item is being hovered
+    // without showing the submenu
     };
 
     const handleClose = () => {
@@ -194,32 +221,43 @@ const FiltersBar = ({ formState, handleFormChange }) => {
         setActiveSubmenu(null);
     };
 
-    const handleOptionSelect = (option) => {
-        if (activeFilter === 'resourceType') {
-            if (option === 'Presentation') {
-                handleFormChange(activeFilter, option);
-                if (!formState.numSlides) {
-                    handleFormChange('numSlides', 5);
-                }
-            }
-        } else {
-            handleFormChange(activeFilter, option);
-            handleClose();
+    const handleOptionSelect = (option, event,field = activeFilter) => {
+    if (field === 'resourceType') {
+        // Toggle the option in the array
+        handleFormChange(field, option, true);
+        
+        // Only show submenu for Presentation if it's selected
+        if (option === 'Presentation' && 
+            (Array.isArray(formState.resourceType) && 
+            formState.resourceType.includes('Presentation'))) {
+            // Use document.activeElement instead of event
+            setSubmenuAnchorEl(document.activeElement);
+            setActiveSubmenu('presentation');
         }
+    } else {
+        handleFormChange(field, option);
+        handleClose();
+    }
     };
+
+    // Count selected resource types
+    const selectedResourceCount = Array.isArray(formState.resourceType) 
+        ? formState.resourceType.length 
+        : (formState.resourceType ? 1 : 0);
 
     return (
         <Box sx={{ 
             display: 'flex',
             gap: 1.5,
             mb: 3,
-            flexWrap: 'wrap', // Allow wrapping on smaller screens
+            flexWrap: 'wrap',
             justifyContent: 'flex-start'
           }}>
             {/* Resource Button */}
             <FilterButton
-                label={formState.resourceType || "Resource"}
-                isSelected={!!formState.resourceType}
+                label="Resources"
+                isSelected={selectedResourceCount > 0}
+                selectedCount={selectedResourceCount}
                 onClick={(e) => handleFilterClick(e, 'resourceType')}
             />
 
@@ -256,6 +294,40 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                 isSelected={!!formState.language}
                 onClick={(e) => handleFilterClick(e, 'language')}
             />
+
+            {/* Display selected resource types as chips */}
+            {Array.isArray(formState.resourceType) && formState.resourceType.length > 0 && (
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: 1, 
+                    alignItems: 'center'
+                }}>
+                    {formState.resourceType.map(type => (
+                        <Chip
+                            key={type}
+                            label={type}
+                            onDelete={() => {
+                                const newTypes = formState.resourceType.filter(t => t !== type);
+                                handleFormChange('resourceType', newTypes.length ? newTypes : '');
+                            }}
+                            size="small"
+                            sx={{
+                                bgcolor: 'rgba(37, 99, 235, 0.1)',
+                                color: '#2563EB',
+                                fontWeight: '500',
+                                '& .MuiChip-deleteIcon': {
+                                    color: '#2563EB',
+                                    '&:hover': {
+                                        color: '#1E40AF'
+                                    }
+                                }
+                            }}
+                            deleteIcon={<X size={14} />}
+                        />
+                    ))}
+                </Box>
+            )}
 
             {/* Standards Modal */}
             <StandardsModal
@@ -296,20 +368,27 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                 <Paper elevation={0} sx={{ py: 0.5 }}>
                     {activeFilter === 'resourceType' && [
                         { label: 'Presentation', type: 'presentation', hasSubmenu: true, disabled: false },
-                        { label: 'Lesson Plan', type: 'lessonPlan', disabled: true },
-                        { label: 'Worksheet', type: 'worksheet', disabled: true },
-                        { label: 'Quiz/Test', type: 'quiz', disabled: true }
-                    ].map((option) => (
-                        <MenuOption
-                            key={option.type}
-                            label={option.label}
-                            isSelected={formState.resourceType === option.label}
-                            hasSubmenu={option.hasSubmenu}
-                            disabled={option.disabled}
-                            onClick={() => handleOptionSelect(option.label)}
-                            onMouseEnter={(e) => handleOptionHover(e, option)}
-                        />
-                    ))}
+                        { label: 'Lesson Plan', type: 'lessonPlan', disabled: false },
+                        { label: 'Worksheet', type: 'worksheet', disabled: false },
+                        { label: 'Quiz/Test', type: 'quiz', disabled: false }
+                    ].map((option) => {
+                        // Check if this option is selected in the array
+                        const isSelected = Array.isArray(formState.resourceType) 
+                            ? formState.resourceType.includes(option.label)
+                            : formState.resourceType === option.label;
+                            
+                        return (
+                            <MenuOption
+                                key={option.type}
+                                label={option.label}
+                                isSelected={isSelected}
+                                hasSubmenu={option.hasSubmenu}
+                                disabled={option.disabled}
+                                onClick={(e) => handleOptionSelect(option.label, e)}
+                                onMouseEnter={(e) => handleOptionHover(e, option)}
+                            />
+                        );
+                    })}
                     
                     {activeFilter === 'gradeLevel' && FORM.GRADES.map((grade) => (
                         <MenuOption
@@ -341,7 +420,8 @@ const FiltersBar = ({ formState, handleFormChange }) => {
             </Popover>
 
             {/* Presentation Options */}
-            {formState.resourceType === 'Presentation' && (
+            {Array.isArray(formState.resourceType) && 
+             formState.resourceType.includes('Presentation') && (
                 <PresentationOptions
                     open={activeSubmenu === 'presentation'}
                     anchorEl={submenuAnchorEl}

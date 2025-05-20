@@ -1,6 +1,6 @@
-// Properly centered LessonBuilder component
+// src/pages/LessonBuilder/index.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
 import FiltersBar from '../../components/filters/FiltersBar';
@@ -9,6 +9,7 @@ import SignInPrompt from '../../components/modals/SignInPrompt';
 import UpgradeModal from '../../components/modals/UpgradeModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
 import OutlineDisplay from './components/OutlineDisplay';
+import ResourceManager from './components/resources/ResourceManager';
 import DebugPanel from '../../components/debug/DebugPanel';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,9 +28,13 @@ const LessonBuilder = () => {
     defaultSlides: 5,
     alwaysIncludeImages: false
   });
+  
+  // Resource status tracking
+  const [resourceStatus, setResourceStatus] = useState({});
+  const [showResourceManager, setShowResourceManager] = useState(false);
 
   // Use auth context instead of hook
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
 
   const handleLoginSuccess = (credentialResponse) => {
     const credential = credentialResponse.credential;
@@ -60,7 +65,8 @@ const LessonBuilder = () => {
     isLoading: presentationLoading,
     googleSlidesState,
     subscriptionState,
-    generatePresentation,
+    // generatePresentation,
+    generateMultiResource, // New method for generating multiple resources
     generateGoogleSlides,
   } = usePresentation({
     token: user?.token,
@@ -69,7 +75,7 @@ const LessonBuilder = () => {
     setShowSignInPrompt: () => setUiState(prev => ({ ...prev, showSignInPrompt: true }))
   });
 
-  // Load user settings from session storage instead of local storage
+  // Load user settings from session storage
   useEffect(() => {
     const savedSettings = sessionStorage.getItem('userSettings');
     if (savedSettings) {
@@ -105,7 +111,7 @@ const LessonBuilder = () => {
         
         // Create a clean version of the form state to save
         const cleanFormState = {
-          resourceType: formState.resourceType || 'PRESENTATION',
+          resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel || '',
           subjectFocus: formState.subjectFocus || '',
           language: formState.language || '',
@@ -116,7 +122,24 @@ const LessonBuilder = () => {
           selectedStandards: Array.isArray(formState.selectedStandards) ? [...formState.selectedStandards] : []
         };
         
-        // Create a clean version of the structured content
+        // Create a clean version of the structured content and generatedResources
+        const cleanGeneratedResources = {};
+        
+        // Clean up each resource type
+        if (contentState.generatedResources) {
+          Object.entries(contentState.generatedResources).forEach(([type, content]) => {
+            cleanGeneratedResources[type] = content.map(slide => ({
+              title: slide.title || 'Untitled Slide',
+              layout: slide.layout || 'TITLE_AND_CONTENT',
+              content: Array.isArray(slide.content) ? [...slide.content] : [],
+              teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
+              visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
+              left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
+              right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
+            }));
+          });
+        }
+        
         const cleanStructuredContent = contentState.structuredContent.map(slide => ({
           title: slide.title || 'Untitled Slide',
           layout: slide.layout || 'TITLE_AND_CONTENT',
@@ -130,7 +153,8 @@ const LessonBuilder = () => {
         // Use the trackLessonGeneration method for comprehensive tracking
         await historyService.trackLessonGeneration(cleanFormState, {
           structuredContent: cleanStructuredContent,
-          finalOutline: contentState.finalOutline || ''
+          finalOutline: contentState.finalOutline || '',
+          generatedResources: cleanGeneratedResources
         });
         
         console.log('Lesson successfully saved to history');
@@ -142,12 +166,13 @@ const LessonBuilder = () => {
           const localHistoryItem = {
             id: Date.now(),
             title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
-            types: [formState.resourceType || 'PRESENTATION'],
+            types: Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'],
             date: 'Today',
             lessonData: {
               ...formState,
               structuredContent: contentState.structuredContent,
-              finalOutline: contentState.finalOutline
+              finalOutline: contentState.finalOutline,
+              generatedResources: contentState.generatedResources
             }
           };
           
@@ -180,8 +205,16 @@ const LessonBuilder = () => {
     try {
       const { lessonData } = historyItem;
       
-      // Method 1: Using individual handleFormChange calls
-      if (lessonData.resourceType) handleFormChange('resourceType', lessonData.resourceType);
+      // For resource type, handle both array and string formats
+      if (lessonData.resourceType) {
+        const resourceType = Array.isArray(lessonData.resourceType) 
+          ? lessonData.resourceType 
+          : (typeof lessonData.resourceType === 'string' ? [lessonData.resourceType] : []);
+          
+        handleFormChange('resourceType', resourceType, true);
+      }
+      
+      // Handle other fields
       if (lessonData.gradeLevel) handleFormChange('gradeLevel', lessonData.gradeLevel);
       if (lessonData.subjectFocus) handleFormChange('subjectFocus', lessonData.subjectFocus);
       if (lessonData.language) handleFormChange('language', lessonData.language);
@@ -193,22 +226,44 @@ const LessonBuilder = () => {
         handleFormChange('selectedStandards', lessonData.selectedStandards);
       }
       
-      // Update content state if structured content is available
-      if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
-        setContentState(prev => ({
-          ...prev,
-          structuredContent: lessonData.structuredContent,
-          finalOutline: lessonData.finalOutline || ''
-        }));
+      // Update content state with structured content
+      const contentUpdate = {
+        finalOutline: lessonData.finalOutline || ''
+      };
+      
+      // Handle both generatedResources and structuredContent
+      if (lessonData.generatedResources && typeof lessonData.generatedResources === 'object') {
+        contentUpdate.generatedResources = lessonData.generatedResources;
         
-        // Update UI state to show the loaded content
-        setUiState(prev => ({
-          ...prev,
-          outlineConfirmed: true,
-          isLoading: false,
-          error: ''
-        }));
+        // Get first resource type for structuredContent
+        const primaryType = Object.keys(lessonData.generatedResources)[0];
+        if (primaryType) {
+          contentUpdate.structuredContent = lessonData.generatedResources[primaryType];
+        }
+      } else if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
+        contentUpdate.structuredContent = lessonData.structuredContent;
+        // Create generatedResources with a single entry
+        const resourceType = Array.isArray(lessonData.resourceType) 
+          ? lessonData.resourceType[0] 
+          : (lessonData.resourceType || 'Presentation');
+          
+        contentUpdate.generatedResources = {
+          [resourceType]: lessonData.structuredContent
+        };
       }
+      
+      setContentState(prev => ({
+        ...prev,
+        ...contentUpdate
+      }));
+      
+      // Update UI state to show the loaded content
+      setUiState(prev => ({
+        ...prev,
+        outlineConfirmed: true,
+        isLoading: false,
+        error: ''
+      }));
     } catch (error) {
       console.error('Error loading lesson from history:', error);
       setUiState(prev => ({
@@ -218,7 +273,7 @@ const LessonBuilder = () => {
     }
   };
   
-  // Add this function to track lesson generation in history
+  // Track lesson generation in history
   const trackLessonInHistory = async () => {
     if (!contentState.structuredContent || contentState.structuredContent.length === 0) {
       return;
@@ -233,8 +288,92 @@ const LessonBuilder = () => {
     }
   };
 
+  // Handler for generating resources - can generate specific type or all
+  const handleGenerateResource = async (specificResourceTypes = null) => {
+    try {
+      setUiState(prev => ({
+        ...prev,
+        isLoading: true
+      }));
+      
+      // Only process resources that were explicitly selected
+      const resourcesToGenerate = specificResourceTypes 
+        ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
+        : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+      
+      // Filter out already generated resources to avoid hitting the API unnecessarily
+      const pendingResources = resourcesToGenerate.filter(type => 
+        resourceStatus[type]?.status !== 'success'
+      );
+      
+      if (pendingResources.length === 0) {
+        console.log('No new resources to generate, skipping API call');
+        setUiState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+      
+      // Mark pending resources as generating
+      const newStatus = { ...resourceStatus };
+      pendingResources.forEach(type => {
+        newStatus[type] = { status: 'generating' };
+      });
+      setResourceStatus(newStatus);
+      
+      // Only generate resources that need to be generated
+      const results = await generateMultiResource(formState, contentState, pendingResources);
+      
+      // Update status based on results
+      const updatedStatus = { ...newStatus };
+      Object.entries(results).forEach(([type, result]) => {
+        if (result.error) {
+          updatedStatus[type] = { 
+            status: 'error', 
+            message: result.error 
+          };
+        } else {
+          updatedStatus[type] = { 
+            status: 'success',
+            blob: result.blob,
+            contentType: result.contentType
+          };
+        }
+      });
+      setResourceStatus(updatedStatus);
+      
+      // Save to history after generation
+      saveToHistory();
+    } catch (error) {
+      console.error('Error generating resources:', error);
+      
+      // Mark all resources as error
+      const errorStatus = { ...resourceStatus };
+      const resourcesToGenerate = specificResourceTypes 
+        ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
+        : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+        
+      resourcesToGenerate.forEach(type => {
+        errorStatus[type] = { 
+          status: 'error', 
+          message: error.message || 'Failed to generate resource' 
+        };
+      });
+      setResourceStatus(errorStatus);
+      
+      // Set UI error
+      setUiState(prev => ({
+        ...prev,
+        error: error.message || 'Error generating resources. Please try again.'
+      }));
+    } finally {
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false
+      }));
+    }
+  };
+
   // Show loading state while auth is being checked
-  if (isLoading) {
+  if (authLoading) {
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -344,20 +483,71 @@ const LessonBuilder = () => {
               />
             </Box>
 
-            {/* Show the generated content */}
+            {/* Resource Manager and Content Display */}
             {contentState.structuredContent.length > 0 && (
-              <OutlineDisplay
-                contentState={contentState}
-                uiState={{
-                  ...uiState,
-                  isLoading: presentationLoading
-                }}
-                subscriptionState={subscriptionState}
-                isAuthenticated={isAuthenticated}
-                googleSlidesState={googleSlidesState}
-                onGeneratePresentation={() => generatePresentation(formState, contentState)}
-                onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
-              />
+              <>
+                {/* Toggle button between resources and content */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  mb: 3,
+                  gap: 2
+                }}>
+                  <Button 
+                    variant={showResourceManager ? "contained" : "outlined"}
+                    onClick={() => setShowResourceManager(true)}
+                    sx={{ 
+                      minWidth: '150px',
+                      textTransform: 'none'
+                    }}
+                  >
+                    Manage Resources
+                  </Button>
+                  <Button 
+                    variant={!showResourceManager ? "contained" : "outlined"}
+                    onClick={() => setShowResourceManager(false)}
+                    sx={{ 
+                      minWidth: '150px',
+                      textTransform: 'none'
+                    }}
+                  >
+                    View Content
+                  </Button>
+                </Box>
+
+                {/* Show either ResourceManager or OutlineDisplay based on state */}
+                {showResourceManager ? (
+                  <ResourceManager
+                    formState={formState}
+                    contentState={contentState}
+                    resourceStatus={resourceStatus}
+                    isLoading={presentationLoading}
+                    onGenerateResource={handleGenerateResource}
+                    downloadLimit={5}
+                    isPremium={subscriptionState.isPremium}
+                    downloadsRemaining={subscriptionState.isPremium ? 999 : (subscriptionState.downloadCount >= 5 ? 0 : 5 - subscriptionState.downloadCount)}
+                  />
+                ) : (
+                  <OutlineDisplay
+                    contentState={contentState}
+                    uiState={{
+                      ...uiState,
+                      isLoading: presentationLoading
+                    }}
+                    subscriptionState={subscriptionState}
+                    isAuthenticated={isAuthenticated}
+                    googleSlidesState={googleSlidesState}
+                    resourceStatus={resourceStatus}
+                    onGeneratePresentation={() => handleGenerateResource()}
+                    onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
+                    onRegenerateOutline={() => setUiState(prev => ({ 
+                      ...prev, 
+                      outlineModalOpen: true,
+                      regenerationCount: prev.regenerationCount
+                    }))}
+                  />
+                )}
+              </>
             )}
           </Box>
         </Box>
@@ -382,7 +572,7 @@ const LessonBuilder = () => {
           setUiState={setUiState}
           setContentState={setContentState}
           handleRegenerateOutline={handleRegenerateOutline}
-          handleDownload={generatePresentation}
+          handleDownload={handleGenerateResource}
           onFinalize={trackLessonInHistory}
         />
 

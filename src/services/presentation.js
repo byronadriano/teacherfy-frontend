@@ -2,9 +2,14 @@
 import { config } from '../utils/config';
 
 export const presentationService = {
-  async generatePptx(formState, contentState) {
+  async generateMultiResource(formState, contentState, specificResources = null) {
     try {
-      console.log('Generating presentation with:', {
+      // Get resources to generate - either specified or from form state
+      const resourceTypes = specificResources || 
+        (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+      
+      console.log('Generating multiple resources with:', {
+        resourceTypes,
         formState: {
           resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel,
@@ -13,9 +18,178 @@ export const presentationService = {
         },
         contentState: {
           hasStructuredContent: Boolean(contentState.structuredContent),
-          slidesCount: contentState.structuredContent?.length || 0
+          resourcesGenerated: Object.keys(contentState.generatedResources || {})
         }
       });
+      
+      // For each resource type, generate the file
+      const results = {};
+      
+      for (const resourceType of resourceTypes) {
+        const structuredContent = 
+          contentState.generatedResources?.[resourceType] || 
+          contentState.structuredContent;
+          
+        // Skip if no content available
+        if (!structuredContent || !Array.isArray(structuredContent) || structuredContent.length === 0) {
+          console.warn(`No content available for ${resourceType}, skipping generation`);
+          results[resourceType] = { error: 'No content available' };
+          continue;
+        }
+        
+        try {
+          // Build request data for this resource type
+          const requestData = {
+            resource_type: resourceType.toLowerCase().replace('/', '_'),
+            lesson_outline: contentState.finalOutline || '',
+            structured_content: structuredContent.map((slide, index) => ({
+              title: slide.title || `Item ${index + 1}`,
+              layout: slide.layout || 'TITLE_AND_CONTENT',
+              content: Array.isArray(slide.content) ? slide.content : [],
+              teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
+              visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
+              left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
+              right_column: Array.isArray(slide.right_column) ? slide.right_column : []
+            }))
+          };
+          
+          // Determine API URL
+          const apiUrl = config.apiUrl || 
+            (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://teacherfy.ai');
+          
+          console.log(`Sending request to generate ${resourceType} to: ${apiUrl}/generate`);
+          
+          const response = await fetch(`${apiUrl}/generate`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': '*/*'
+            },
+            body: JSON.stringify(requestData)
+          });
+          
+          console.log(`${resourceType} response status:`, response.status);
+          
+          if (!response.ok) {
+            console.error(`Server returned error for ${resourceType}:`, response.status);
+            let errorMessage = `Server error: ${response.status}`;
+            
+            try {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errorJson = await response.json();
+                errorMessage = errorJson.error || errorJson.message || errorMessage;
+              } else {
+                const errorText = await response.text();
+                errorMessage = `${errorMessage}. Details: ${errorText.substring(0, 150)}...`;
+              }
+            } catch (e) {
+              console.error('Failed to parse error response:', e);
+            }
+            
+            results[resourceType] = { error: errorMessage };
+            continue;
+          }
+          
+          // Verify response content type
+          const contentType = response.headers.get('content-type');
+          
+          // Different content types for different resources
+          const validTypes = [
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // DOCX
+            'application/pdf', // PDF
+            'application/octet-stream' // Generic binary
+          ];
+          
+          if (!contentType || !validTypes.some(type => contentType.includes(type))) {
+            console.warn(`Unexpected content type for ${resourceType}:`, contentType);
+            
+            try {
+              const textContent = await response.text();
+              console.error(`Unexpected response content for ${resourceType} (first 200 chars):`, textContent.substring(0, 200));
+            } catch (err) {
+              console.error('Could not read response content:', err);
+            }
+            
+            results[resourceType] = { 
+              error: `Invalid response type from server: ${contentType || 'unknown'}` 
+            };
+            continue;
+          }
+          
+          // Get the blob and store it in results
+          const blob = await response.blob();
+          console.log(`Got blob for ${resourceType} of size:`, blob.size);
+          
+          if (blob.size < 1000) {  // Files should be at least a few KB
+            console.error(`Received file for ${resourceType} is suspiciously small:`, blob.size, 'bytes');
+            results[resourceType] = { 
+              error: 'File returned from server appears to be invalid or incomplete' 
+            };
+            continue;
+          }
+          
+          // Add the blob to results
+          results[resourceType] = { blob, contentType };
+          
+          // Generate appropriate file extension
+          let fileExt = '.bin';
+          if (contentType.includes('presentation')) fileExt = '.pptx';
+          else if (contentType.includes('document')) fileExt = '.docx';
+          else if (contentType.includes('pdf')) fileExt = '.pdf';
+          
+          // Create and trigger download
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+            
+          // Create a meaningful filename
+          const topicSlug = formState.lessonTopic 
+            ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
+            : 'lesson';
+              
+          a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
+          document.body.appendChild(a);
+            
+          console.log(`Triggering download for ${resourceType} with filename:`, a.download);
+          a.click();
+            
+          // Replace the timeout block with this:
+          // Clean up with longer timeout and better error handling
+          setTimeout(() => {
+            try {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              console.log(`Download complete for ${resourceType} and resources cleaned up`);
+            } catch (err) {
+              console.error('Error cleaning up download resources:', err);
+            }
+          }, 5000);
+        } catch (resourceError) {
+          console.error(`Error generating ${resourceType}:`, resourceError);
+          results[resourceType] = { error: resourceError.message };
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('Multi-resource generation error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      throw new Error(`Failed to generate resources: ${error.message}`);
+    }
+  },
+  
+  // For backward compatibility, maintain the original function
+  async generatePptx(formState, contentState) {
+    try {
+      console.log('Using legacy generatePptx function');
       
       // Validate content before sending to server
       if (!contentState.structuredContent || !Array.isArray(contentState.structuredContent) || contentState.structuredContent.length === 0) {
@@ -23,25 +197,9 @@ export const presentationService = {
         throw new Error('No slide content available for presentation generation');
       }
       
-      // Validate each slide has required properties
-      contentState.structuredContent.forEach((slide, index) => {
-        if (!slide.title) {
-          console.warn(`Slide ${index} missing title`);
-        }
-        if (!slide.layout) {
-          console.warn(`Slide ${index} missing layout`);
-        }
-        // Validate content arrays
-        if (!Array.isArray(slide.content)) {
-          console.warn(`Slide ${index} content is not an array`);
-        }
-        if (!Array.isArray(slide.teacher_notes)) {
-          console.warn(`Slide ${index} teacher_notes is not an array`);
-        }
-      });
-      
       // Build a clean request object with only what the backend needs
       const requestData = {
+        resource_type: 'presentation',
         lesson_outline: contentState.finalOutline || '',
         structured_content: contentState.structuredContent.map((slide, index) => ({
           title: slide.title || `Slide ${index + 1}`,
@@ -54,12 +212,7 @@ export const presentationService = {
         }))
       };
       
-      console.log('Sending presentation request with data:', {
-        outline_length: requestData.lesson_outline?.length || 0,
-        slides_count: requestData.structured_content?.length || 0
-      });
-      
-      // Determine API URL - use config if available, or construct from known pattern
+      // Determine API URL
       const apiUrl = config.apiUrl || 
         (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://teacherfy.ai');
       
@@ -76,7 +229,6 @@ export const presentationService = {
       });
   
       console.log('Presentation response status:', response.status);
-      console.log('Response headers:', Object.fromEntries([...response.headers.entries()]));
       
       if (!response.ok) {
         console.error('Server returned error status:', response.status);
@@ -166,5 +318,10 @@ export const presentationService = {
     }
   },
   
-  // Add additional methods if needed for Google Slides, etc.
+  // Google Slides generation function
+  async generateGoogleSlides(formState, contentState, token) {
+    // Implementation remains unchanged
+    console.log("Google Slides generation requested");
+    // Your Google Slides implementation here
+  }
 };

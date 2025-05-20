@@ -7,7 +7,7 @@ import { outlineService } from "../../../services";
 export default function useForm({ setShowSignInPrompt }) {
   // Initial form state with all required fields
   const [formState, setFormState] = useState({
-    resourceType: "",
+    resourceType: [], // Changed to array for multiple selections
     gradeLevel: "",
     subjectFocus: "",
     selectedStandards: [],
@@ -32,12 +32,13 @@ export default function useForm({ setShowSignInPrompt }) {
   const [contentState, setContentState] = useState({
     outlineToConfirm: "",
     finalOutline: "",
-    structuredContent: []
+    structuredContent: [],
+    generatedResources: {} // New field to store multiple resource outputs
   });
 
   const resetForm = useCallback(() => {
     setFormState({
-      resourceType: "Presentation",
+      resourceType: [],
       gradeLevel: "",
       subjectFocus: "",
       selectedStandards: [],
@@ -63,32 +64,56 @@ export default function useForm({ setShowSignInPrompt }) {
     setContentState({
       outlineToConfirm: "",
       finalOutline: "",
-      structuredContent: []
+      structuredContent: [],
+      generatedResources: {}
     });
   }, []);
 
-  const handleFormChange = useCallback((field, value) => {
+  const handleFormChange = useCallback((field, value, isMultiSelect = false) => {
     setFormState(prev => {
-      // Special handling for resourceType
-      if (field === 'resourceType') {
-        // Reset numSlides and includeImages when switching from Presentation
-        if (prev.resourceType === 'Presentation' && value !== 'Presentation') {
-          return {
-            ...prev,
-            [field]: value,
-            numSlides: undefined,
-            includeImages: false
+      // Special handling for resourceType multi-select
+      if (field === 'resourceType' && isMultiSelect) {
+        let newResourceTypes;
+        
+        // If resourceType is already an array
+        if (Array.isArray(prev.resourceType)) {
+          if (prev.resourceType.includes(value)) {
+            // Remove the value if it already exists
+            newResourceTypes = prev.resourceType.filter(type => type !== value);
+          } else {
+            // Add the value if it doesn't exist
+            newResourceTypes = [...prev.resourceType, value];
+          }
+        } else if (prev.resourceType) {
+          // If there's a single value already, create an array with both values
+          if (prev.resourceType === value) {
+            newResourceTypes = [];
+          } else {
+            newResourceTypes = [prev.resourceType, value];
+          }
+        } else {
+          // If no value exists yet, create an array with the new value
+          newResourceTypes = [value];
+        }
+        
+        // Handle empty array - convert back to empty string
+        if (newResourceTypes.length === 0) {
+          return { ...prev, [field]: [] };
+        }
+        
+        // Special handling for Presentation type
+        if (newResourceTypes.includes('Presentation') && !prev.numSlides) {
+          return { 
+            ...prev, 
+            [field]: newResourceTypes,
+            numSlides: 5 
           };
         }
-        // Set default numSlides when switching to Presentation
-        if (value === 'Presentation') {
-          return {
-            ...prev,
-            [field]: value,
-            numSlides: 5
-          };
-        }
+        
+        return { ...prev, [field]: newResourceTypes };
       }
+      
+      // Regular single-value handling
       return { ...prev, [field]: value };
     });
   }, []);
@@ -97,10 +122,11 @@ export default function useForm({ setShowSignInPrompt }) {
     if (isChecked) {
       setFormState(prev => ({
         ...EXAMPLE_FORM_DATA,
-        // Only preserve these if they're already set and valid, otherwise use example values
-        numSlides: (prev.numSlides && prev.numSlides > 0) ? prev.numSlides : EXAMPLE_FORM_DATA.numSlides,
-        includeImages: prev.includeImages !== undefined ? prev.includeImages : EXAMPLE_FORM_DATA.includeImages
-        // Note: We're no longer preserving resourceType, so it will always come from the example data
+        // For multi-select compatibility, convert to array 
+        resourceType: [EXAMPLE_FORM_DATA.resourceType],
+        // Preserve any current settings that shouldn't be overwritten
+        numSlides: prev.numSlides,
+        includeImages: prev.includeImages
       }));
       setUiState(prev => ({ ...prev, isExample: true }));
     } else {
@@ -109,10 +135,11 @@ export default function useForm({ setShowSignInPrompt }) {
   }, [resetForm]);
 
   const handleGenerateOutline = useCallback(async () => {
-    // Validate only the essential required fields
-    if (!formState.resourceType || !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
+    // Validate the essential required fields
+    if (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0) || 
+        !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
       const missingFields = [
-        !formState.resourceType && 'resource type',
+        (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0)) && 'resource type',
         !formState.gradeLevel && 'grade level',
         !formState.subjectFocus && 'subject',
         !formState.language && 'language'
@@ -141,7 +168,10 @@ export default function useForm({ setShowSignInPrompt }) {
         
         setContentState({
           outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
-          structuredContent: EXAMPLE_OUTLINE.structured_content
+          structuredContent: EXAMPLE_OUTLINE.structured_content,
+          generatedResources: {
+            'Presentation': EXAMPLE_OUTLINE.structured_content
+          }
         });
         
         setUiState(prev => ({
@@ -153,56 +183,72 @@ export default function useForm({ setShowSignInPrompt }) {
         return;
       }
       
-      // Regular workflow - make API request
+      // Regular workflow - handle multiple resource types
       console.log('Making API request with form data:', {
         resourceType: formState.resourceType,
         gradeLevel: formState.gradeLevel,
         subjectFocus: formState.subjectFocus,
         language: formState.language,
-        // Don't log the full request for brevity
       });
       
       try {
-        // Build request with all available fields
-        // Use subjectFocus as lessonTopic if lessonTopic is empty
-        const requestData = {
-          resourceType: formState.resourceType,
-          gradeLevel: formState.gradeLevel,
-          subjectFocus: formState.subjectFocus,
-          language: formState.language,
-          // Use subject focus as the lesson topic if not explicitly provided
-          lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
-          custom_prompt: formState.customPrompt || '',
-          selectedStandards: Array.isArray(formState.selectedStandards) 
-            ? formState.selectedStandards 
-            : [],
-          numSlides: formState.numSlides || 5,
-          includeImages: Boolean(formState.includeImages)
-        };
+        // Normalize resourceType to array
+        const resourceTypes = Array.isArray(formState.resourceType) 
+          ? formState.resourceType 
+          : [formState.resourceType];
+          
+        const generatedResources = {};
         
-        const data = await outlineService.generate(requestData);
-        
-        console.log('API request successful:', {
-          hasMessages: Boolean(data.messages),
-          structuredContentLength: data.structured_content?.length || 0
-        });
-        
-        // Process the response data (unchanged)
-        if (!data.messages || !data.structured_content) {
-          throw new Error('Invalid response format from server');
+        // For each resource type, generate an outline
+        for (const resourceType of resourceTypes) {
+          // Build request with all available fields
+          const requestData = {
+            resourceType: resourceType,
+            gradeLevel: formState.gradeLevel,
+            subjectFocus: formState.subjectFocus,
+            language: formState.language,
+            // Use subject focus as the lesson topic if not explicitly provided
+            lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
+            custom_prompt: formState.customPrompt || '',
+            selectedStandards: Array.isArray(formState.selectedStandards) 
+              ? formState.selectedStandards 
+              : [],
+            numSlides: formState.numSlides || 5,
+            includeImages: Boolean(formState.includeImages)
+          };
+          
+          const data = await outlineService.generate(requestData);
+          
+          console.log(`API request for ${resourceType} successful:`, {
+            hasMessages: Boolean(data.messages),
+            structuredContentLength: data.structured_content?.length || 0
+          });
+          
+          // Process the response data
+          if (!data.messages || !data.structured_content) {
+            throw new Error(`Invalid response format from server for ${resourceType}`);
+          }
+
+          const structuredContent = Array.isArray(data.structured_content) 
+            ? data.structured_content 
+            : parseOutlineToStructured(data.messages[0], formState.numSlides || 5);
+
+          if (!structuredContent || structuredContent.length === 0) {
+            throw new Error(`No valid slide content returned from the server for ${resourceType}`);
+          }
+
+          // Store in the generatedResources object
+          generatedResources[resourceType] = structuredContent;
         }
-
-        const structuredContent = Array.isArray(data.structured_content) 
-          ? data.structured_content 
-          : parseOutlineToStructured(data.messages[0], formState.numSlides || 5);
-
-        if (!structuredContent || structuredContent.length === 0) {
-          throw new Error('No valid slide content returned from the server');
-        }
-
+        
+        // Set the primary resource type for display
+        const primaryResourceType = resourceTypes[0];
+        const primaryContent = generatedResources[primaryResourceType];
+        
         setContentState({
-          outlineToConfirm: formatOutlineForDisplay(structuredContent),
-          structuredContent
+          outlineToConfirm: formatOutlineForDisplay(primaryContent),
+          structuredContent: primaryContent,
+          generatedResources
         });
         
         setUiState(prev => ({
@@ -241,6 +287,7 @@ export default function useForm({ setShowSignInPrompt }) {
     }
   }, [formState, uiState.isExample]);
   
+
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
       setUiState(prev => ({
@@ -258,8 +305,17 @@ export default function useForm({ setShowSignInPrompt }) {
     }));
 
     try {
+      // Normalize resourceType to array
+      const resourceTypes = Array.isArray(formState.resourceType) 
+        ? formState.resourceType 
+        : [formState.resourceType];
+        
+      // For now, only regenerate the primary resource type
+      const primaryResourceType = resourceTypes[0];
+      
       const requestData = {
         ...formState,
+        resourceType: primaryResourceType,
         regeneration: true,
         regenerationCount: uiState.regenerationCount + 1,
         previous_outline: contentState.outlineToConfirm,
@@ -276,10 +332,17 @@ export default function useForm({ setShowSignInPrompt }) {
       const structuredContent = Array.isArray(data.structured_content) 
         ? data.structured_content 
         : parseOutlineToStructured(data.messages[0]);
+        
+      // Update the generatedResources with the new content
+      const updatedResources = {
+        ...contentState.generatedResources,
+        [primaryResourceType]: structuredContent
+      };
 
       setContentState({
         outlineToConfirm: formatOutlineForDisplay(structuredContent),
-        structuredContent
+        structuredContent,
+        generatedResources: updatedResources
       });
 
     } catch (error) {
@@ -294,7 +357,7 @@ export default function useForm({ setShowSignInPrompt }) {
         isLoading: false
       }));
     }
-  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm]);
+  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources]);
 
   return {
     formState,
