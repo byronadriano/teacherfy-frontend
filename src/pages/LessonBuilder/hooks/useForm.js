@@ -98,7 +98,7 @@ export default function useForm({ setShowSignInPrompt }) {
         
         // Handle empty array - convert back to empty string
         if (newResourceTypes.length === 0) {
-          return { ...prev, [field]: "" };
+          return { ...prev, [field]: [] };
         }
         
         // Special handling for Presentation type

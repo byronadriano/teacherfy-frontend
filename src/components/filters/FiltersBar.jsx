@@ -204,10 +204,14 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     };
 
     const handleOptionHover = (event, option) => {
-        if (option.hasSubmenu && option.type === 'presentation') {
-            setSubmenuAnchorEl(event.currentTarget);
-            setActiveSubmenu(option.type);
-        }
+    // Remove this code that shows submenu on hover
+    // if (option.hasSubmenu && option.type === 'presentation') {
+    //   setSubmenuAnchorEl(event.currentTarget);
+    //   setActiveSubmenu(option.type);
+    // }
+    
+    // Either leave it empty, or just track which item is being hovered
+    // without showing the submenu
     };
 
     const handleClose = () => {
@@ -217,14 +221,23 @@ const FiltersBar = ({ formState, handleFormChange }) => {
         setActiveSubmenu(null);
     };
 
-    const handleOptionSelect = (option, field = activeFilter) => {
-        // For resource types, we need to handle multiple selections
-        if (field === 'resourceType') {
-            handleFormChange(field, option, true); // Added third parameter to indicate multi-select
-        } else {
-            handleFormChange(field, option);
-            handleClose();
+    const handleOptionSelect = (option, event,field = activeFilter) => {
+    if (field === 'resourceType') {
+        // Toggle the option in the array
+        handleFormChange(field, option, true);
+        
+        // Only show submenu for Presentation if it's selected
+        if (option === 'Presentation' && 
+            (Array.isArray(formState.resourceType) && 
+            formState.resourceType.includes('Presentation'))) {
+            // Use document.activeElement instead of event
+            setSubmenuAnchorEl(document.activeElement);
+            setActiveSubmenu('presentation');
         }
+    } else {
+        handleFormChange(field, option);
+        handleClose();
+    }
     };
 
     // Count selected resource types
@@ -371,7 +384,7 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                                 isSelected={isSelected}
                                 hasSubmenu={option.hasSubmenu}
                                 disabled={option.disabled}
-                                onClick={() => handleOptionSelect(option.label)}
+                                onClick={(e) => handleOptionSelect(option.label, e)}
                                 onMouseEnter={(e) => handleOptionHover(e, option)}
                             />
                         );
