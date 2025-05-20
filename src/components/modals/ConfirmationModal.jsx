@@ -130,6 +130,166 @@ const ConfirmationModal = ({
     }));
   };
 
+  // Helper function to render resource-specific sections
+  const renderResourceContent = (item, resourceType) => {
+    // Normalize resource type name
+    const type = resourceType?.toLowerCase() || '';
+    
+    switch(true) {
+      case type.includes('quiz') || type.includes('test'):
+        return (
+          <>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+              Questions:
+            </Typography>
+            {item.content && item.content.map((question, i) => (
+              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                • {question}
+              </Typography>
+            ))}
+            
+            {item.answers && item.answers.length > 0 && (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+                  Answers:
+                </Typography>
+                {item.answers.map((answer, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {answer}
+                  </Typography>
+                ))}
+              </>
+            )}
+          </>
+        );
+        
+      case type.includes('worksheet'):
+        return (
+          <>
+            {item.instructions && item.instructions.length > 0 && (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+                  Instructions:
+                </Typography>
+                {item.instructions.map((instruction, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {instruction}
+                  </Typography>
+                ))}
+              </>
+            )}
+            
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+              Content:
+            </Typography>
+            {item.content && item.content.map((content, i) => (
+              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                • {content}
+              </Typography>
+            ))}
+          </>
+        );
+        
+      case type.includes('lesson'):
+        return (
+          <>
+            {item.duration && (
+              <Typography sx={{ fontWeight: 'bold', mt: 2, color: '#7c3aed' }}>
+                Duration: {item.duration}
+              </Typography>
+            )}
+            
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+              Content:
+            </Typography>
+            {item.content && item.content.map((content, i) => (
+              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                • {content}
+              </Typography>
+            ))}
+            
+            {item.procedure && item.procedure.length > 0 && (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+                  Procedure:
+                </Typography>
+                {item.procedure.map((step, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {step}
+                  </Typography>
+                ))}
+              </>
+            )}
+            
+            {item.teacher_notes && item.teacher_notes.length > 0 && (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
+                  Teacher Notes:
+                </Typography>
+                {item.teacher_notes.map((note, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {note}
+                  </Typography>
+                ))}
+              </>
+            )}
+          </>
+        );
+        
+      // Default case for presentations or anything else
+      default:
+        return (
+          <>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+              Content:
+            </Typography>
+            {item.content && item.content.map((content, i) => (
+              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                • {content}
+              </Typography>
+            ))}
+            
+            {item.teacher_notes && item.teacher_notes.length > 0 && (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
+                  Teacher Notes:
+                </Typography>
+                {item.teacher_notes.map((note, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {note}
+                  </Typography>
+                ))}
+              </>
+            )}
+          </>
+        );
+    }
+  };
+
+  // Determine primary resource type (for display purposes)
+  const getPrimaryResourceType = () => {
+    // Check if resource type exists in form state
+    const resourceType = Array.isArray(uiState.resourceType) 
+      ? uiState.resourceType[0] 
+      : uiState.resourceType;
+    
+    // Handle special cases
+    if (resourceType?.toLowerCase().includes('quiz') || 
+        resourceType?.toLowerCase().includes('test')) {
+      return 'Quiz/Test';
+    }
+    
+    if (resourceType?.toLowerCase().includes('worksheet')) {
+      return 'Worksheet';
+    }
+    
+    if (resourceType?.toLowerCase().includes('lesson')) {
+      return 'Lesson Plan';
+    }
+    
+    return 'Presentation';
+  };
+
   return (
     <Dialog 
       open={uiState.outlineModalOpen} 
@@ -159,56 +319,14 @@ const ConfirmationModal = ({
             overflowY: "auto",
             backgroundColor: "#fafafa" 
           }}>
-            {contentState.structuredContent.map((slide, index) => (
+            {contentState.structuredContent.map((item, index) => (
               <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                  Slide {index + 1}: {slide.title}
+                  {getPrimaryResourceType() === 'Presentation' ? 'Slide' : 'Section'} {index + 1}: {item.title}
                 </Typography>
 
-                {slide.content && slide.content.length > 0 && (
-                  <>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                      Content:
-                    </Typography>
-                    {slide.content.map((item, i) => (
-                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                        • {item}
-                      </Typography>
-                    ))}
-                  </>
-                )}
-
-                {slide.teacher_notes && slide.teacher_notes.length > 0 && (
-                  <>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                      Teacher Notes:
-                    </Typography>
-                    {slide.teacher_notes.map((note, i) => (
-                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                        • {note}
-                      </Typography>
-                    ))}
-                  </>
-                )}
-
-                {slide.visual_elements && (
-                  <>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                      Visual Elements:
-                    </Typography>
-                    {slide.visual_elements.length > 0 ? (
-                      slide.visual_elements.map((element, i) => (
-                        <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                          • {element}
-                        </Typography>
-                      ))
-                    ) : (
-                      <Typography sx={{ pl: 2, mb: 0.5, fontStyle: 'italic' }}>
-                        • (None provided)
-                      </Typography>
-                    )}
-                  </>
-                )}
+                {/* Render content based on resource type */}
+                {renderResourceContent(item, getPrimaryResourceType())}
 
                 {index < contentState.structuredContent.length - 1 && (
                   <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
