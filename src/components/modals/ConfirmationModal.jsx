@@ -83,7 +83,7 @@ const ConfirmationModal = ({
         right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
       }));
       
-      // Ensure the data is properly set for the next step
+      // Ensure consistent data: use the same formatted outline for both properties
       setContentState(prev => ({ 
         ...prev, 
         finalOutline: contentState.outlineToConfirm,
@@ -131,140 +131,140 @@ const ConfirmationModal = ({
   };
 
   // Helper function to render resource-specific sections
-  const renderResourceContent = (item, resourceType) => {
-    // Normalize resource type name
-    const type = resourceType?.toLowerCase() || '';
+  // const renderResourceContent = (item, resourceType) => {
+  //   // Normalize resource type name
+  //   const type = resourceType?.toLowerCase() || '';
     
-    switch(true) {
-      case type.includes('quiz') || type.includes('test'):
-        return (
-          <>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-              Questions:
-            </Typography>
-            {item.content && item.content.map((question, i) => (
-              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                • {question}
-              </Typography>
-            ))}
+  //   switch(true) {
+  //     case type.includes('quiz') || type.includes('test'):
+  //       return (
+  //         <>
+  //           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //             Questions:
+  //           </Typography>
+  //           {item.content && item.content.map((question, i) => (
+  //             <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //               • {question}
+  //             </Typography>
+  //           ))}
             
-            {item.answers && item.answers.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                  Answers:
-                </Typography>
-                {item.answers.map((answer, i) => (
-                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                    • {answer}
-                  </Typography>
-                ))}
-              </>
-            )}
-          </>
-        );
+  //           {item.answers && item.answers.length > 0 && (
+  //             <>
+  //               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //                 Answers:
+  //               </Typography>
+  //               {item.answers.map((answer, i) => (
+  //                 <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //                   • {answer}
+  //                 </Typography>
+  //               ))}
+  //             </>
+  //           )}
+  //         </>
+  //       );
         
-      case type.includes('worksheet'):
-        return (
-          <>
-            {item.instructions && item.instructions.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                  Instructions:
-                </Typography>
-                {item.instructions.map((instruction, i) => (
-                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                    • {instruction}
-                  </Typography>
-                ))}
-              </>
-            )}
+  //     case type.includes('worksheet'):
+  //       return (
+  //         <>
+  //           {item.instructions && item.instructions.length > 0 && (
+  //             <>
+  //               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //                 Instructions:
+  //               </Typography>
+  //               {item.instructions.map((instruction, i) => (
+  //                 <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //                   • {instruction}
+  //                 </Typography>
+  //               ))}
+  //             </>
+  //           )}
             
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-              Content:
-            </Typography>
-            {item.content && item.content.map((content, i) => (
-              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                • {content}
-              </Typography>
-            ))}
-          </>
-        );
+  //           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //             Content:
+  //           </Typography>
+  //           {item.content && item.content.map((content, i) => (
+  //             <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //               • {content}
+  //             </Typography>
+  //           ))}
+  //         </>
+  //       );
         
-      case type.includes('lesson'):
-        return (
-          <>
-            {item.duration && (
-              <Typography sx={{ fontWeight: 'bold', mt: 2, color: '#7c3aed' }}>
-                Duration: {item.duration}
-              </Typography>
-            )}
+  //     case type.includes('lesson'):
+  //       return (
+  //         <>
+  //           {item.duration && (
+  //             <Typography sx={{ fontWeight: 'bold', mt: 2, color: '#7c3aed' }}>
+  //               Duration: {item.duration}
+  //             </Typography>
+  //           )}
             
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-              Content:
-            </Typography>
-            {item.content && item.content.map((content, i) => (
-              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                • {content}
-              </Typography>
-            ))}
+  //           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //             Content:
+  //           </Typography>
+  //           {item.content && item.content.map((content, i) => (
+  //             <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //               • {content}
+  //             </Typography>
+  //           ))}
             
-            {item.procedure && item.procedure.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-                  Procedure:
-                </Typography>
-                {item.procedure.map((step, i) => (
-                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                    • {step}
-                  </Typography>
-                ))}
-              </>
-            )}
+  //           {item.procedure && item.procedure.length > 0 && (
+  //             <>
+  //               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //                 Procedure:
+  //               </Typography>
+  //               {item.procedure.map((step, i) => (
+  //                 <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //                   • {step}
+  //                 </Typography>
+  //               ))}
+  //             </>
+  //           )}
             
-            {item.teacher_notes && item.teacher_notes.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
-                  Teacher Notes:
-                </Typography>
-                {item.teacher_notes.map((note, i) => (
-                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                    • {note}
-                  </Typography>
-                ))}
-              </>
-            )}
-          </>
-        );
+  //           {item.teacher_notes && item.teacher_notes.length > 0 && (
+  //             <>
+  //               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
+  //                 Teacher Notes:
+  //               </Typography>
+  //               {item.teacher_notes.map((note, i) => (
+  //                 <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //                   • {note}
+  //                 </Typography>
+  //               ))}
+  //             </>
+  //           )}
+  //         </>
+  //       );
         
-      // Default case for presentations or anything else
-      default:
-        return (
-          <>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
-              Content:
-            </Typography>
-            {item.content && item.content.map((content, i) => (
-              <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                • {content}
-              </Typography>
-            ))}
+  //     // Default case for presentations or anything else
+  //     default:
+  //       return (
+  //         <>
+  //           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#1976d2' }}>
+  //             Content:
+  //           </Typography>
+  //           {item.content && item.content.map((content, i) => (
+  //             <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //               • {content}
+  //             </Typography>
+  //           ))}
             
-            {item.teacher_notes && item.teacher_notes.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
-                  Teacher Notes:
-                </Typography>
-                {item.teacher_notes.map((note, i) => (
-                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
-                    • {note}
-                  </Typography>
-                ))}
-              </>
-            )}
-          </>
-        );
-    }
-  };
+  //           {item.teacher_notes && item.teacher_notes.length > 0 && (
+  //             <>
+  //               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, color: '#16a34a' }}>
+  //                 Teacher Notes:
+  //               </Typography>
+  //               {item.teacher_notes.map((note, i) => (
+  //                 <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+  //                   • {note}
+  //                 </Typography>
+  //               ))}
+  //             </>
+  //           )}
+  //         </>
+  //       );
+  //   }
+  // };
 
   // Determine primary resource type (for display purposes)
   const getPrimaryResourceType = () => {
@@ -320,16 +320,44 @@ const ConfirmationModal = ({
             backgroundColor: "#fafafa" 
           }}>
             {contentState.structuredContent.map((item, index) => (
-              <Box key={index} sx={{ mb: index < contentState.structuredContent.length - 1 ? 4 : 0 }}>
+              <Box key={index} sx={{ mb: 4 }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
                   {getPrimaryResourceType() === 'Presentation' ? 'Slide' : 'Section'} {index + 1}: {item.title}
                 </Typography>
-
-                {/* Render content based on resource type */}
-                {renderResourceContent(item, getPrimaryResourceType())}
-
-                {index < contentState.structuredContent.length - 1 && (
-                  <Box sx={{ my: 3, borderBottom: '1px solid #e0e0e0' }} />
+                
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#2563eb', mb: 1 }}>
+                  Content:
+                </Typography>
+                {item.content && item.content.map((content, i) => (
+                  <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                    • {content}
+                  </Typography>
+                ))}
+                
+                {item.teacher_notes && item.teacher_notes.length > 0 && (
+                  <>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#16a34a', mt: 2, mb: 1 }}>
+                      Teacher Notes:
+                    </Typography>
+                    {item.teacher_notes.map((note, i) => (
+                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                        • {note}
+                      </Typography>
+                    ))}
+                  </>
+                )}
+                
+                {item.visual_elements && item.visual_elements.length > 0 && (
+                  <>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#f59e0b', mt: 2, mb: 1 }}>
+                      Visual Elements:
+                    </Typography>
+                    {item.visual_elements.map((element, i) => (
+                      <Typography key={i} sx={{ pl: 2, mb: 0.5 }}>
+                        • {element}
+                      </Typography>
+                    ))}
+                  </>
                 )}
               </Box>
             ))}

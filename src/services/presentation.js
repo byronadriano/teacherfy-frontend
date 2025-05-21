@@ -1,6 +1,30 @@
 //src/services/presentation.js
 import { config } from '../utils/config';
 
+/**
+ * Normalize resource type to match backend expectations
+ * @param {string} resourceType - The resource type to normalize
+ * @return {string} - Normalized resource type
+ */
+function normalizeResourceType(resourceType) {
+  // First convert to lowercase
+  const normalized = resourceType.toLowerCase();
+  
+  // Handle special cases
+  if (normalized.includes('quiz') || normalized.includes('test')) {
+    return 'quiz';
+  } else if (normalized.includes('lesson') && normalized.includes('plan')) {
+    return 'lesson_plan';
+  } else if (normalized.includes('worksheet')) {
+    return 'worksheet';
+  } else if (normalized.includes('presentation') || normalized.includes('slide')) {
+    return 'presentation';
+  }
+  
+  // Default fallback - replace spaces and slashes
+  return normalized.replace(/\s+/g, '_').replace('/', '_');
+}
+
 export const presentationService = {
   async generateMultiResource(formState, contentState, specificResources = null) {
     try {
@@ -40,7 +64,8 @@ export const presentationService = {
         try {
           // Build request data for this resource type
           const requestData = {
-            resource_type: resourceType.toLowerCase().replace('/', '_'),
+            // Use the normalized resource type to ensure backend compatibility
+            resource_type: normalizeResourceType(resourceType),
             lesson_outline: contentState.finalOutline || '',
             structured_content: structuredContent.map((slide, index) => ({
               title: slide.title || `Item ${index + 1}`,
@@ -157,7 +182,6 @@ export const presentationService = {
           console.log(`Triggering download for ${resourceType} with filename:`, a.download);
           a.click();
             
-          // Replace the timeout block with this:
           // Clean up with longer timeout and better error handling
           setTimeout(() => {
             try {

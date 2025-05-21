@@ -166,8 +166,11 @@ export default function useForm({ setShowSignInPrompt }) {
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        const displayText = formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content);
+        
         setContentState({
-          outlineToConfirm: formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content),
+          outlineToConfirm: displayText,
+          finalOutline: displayText,
           structuredContent: EXAMPLE_OUTLINE.structured_content,
           generatedResources: {
             'Presentation': EXAMPLE_OUTLINE.structured_content
@@ -198,6 +201,8 @@ export default function useForm({ setShowSignInPrompt }) {
           : [formState.resourceType];
           
         const generatedResources = {};
+        let primaryContent = null;
+        let formattedOutline = "";
         
         // For each resource type, generate an outline
         for (const resourceType of resourceTypes) {
@@ -239,14 +244,20 @@ export default function useForm({ setShowSignInPrompt }) {
 
           // Store in the generatedResources object
           generatedResources[resourceType] = structuredContent;
+          
+          // Store the first resource type's content as primary
+          if (!primaryContent) {
+            primaryContent = structuredContent;
+            
+            // Important: Format the outline here to ensure consistency
+            formattedOutline = formatOutlineForDisplay(structuredContent);
+          }
         }
         
-        // Set the primary resource type for display
-        const primaryResourceType = resourceTypes[0];
-        const primaryContent = generatedResources[primaryResourceType];
-        
+        // Set the primary resource type for display - using the same formatted outline for both properties
         setContentState({
-          outlineToConfirm: formatOutlineForDisplay(primaryContent),
+          outlineToConfirm: formattedOutline,
+          finalOutline: formattedOutline,
           structuredContent: primaryContent,
           generatedResources
         });
@@ -333,6 +344,9 @@ export default function useForm({ setShowSignInPrompt }) {
         ? data.structured_content 
         : parseOutlineToStructured(data.messages[0]);
         
+      // Format the outline once and use it consistently
+      const formattedOutline = formatOutlineForDisplay(structuredContent);
+        
       // Update the generatedResources with the new content
       const updatedResources = {
         ...contentState.generatedResources,
@@ -340,7 +354,8 @@ export default function useForm({ setShowSignInPrompt }) {
       };
 
       setContentState({
-        outlineToConfirm: formatOutlineForDisplay(structuredContent),
+        outlineToConfirm: formattedOutline,
+        finalOutline: formattedOutline,
         structuredContent,
         generatedResources: updatedResources
       });
@@ -358,8 +373,8 @@ export default function useForm({ setShowSignInPrompt }) {
       }));
     }
   }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources]);
-
-  return {
+    
+    return {
     formState,
     uiState,
     contentState,
