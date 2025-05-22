@@ -1,62 +1,42 @@
-/* src/styles/mobile.css */
-
-/* Mobile-specific styles that will be applied only on mobile devices */
-.is-mobile-device {
-  /* Add some extra space at the bottom for footer */
-  padding-bottom: 60px !important;
-}
-
-/* Footer fixes for mobile */
-.is-mobile-device footer,
-.is-mobile-device .MuiBox-root[component="footer"],
-.is-mobile-device .app-footer {
-  position: relative !important;
-  bottom: auto !important;
-  left: auto !important;
-  width: 100% !important;
-  margin-left: 0 !important;
-  margin-top: 20px !important;
-  padding-bottom: 20px !important; /* Extra padding at bottom */
-}
 
 /* Fix for Google Sign-in button on mobile */
 .is-mobile-device .google-login-container {
-  margin-bottom: 80px !important;
+  margin-bottom: 40px !important; /* Reduced to avoid excess scroll */
 }
 
-/* Prevent buttons from being too close to bottom on mobile */
+/* Prevent buttons from touching screen edge */
 .is-mobile-device .view-plans-button,
 .is-mobile-device .signin-button {
-  margin-bottom: 20px !important;
+  margin-bottom: 16px !important;
 }
 
-/* Added padding to ensure content doesn't get hidden under footer */
+/* Content padding — only add minimal space for UI breathing room */
 .is-mobile-device .main-content {
-  padding-bottom: 100px !important;
+  padding-bottom: 40px !important; /* Matches typical safe UI space */
 }
 
-/* Additional CSS for sidebar toggle visibility */
+/* Sidebar toggle button */
 .sidebar-toggle-button {
-  /* Ensure button is visible and positioned correctly */
   position: absolute !important;
   z-index: 1000 !important;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) !important;
   border: 2px solid #ffffff !important;
+  background-color: #fff;
+  border-radius: 50%;
 }
 
-/* Add highlight animation to make it more noticeable on first visit */
+/* Highlight animation */
 @keyframes highlight-toggle {
   0% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.4); }
   70% { box-shadow: 0 0 0 10px rgba(29, 78, 216, 0); }
   100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0); }
 }
 
-/* Apply animation to new users (via adding a class 'new-user' to body) */
 .new-user .sidebar-toggle-button {
   animation: highlight-toggle 2s ease-in-out 3;
 }
 
-/* For very small screens, make sure toggle button is still visible */
+/* Mobile screen optimizations */
 @media (max-width: 600px) {
   .sidebar-toggle-button {
     right: -18px !important;
@@ -64,38 +44,33 @@
     height: 32px !important;
     top: 70px !important;
   }
-  
-  /* Form container fixes on small screens */
+
   .form-container {
     padding-left: 10px !important;
     padding-right: 10px !important;
   }
-  
-  /* Smaller font sizes on mobile */
+
   h1.page-title {
     font-size: 1.5rem !important;
     margin-top: 1rem !important;
     margin-bottom: 1.5rem !important;
   }
-  
-  /* Improve button sizes on mobile for better touch targets */
+
   button {
     min-height: 44px !important;
   }
-  
-  /* Space between filter buttons */
+
   .filter-button {
     margin-right: 5px !important;
     margin-bottom: 5px !important;
   }
-  
-  /* Fix for sidebar when hidden on mobile */
+
   .sidebar-collapsed {
     width: 0 !important;
   }
 }
 
-/* Improve visibility at the point where the toggle crosses over content */
+/* Overlap fix for toggle */
 .sidebar-toggle-button::after {
   content: "";
   position: absolute;
@@ -107,21 +82,13 @@
   z-index: -1;
 }
 
-/* iOS-specific fixes */
+/* iOS-specific safe area support */
 @supports (-webkit-touch-callout: none) {
-  /* Add iOS-specific padding for the bottom area with home indicator */
   body {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
-  
-  /* Fix for footer on iOS devices */
-  footer, .MuiBox-root[component="footer"], .app-footer {
-    padding-bottom: env(safe-area-inset-bottom, 10px) !important;
-  }
-  
-  /* Ensure sidebar toggle is visible on iOS */
+
   .sidebar-toggle-button {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2) !important;
   }
 }
-
