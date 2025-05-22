@@ -75,8 +75,11 @@ function App() {
           flexDirection: 'column', 
           minHeight: '100vh',
           position: 'relative',
-          overflow: 'hidden' // Prevent any horizontal scrolling
+          overflow: 'hidden',
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)'
         }}>
+
           <Box sx={{ 
             flex: 1,
             // Only add bottom padding when footer is shown
@@ -99,7 +102,7 @@ function App() {
           </Box>
           
           {/* FIXED: Only render footer container when showFooter is true AND on home page */}
-          {window.location.pathname === '/' && showFooter && (
+          {window.location.pathname === '/' && showFooter && !isMobile && (
             <Box
               component="footer"
               sx={{
