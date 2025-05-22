@@ -437,7 +437,7 @@ const Sidebar = ({
 
     const handlePlanSelect = (plan) => {
         if (plan === 'pro') {
-            window.location.href = 'your-stripe-checkout-url';
+            window.location.href = 'https://buy.stripe.com/9AQbJAfWy9oMduU6oo';
         }
     };
 

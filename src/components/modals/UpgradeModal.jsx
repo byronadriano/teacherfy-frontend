@@ -33,7 +33,7 @@ const UpgradeModal = ({ open = false, onClose }) => (
         color="primary"
         onClick={() => {
           // Add your payment processing logic here
-          window.location.href = 'your-stripe-checkout-url';
+          window.location.href = 'https://buy.stripe.com/9AQbJAfWy9oMduU6oo';
         }}
       >
         Upgrade Now

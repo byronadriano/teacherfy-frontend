@@ -438,8 +438,8 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                     src={Logo}
                     alt="Teacherfy AI Logo"
                     style={{ 
-                      width: '80px',
-                      height: '80px',
+                      width: '200px',
+                      height: '200px',
                       borderRadius: '16px',
                       objectFit: 'contain'
                     }}

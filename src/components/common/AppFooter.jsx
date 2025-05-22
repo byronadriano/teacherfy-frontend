@@ -38,11 +38,11 @@ const AppFooter = () => {
         px: 2,
         paddingBottom: `calc(${isMobileDevice ? '20px' : '10px'} + ${getSafeAreaBottom()})`,
         backgroundColor: 'rgba(255, 255, 255, 0.95)', // Semi-transparent background
-        borderTop: '1px solid #e5e7eb',
+        // borderTop: '1px solid #e5e7eb',
         marginLeft: isMobileDevice ? 0 : (isSidebarCollapsed ? '20px' : (isSmallScreen ? '0' : '240px')),
         transition: 'margin-left 0.3s ease',
         width: isMobileDevice ? '100%' : (isSidebarCollapsed ? 'calc(100% - 20px)' : (isSmallScreen ? '100%' : 'calc(100% - 240px)')),
-        boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.05)',
+        // boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.05)',
         fontSize: isMobileDevice ? '0.75rem' : 'inherit'
       }}
     >

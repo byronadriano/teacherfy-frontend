@@ -1,5 +1,4 @@
-/* Updated global.css */
-
+/* Updated global.css 
 /* Base reset and defaults */
 html {
   box-sizing: border-box;
@@ -24,6 +23,7 @@ body {
   color: #1e293b;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal scrolling */
+  /* Remove fixed bottom padding - now handled dynamically in App.js */
 }
 
 /* Root container */
@@ -35,9 +35,7 @@ body {
 
 /* Mobile-specific fixes */
 @media (max-width: 600px) {
-  body {
-    padding-bottom: 70px; /* Extra padding for footer on mobile */
-  }
+  /* Remove fixed bottom padding for mobile too */
   
   /* Prevent zooming on inputs in mobile Safari */
   input[type="text"],
@@ -47,7 +45,7 @@ body {
     font-size: 16px;
   }
   
-  /* Fix for footer overlapping content */
+  /* Fix for footer overlapping content - removed since footer is now conditional */
   .MuiBox-root[component="footer"] {
     position: relative;
     margin-top: 2rem;
@@ -95,9 +93,4 @@ body {
   100% {
     background-position: 1000px 0;
   }
-}
-
-/* Ensure proper spacing at the bottom for the footer */
-.main-content-wrapper {
-  padding-bottom: 60px; /* Adjust as needed */
 }

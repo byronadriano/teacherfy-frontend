@@ -1,4 +1,4 @@
-// Fixed App.js
+// Fixed App.js - Completely remove footer container when hidden
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -79,7 +79,8 @@ function App() {
         }}>
           <Box sx={{ 
             flex: 1,
-            pb: isMobile ? '70px' : '60px', // Extra padding on mobile for footer
+            // Only add bottom padding when footer is shown
+            pb: showFooter ? (isMobile ? '70px' : '60px') : 0,
             position: 'relative'
           }}>
             <Routes>
@@ -97,7 +98,7 @@ function App() {
             </Routes>
           </Box>
           
-          {/* Footer displays outside the main content area - only show when showFooter is true */}
+          {/* FIXED: Only render footer container when showFooter is true AND on home page */}
           {window.location.pathname === '/' && showFooter && (
             <Box
               component="footer"
