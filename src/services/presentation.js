@@ -70,11 +70,7 @@ export const presentationService = {
             structured_content: structuredContent.map((slide, index) => ({
               title: slide.title || `Item ${index + 1}`,
               layout: slide.layout || 'TITLE_AND_CONTENT',
-              content: Array.isArray(slide.content) ? slide.content : [],
-              teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
-              visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
-              left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
-              right_column: Array.isArray(slide.right_column) ? slide.right_column : []
+              content: Array.isArray(slide.content) ? slide.content : []
             }))
           };
           
@@ -228,11 +224,7 @@ export const presentationService = {
         structured_content: contentState.structuredContent.map((slide, index) => ({
           title: slide.title || `Slide ${index + 1}`,
           layout: slide.layout || 'TITLE_AND_CONTENT',
-          content: Array.isArray(slide.content) ? slide.content : [],
-          teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
-          visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
-          left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
-          right_column: Array.isArray(slide.right_column) ? slide.right_column : []
+          content: Array.isArray(slide.content) ? slide.content : []
         }))
       };
       

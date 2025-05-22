@@ -150,26 +150,37 @@ const LessonBuilder = () => {
           right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
         }));
         
-        // Use the trackLessonGeneration method for comprehensive tracking
-        await historyService.trackLessonGeneration(cleanFormState, {
+        // NEW: Enhanced content state with title for tracking
+        const enhancedContentState = {
+          title: contentState.title,  // Include the generated title
           structuredContent: cleanStructuredContent,
           finalOutline: contentState.finalOutline || '',
           generatedResources: cleanGeneratedResources
-        });
+        };
         
-        console.log('Lesson successfully saved to history');
+        // Use the trackLessonGeneration method with enhanced content state
+        await historyService.trackLessonGeneration(cleanFormState, enhancedContentState);
+        
+        console.log('Lesson successfully saved to history with title:', contentState.title);
       } catch (error) {
         console.error('Error saving to history:', error);
         
         // If the server call fails, save directly to local storage
         try {
+          // NEW: Use the generated title for local storage fallback
+          const lessonTitle = contentState.title || 
+                            formState.lessonTopic || 
+                            formState.subjectFocus || 
+                            'Untitled Lesson';
+          
           const localHistoryItem = {
             id: Date.now(),
-            title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+            title: lessonTitle,  // Use enhanced title
             types: Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'],
             date: 'Today',
             lessonData: {
               ...formState,
+              generatedTitle: contentState.title,  // Include generated title
               structuredContent: contentState.structuredContent,
               finalOutline: contentState.finalOutline,
               generatedResources: contentState.generatedResources
@@ -177,7 +188,7 @@ const LessonBuilder = () => {
           };
           
           historyService.saveLocalHistory(localHistoryItem);
-          console.log('Lesson saved to local history as fallback');
+          console.log('Lesson saved to local history as fallback with title:', lessonTitle);
         } catch (localError) {
           console.error('Failed to save to local history:', localError);
         }
@@ -228,6 +239,7 @@ const LessonBuilder = () => {
       
       // Update content state with structured content
       const contentUpdate = {
+        title: lessonData.generatedTitle || historyItem.title || 'Loaded Lesson',  // NEW: Use generated title
         finalOutline: lessonData.finalOutline || ''
       };
       
@@ -264,6 +276,8 @@ const LessonBuilder = () => {
         isLoading: false,
         error: ''
       }));
+      
+      console.log('Lesson loaded from history with title:', contentUpdate.title);
     } catch (error) {
       console.error('Error loading lesson from history:', error);
       setUiState(prev => ({

@@ -108,7 +108,7 @@ INTEGRATION INSTRUCTIONS:
    - Make comprehensive changes to fully implement new requirements.
    - Preserve original requirements where compatible.
    - Adapt examples and activities to serve both sets of needs.
-6. Review final outline to verify:
+6. Review final outline to verify: 
    - Complete implementation of additional requirements.
    - Maintenance of original requirements.
    - Coherent integration of all elements.
@@ -116,44 +116,38 @@ INTEGRATION INSTRUCTIONS:
     );
 };
 
+// src/utils/outlineFormatter.js - CLEANED VERSION
+
 export const formatOutlineForDisplay = (structuredContent) => {
+  // Add defensive programming to handle undefined/null input
+  if (!structuredContent || !Array.isArray(structuredContent)) {
+    console.warn('formatOutlineForDisplay: Invalid structured content provided');
+    return 'No content available';
+  }
+
   let output = '';
 
-  structuredContent.forEach((slide, index) => {
+  structuredContent.forEach((item, index) => {
     if (index > 0) {
       output += '\n\n';
     }
-    output += `## Slide ${index + 1}: ${slide.title}\n\n`;
+    
+    // Safely get the title
+    const title = item?.title || `Item ${index + 1}`;
+    output += `## ${title}\n\n`;
+    
+    // Safely get and format content
     output += '### Content\n\n';
-    slide.content.forEach(item => {
-      const wrappedContent = item.split(/(?<=\. )/g).join('\n  ');
-      output += `• ${wrappedContent}\n`;
-    });
-    output += '\n';
-    output += '### Teacher Notes\n\n';
-    const noteTypes = ['ENGAGEMENT', 'ASSESSMENT', 'DIFFERENTIATION'];
-    noteTypes.forEach(type => {
-      const typeNotes = slide.teacher_notes.filter(note => note.startsWith(type));
-      if (typeNotes.length > 0) {
-        output += `**${type}:**\n`;
-        typeNotes.forEach(note => {
-          const cleanNote = note.replace(`${type}: `, '').trim();
-          output += `  • ${cleanNote}\n`;
-        });
-        output += '\n';
-      }
-    });
-    output += '### Visual Elements\n\n';
-    if (slide.visual_elements && slide.visual_elements.length > 0) {
-      slide.visual_elements.forEach(element => {
-        if (element !== '--') {
-          output += `• ${element}\n`;
+    const content = item?.content || [];
+    if (Array.isArray(content)) {
+      content.forEach(contentItem => {
+        if (contentItem && typeof contentItem === 'string') {
+          output += `• ${contentItem}\n`;
         }
       });
-    } else {
-      output += '• (None provided)\n';
     }
     output += '\n';
+    
     if (index < structuredContent.length - 1) {
       output += '\n---\n';
     }
@@ -162,196 +156,91 @@ export const formatOutlineForDisplay = (structuredContent) => {
   return output.trim();
 };
 
-export const parseOutlineToStructured = (outlineText, numSlides = 5) => {
+export const parseOutlineToStructured = (outlineText, numItems = 5) => {
   console.log('Parsing outline text to structured content', { 
-    textLength: outlineText.length,
-    requestedSlides: numSlides
+    textLength: outlineText?.length || 0,
+    requestedItems: numItems
   });
   
-  // Normalize markdown bold syntax and line breaks
+  // Handle null/undefined input
+  if (!outlineText || typeof outlineText !== 'string') {
+    console.warn('parseOutlineToStructured: Invalid outline text provided');
+    return [{
+      title: 'Generated Content',
+      layout: 'TITLE_AND_CONTENT',
+      content: ['No content available']
+    }];
+  }
+  
+  // Normalize text
   const normalizedText = outlineText
+    .replace(/\*\*Section (\d+):/g, 'Section $1:')
     .replace(/\*\*Slide (\d+):/g, 'Slide $1:')
     .replace(/\r\n/g, '\n');
   
-  // Split the text by slide markers - handle different slide header formats
-  const slideRegex = /\n?(?:Slide \d+:|#{1,3} Slide \d+:)/;
-  const slides = normalizedText
-    .split(slideRegex)
+  // Split by section/slide markers
+  const itemRegex = /\n?(?:Section \d+:|Slide \d+:|#{1,3} (?:Section|Slide) \d+:)/;
+  const items = normalizedText
+    .split(itemRegex)
     .filter(Boolean)
-    .map(slide => slide.trim());
+    .map(item => item.trim());
   
-  console.log(`Found ${slides.length} slides in text`);
+  console.log(`Found ${items.length} items in text`);
   
-  if (slides.length === 0) {
-    console.warn('No slides found in outline text. Text might not be in expected format.');
-    // Try an alternative parsing approach - look for sections instead
-    const sections = normalizedText.split(/\n(?:#{1,3} |\*\*)/);
-    if (sections.length > 1) {
-      console.log(`Found ${sections.length} possible sections to convert to slides`);
-      return sections.slice(0, numSlides).map((section, index) => {
-        const titleMatch = section.match(/^(.+?)(?:\n|$)/);
-        const title = titleMatch ? titleMatch[1].trim() : `Slide ${index + 1}`;
-        
-        // Extract content after title
-        const content = section
-          .replace(/^.+?\n/, '')
-          .split('\n')
-          .map(line => line.trim())
-          .filter(Boolean);
-        
-        return {
-          title,
-          layout: 'TITLE_AND_CONTENT',
-          content,
-          teacher_notes: ['Auto-converted from outline text'],
-          visual_elements: [],
-          left_column: [],
-          right_column: []
-        };
-      });
-    }
-    
-    // If all else fails, create a minimal structured content
+  if (items.length === 0) {
+    // Fallback: create a single item with all content
     return [{
-      title: 'Generated Slide',
+      title: 'Generated Content',
       layout: 'TITLE_AND_CONTENT',
-      content: [normalizedText],
-      teacher_notes: ['Auto-generated from text'],
-      visual_elements: [],
-      left_column: [],
-      right_column: []
+      content: [normalizedText]
     }];
   }
 
-  const structuredSlides = [];
+  const structuredItems = [];
 
-  // Function to extract a section from slide text
-  const extractSection = (slideText, sectionName) => {
-    console.log(`Extracting ${sectionName} section from slide text`);
+  // Process each item
+  for (let i = 0; i < items.length && i < numItems; i++) {
+    const itemText = items[i];
     
-    // Create a regex for the section header (handles multiple formats)
-    const sectionPattern = new RegExp(`(?:\\*\\*)?${sectionName}:?(?:\\*\\*)?`, 'i');
-    const sectionMatch = slideText.match(sectionPattern);
+    // Extract title (first line)
+    const titleMatch = itemText.match(/^(?:Section \d+:\s*|Slide \d+:\s*)?([^*\n]+?)(?:\n|$)/);
+    const title = titleMatch ? titleMatch[1].trim() : `Item ${i + 1}`;
     
-    if (!sectionMatch) {
-      console.warn(`Section ${sectionName} not found in slide text`);
-      return [];
-    }
+    // Extract content after "Content:" header
+    const contentMatch = itemText.match(/Content:\s*(.*?)(?:$)/s);
+    let content = [];
     
-    const sectionStart = sectionMatch.index;
-    const sectionHeader = sectionMatch[0];
-    
-    // Find the end of this section (start of next section or end of slide)
-    const nextSections = ['Content:', 'Teacher Notes:', 'Visual Elements:'];
-    let sectionEnd = slideText.length;
-    
-    for (const nextSection of nextSections) {
-      if (nextSection === sectionName + ':') continue;
-      
-      const nextPattern = new RegExp(`(?:\\*\\*)?${nextSection}(?:\\*\\*)?`, 'i');
-      const nextMatch = slideText.substring(sectionStart + sectionHeader.length).match(nextPattern);
-      
-      if (nextMatch) {
-        const nextPos = sectionStart + sectionHeader.length + nextMatch.index;
-        if (nextPos < sectionEnd) {
-          sectionEnd = nextPos;
-        }
-      }
-    }
-    
-    // Extract and clean the section content
-    let sectionContent = slideText
-      .substring(sectionStart + sectionHeader.length, sectionEnd)
-      .trim()
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => 
-        line && 
-        line.length > 0 && 
-        !line.match(/^(?:\*\*)?(?:Content|Teacher Notes|Visual Elements):?(?:\*\*)?$/i)
-      )
-      .map(line => {
-        // Clean bullet points and numbering
-        return line
-          .replace(/^[-•*]\s*/, '')
-          .replace(/^\d+\.\s*/, '')
-          .trim();
-      });
-    
-    console.log(`Extracted ${sectionContent.length} items from ${sectionName}`);
-    return sectionContent;
-  };
-
-  // Process each slide
-  for (let i = 0; i < slides.length; i++) {
-    if (i >= numSlides) {
-      console.warn(`Limiting to ${numSlides} slides as requested`);
-      break;
-    }
-    
-    const slideText = slides[i];
-    
-    // Extract title
-    const titleMatch = slideText.match(/^(?:Slide \d+:\s*)?([^*\n]+?)(?:\n|$)/);
-    const title = titleMatch ? titleMatch[1].trim() : `Slide ${i + 1}`;
-    
-    // Determine layout
-    const layout = (
-      slideText.toLowerCase().includes('comparison') || 
-      slideText.toLowerCase().includes('vs') ||
-      slideText.toLowerCase().includes('compare')
-    ) ? 'TWO_COLUMN' : 'TITLE_AND_CONTENT';
-    
-    // Extract sections
-    const content = extractSection(slideText, 'Content');
-    const teacherNotes = extractSection(slideText, 'Teacher Notes');
-    const visualElements = extractSection(slideText, 'Visual Elements');
-    
-    // Handle two-column layout
-    let leftColumn = [];
-    let rightColumn = [];
-    
-    if (layout === 'TWO_COLUMN' && content.length > 0) {
-      const midpoint = Math.ceil(content.length / 2);
-      leftColumn = content.slice(0, midpoint);
-      rightColumn = content.slice(midpoint);
-    }
-    
-    // If no content sections found, try to extract content from the whole slide
-    if (content.length === 0 && teacherNotes.length === 0) {
-      console.warn(`No structured sections found in slide ${i + 1}, extracting from raw text`);
-      
-      const rawContent = slideText
-        .replace(/^Slide \d+:\s*[^\n]+\n/, '') // Remove title line
+    if (contentMatch) {
+      // Extract bullet points
+      const contentText = contentMatch[1].trim();
+      content = contentText
         .split('\n')
         .map(line => line.trim())
-        .filter(Boolean);
-      
-      structuredSlides.push({
-        title,
-        layout: 'TITLE_AND_CONTENT',
-        content: rawContent,
-        teacher_notes: ['Auto-extracted from slide text'],
-        visual_elements: [],
-        left_column: [],
-        right_column: []
-      });
-      
-      continue;
+        .filter(line => line && line.length > 0)
+        .map(line => {
+          // Clean bullet points
+          return line.replace(/^[-•*]\s*/, '').trim();
+        })
+        .filter(line => line.length > 0);
     }
     
-    // Add slide to structured content
-    structuredSlides.push({
+    // If no content found, extract from raw text
+    if (content.length === 0) {
+      const lines = itemText.split('\n').map(line => line.trim()).filter(Boolean);
+      // Skip the first line (title) and extract remaining content
+      content = lines.slice(1).filter(line => 
+        !line.toLowerCase().startsWith('content:') &&
+        !line.startsWith('---')
+      );
+    }
+    
+    structuredItems.push({
       title,
-      layout,
-      content,
-      teacher_notes: teacherNotes.length > 0 ? teacherNotes : ['Teacher notes placeholder'],
-      visual_elements: visualElements.length > 0 ? visualElements : [],
-      left_column: leftColumn,
-      right_column: rightColumn
+      layout: 'TITLE_AND_CONTENT',
+      content
     });
   }
   
-  console.log(`Created structured content with ${structuredSlides.length} slides`);
-  return structuredSlides;
+  console.log(`Created structured content with ${structuredItems.length} items`);
+  return structuredItems;
 };

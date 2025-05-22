@@ -1,13 +1,38 @@
-// src/pages/LessonBuilder/hooks/useForm.js
+// src/pages/LessonBuilder/hooks/useForm.js - CLEANED VERSION
 import { useState, useCallback } from "react";
-import { formatOutlineForDisplay, parseOutlineToStructured } from "../../../utils/outlineFormatter";
-import { EXAMPLE_FORM_DATA, EXAMPLE_OUTLINE } from "../../../utils/constants";
+import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
+import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
 import { outlineService } from "../../../services";
 
+// Clean example outline structure
+const CLEAN_EXAMPLE_OUTLINE = {
+  title: "Equivalent Fractions Lesson",
+  structured_content: [
+    {
+      title: "Let's Explore Equivalent Fractions!",
+      layout: "TITLE_AND_CONTENT",
+      content: [
+        "Students will be able to recognize and create equivalent fractions in everyday situations, like sharing cookies, pizza, or our favorite Colorado trail mix",
+        "Students will be able to explain why different fractions can show the same amount using pictures and numbers"
+      ]
+    },
+    {
+      title: "What Are Equivalent Fractions?",
+      layout: "TITLE_AND_CONTENT",
+      content: [
+        "Let's learn our fraction vocabulary!",
+        "Imagine sharing a breakfast burrito with your friend - you can cut it in half (1/2) or into four equal pieces and take two (2/4). You get the same amount!",
+        "The top number (numerator) tells us how many pieces we have",
+        "The bottom number (denominator) tells us how many total equal pieces",
+        "When fractions show the same amount, we call them equivalent"
+      ]
+    }
+  ]
+};
+
 export default function useForm({ setShowSignInPrompt }) {
-  // Initial form state with all required fields
   const [formState, setFormState] = useState({
-    resourceType: [], // Changed to array for multiple selections
+    resourceType: [],
     gradeLevel: "",
     subjectFocus: "",
     selectedStandards: [],
@@ -30,10 +55,11 @@ export default function useForm({ setShowSignInPrompt }) {
   });
 
   const [contentState, setContentState] = useState({
+    title: "",
     outlineToConfirm: "",
     finalOutline: "",
     structuredContent: [],
-    generatedResources: {} // New field to store multiple resource outputs
+    generatedResources: {}
   });
 
   const resetForm = useCallback(() => {
@@ -62,6 +88,7 @@ export default function useForm({ setShowSignInPrompt }) {
     }));
 
     setContentState({
+      title: "",
       outlineToConfirm: "",
       finalOutline: "",
       structuredContent: [],
@@ -71,37 +98,29 @@ export default function useForm({ setShowSignInPrompt }) {
 
   const handleFormChange = useCallback((field, value, isMultiSelect = false) => {
     setFormState(prev => {
-      // Special handling for resourceType multi-select
       if (field === 'resourceType' && isMultiSelect) {
         let newResourceTypes;
         
-        // If resourceType is already an array
         if (Array.isArray(prev.resourceType)) {
           if (prev.resourceType.includes(value)) {
-            // Remove the value if it already exists
             newResourceTypes = prev.resourceType.filter(type => type !== value);
           } else {
-            // Add the value if it doesn't exist
             newResourceTypes = [...prev.resourceType, value];
           }
         } else if (prev.resourceType) {
-          // If there's a single value already, create an array with both values
           if (prev.resourceType === value) {
             newResourceTypes = [];
           } else {
             newResourceTypes = [prev.resourceType, value];
           }
         } else {
-          // If no value exists yet, create an array with the new value
           newResourceTypes = [value];
         }
         
-        // Handle empty array - convert back to empty string
         if (newResourceTypes.length === 0) {
           return { ...prev, [field]: [] };
         }
         
-        // Special handling for Presentation type
         if (newResourceTypes.includes('Presentation') && !prev.numSlides) {
           return { 
             ...prev, 
@@ -113,7 +132,6 @@ export default function useForm({ setShowSignInPrompt }) {
         return { ...prev, [field]: newResourceTypes };
       }
       
-      // Regular single-value handling
       return { ...prev, [field]: value };
     });
   }, []);
@@ -122,9 +140,7 @@ export default function useForm({ setShowSignInPrompt }) {
     if (isChecked) {
       setFormState(prev => ({
         ...EXAMPLE_FORM_DATA,
-        // For multi-select compatibility, convert to array 
         resourceType: [EXAMPLE_FORM_DATA.resourceType],
-        // Preserve any current settings that shouldn't be overwritten
         numSlides: prev.numSlides,
         includeImages: prev.includeImages
       }));
@@ -135,7 +151,7 @@ export default function useForm({ setShowSignInPrompt }) {
   }, [resetForm]);
 
   const handleGenerateOutline = useCallback(async () => {
-    // Validate the essential required fields
+    // Validate required fields
     if (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0) || 
         !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
       const missingFields = [
@@ -161,19 +177,19 @@ export default function useForm({ setShowSignInPrompt }) {
 
     try {
       if (uiState.isExample) {
-        // Example workflow code (unchanged)
-        console.log('Using example data');
+        console.log('Using clean example data');
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        const displayText = formatOutlineForDisplay(EXAMPLE_OUTLINE.structured_content);
+        const displayText = formatOutlineForDisplay(CLEAN_EXAMPLE_OUTLINE.structured_content);
         
         setContentState({
+          title: CLEAN_EXAMPLE_OUTLINE.title,
           outlineToConfirm: displayText,
           finalOutline: displayText,
-          structuredContent: EXAMPLE_OUTLINE.structured_content,
+          structuredContent: CLEAN_EXAMPLE_OUTLINE.structured_content,
           generatedResources: {
-            'Presentation': EXAMPLE_OUTLINE.structured_content
+            'Presentation': CLEAN_EXAMPLE_OUTLINE.structured_content
           }
         });
         
@@ -195,7 +211,6 @@ export default function useForm({ setShowSignInPrompt }) {
       });
       
       try {
-        // Normalize resourceType to array
         const resourceTypes = Array.isArray(formState.resourceType) 
           ? formState.resourceType 
           : [formState.resourceType];
@@ -203,22 +218,22 @@ export default function useForm({ setShowSignInPrompt }) {
         const generatedResources = {};
         let primaryContent = null;
         let formattedOutline = "";
+        let generatedTitle = "";
         
-        // For each resource type, generate an outline
+        // Generate outline for each resource type
         for (const resourceType of resourceTypes) {
-          // Build request with all available fields
           const requestData = {
             resourceType: resourceType,
             gradeLevel: formState.gradeLevel,
             subjectFocus: formState.subjectFocus,
             language: formState.language,
-            // Use subject focus as the lesson topic if not explicitly provided
             lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
             custom_prompt: formState.customPrompt || '',
             selectedStandards: Array.isArray(formState.selectedStandards) 
               ? formState.selectedStandards 
               : [],
             numSlides: formState.numSlides || 5,
+            numSections: 5, // For non-presentation resources
             includeImages: Boolean(formState.includeImages)
           };
           
@@ -226,36 +241,39 @@ export default function useForm({ setShowSignInPrompt }) {
           
           console.log(`API request for ${resourceType} successful:`, {
             hasMessages: Boolean(data.messages),
+            hasTitle: Boolean(data.title),
             structuredContentLength: data.structured_content?.length || 0
           });
           
-          // Process the response data
           if (!data.messages || !data.structured_content) {
             throw new Error(`Invalid response format from server for ${resourceType}`);
           }
 
-          const structuredContent = Array.isArray(data.structured_content) 
-            ? data.structured_content 
-            : parseOutlineToStructured(data.messages[0], formState.numSlides || 5);
+          // Clean the structured content - SIMPLIFIED structure
+          const cleanStructuredContent = data.structured_content.map(item => ({
+            title: item.title || 'Untitled',
+            layout: item.layout || 'TITLE_AND_CONTENT',
+            content: Array.isArray(item.content) ? item.content : []
+          }));
 
-          if (!structuredContent || structuredContent.length === 0) {
-            throw new Error(`No valid slide content returned from the server for ${resourceType}`);
+          if (!cleanStructuredContent || cleanStructuredContent.length === 0) {
+            throw new Error(`No valid content returned from the server for ${resourceType}`);
           }
 
-          // Store in the generatedResources object
-          generatedResources[resourceType] = structuredContent;
+          // Store in generatedResources
+          generatedResources[resourceType] = cleanStructuredContent;
           
-          // Store the first resource type's content as primary
+          // Use first resource as primary
           if (!primaryContent) {
-            primaryContent = structuredContent;
-            
-            // Important: Format the outline here to ensure consistency
-            formattedOutline = formatOutlineForDisplay(structuredContent);
+            primaryContent = cleanStructuredContent;
+            formattedOutline = formatOutlineForDisplay(cleanStructuredContent);
+            generatedTitle = data.title || `${resourceType} - ${formState.subjectFocus || 'Lesson'}`;
           }
         }
         
-        // Set the primary resource type for display - using the same formatted outline for both properties
+        // Set content state
         setContentState({
+          title: generatedTitle,
           outlineToConfirm: formattedOutline,
           finalOutline: formattedOutline,
           structuredContent: primaryContent,
@@ -267,10 +285,10 @@ export default function useForm({ setShowSignInPrompt }) {
           outlineModalOpen: true,
           isLoading: false
         }));
+        
       } catch (apiError) {
         console.error('API request failed:', apiError);
         
-        // More comprehensive error handling
         let errorMessage = 'Error generating outline: ';
         
         if (apiError.status === 405) {
@@ -297,7 +315,6 @@ export default function useForm({ setShowSignInPrompt }) {
       }));
     }
   }, [formState, uiState.isExample]);
-  
 
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
@@ -316,12 +333,10 @@ export default function useForm({ setShowSignInPrompt }) {
     }));
 
     try {
-      // Normalize resourceType to array
       const resourceTypes = Array.isArray(formState.resourceType) 
         ? formState.resourceType 
         : [formState.resourceType];
         
-      // For now, only regenerate the primary resource type
       const primaryResourceType = resourceTypes[0];
       
       const requestData = {
@@ -335,28 +350,32 @@ export default function useForm({ setShowSignInPrompt }) {
 
       const data = await outlineService.generate(requestData);
       
-      // Ensure we have the expected response structure
       if (!data.messages || !data.structured_content) {
         throw new Error('Invalid response format from server');
       }
 
-      const structuredContent = Array.isArray(data.structured_content) 
-        ? data.structured_content 
-        : parseOutlineToStructured(data.messages[0]);
+      // Clean the structured content - SIMPLIFIED structure
+      const cleanStructuredContent = data.structured_content.map(item => ({
+        title: item.title || 'Untitled',
+        layout: item.layout || 'TITLE_AND_CONTENT',
+        content: Array.isArray(item.content) ? item.content : []
+      }));
         
-      // Format the outline once and use it consistently
-      const formattedOutline = formatOutlineForDisplay(structuredContent);
+      const formattedOutline = formatOutlineForDisplay(cleanStructuredContent);
+      
+      const regeneratedTitle = data.title || contentState.title || `${primaryResourceType} - ${formState.subjectFocus || 'Lesson'}`;
         
       // Update the generatedResources with the new content
       const updatedResources = {
         ...contentState.generatedResources,
-        [primaryResourceType]: structuredContent
+        [primaryResourceType]: cleanStructuredContent
       };
 
       setContentState({
+        title: regeneratedTitle,
         outlineToConfirm: formattedOutline,
         finalOutline: formattedOutline,
-        structuredContent,
+        structuredContent: cleanStructuredContent,
         generatedResources: updatedResources
       });
 
@@ -372,9 +391,9 @@ export default function useForm({ setShowSignInPrompt }) {
         isLoading: false
       }));
     }
-  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources]);
+  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources, contentState.title]);
     
-    return {
+  return {
     formState,
     uiState,
     contentState,

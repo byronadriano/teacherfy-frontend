@@ -124,17 +124,28 @@ export const historyService = {
 
   /**
    * Track lesson generation for history.
+   * Enhanced to use the generated title from the outline.
    * 
    * @param {Object} formState - The form state with lesson details
-   * @param {Object} contentState - The content state with structured content
+   * @param {Object} contentState - The content state with structured content and title
    */
   async trackLessonGeneration(formState, contentState) {
     try {
+      // NEW: Use the generated title from contentState if available
+      const lessonTitle = contentState.title || 
+                         formState.lessonTopic || 
+                         formState.subjectFocus || 
+                         'Untitled Lesson';
+      
+      console.log('Tracking lesson with title:', lessonTitle);
+      
       const historyItem = {
-        title: formState.lessonTopic || formState.subjectFocus || 'Untitled Lesson',
+        title: lessonTitle,  // Use the enhanced title logic
         resourceType: formState.resourceType || 'PRESENTATION',
         lessonData: {
           ...formState,
+          // Include the generated title in lesson data
+          generatedTitle: contentState.title,
           structuredContent: contentState.structuredContent.map(slide => ({
             title: slide.title || '',
             layout: slide.layout || 'TITLE_AND_CONTENT',
@@ -144,7 +155,9 @@ export const historyService = {
             left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
             right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
           })),
-          finalOutline: contentState.finalOutline || ''
+          finalOutline: contentState.finalOutline || '',
+          // Include generated resources if available
+          generatedResources: contentState.generatedResources || {}
         }
       };
       
@@ -176,6 +189,7 @@ export const historyService = {
   
   /**
    * Saves history to local storage for anonymous users.
+   * Enhanced to preserve titles properly.
    * 
    * @param {Object} historyItem - The history item to save
    */
@@ -187,6 +201,19 @@ export const historyService = {
       if (!historyItem.id) {
         historyItem.id = Date.now();
       }
+      
+      // Ensure we have a good title
+      if (!historyItem.title || historyItem.title === 'Untitled Lesson') {
+        // Try to extract a better title from lesson data
+        if (historyItem.lessonData) {
+          historyItem.title = historyItem.lessonData.generatedTitle || 
+                             historyItem.lessonData.lessonTopic || 
+                             historyItem.lessonData.subjectFocus || 
+                             'Educational Resource';
+        }
+      }
+      
+      console.log('Saving local history item with title:', historyItem.title);
       
       // Check if an item with the same title and resource type already exists
       const existingIndex = history.findIndex(item => 
