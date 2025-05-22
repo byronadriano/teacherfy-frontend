@@ -22,18 +22,47 @@ const StandardsModal = ({
   onClose,
   selectedStandards = [],
   onStandardsChange,
-  maxStandards = 3
+  maxStandards = 3,
+  defaultGrade = '', // Add this prop
+  defaultSubject = '' // Add this prop
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGrade, setSelectedGrade] = useState('Grade2');
+  // Convert grade format if needed (e.g., "4th grade" -> "Grade4")
+  const getGradeKey = (grade) => {
+    if (!grade) return 'Grade2';
+    if (grade.includes('Kindergarten')) return 'Kindergarten';
+    if (grade.includes('1st')) return 'Grade1';
+    if (grade.includes('2nd')) return 'Grade2';
+    if (grade.includes('3rd')) return 'Grade3';
+    if (grade.includes('4th')) return 'Grade4';
+    if (grade.includes('5th')) return 'Grade5';
+    if (grade.includes('6th')) return 'Grade6';
+    if (grade.includes('7th')) return 'Grade7';
+    if (grade.includes('8th')) return 'Grade8';
+    if (grade.includes('9th') || grade.includes('10th') || grade.includes('11th') || grade.includes('12th')) return 'High School';
+    return 'Grade2';
+  };
+
+  // Convert subject format if needed
+  const getSubjectKey = (subject) => {
+    if (!subject) return 'ELA';
+    if (subject.toLowerCase().includes('math')) return 'Mathematics';
+    if (subject.toLowerCase().includes('english') || subject.toLowerCase().includes('language')) return 'ELA';
+    return 'ELA';
+  };
+
+  const [selectedGrade, setSelectedGrade] = useState(getGradeKey(defaultGrade));
   const [localSelectedStandards, setLocalSelectedStandards] = useState(selectedStandards);
-  const [activeSubject, setActiveSubject] = useState('ELA');
+  const [activeSubject, setActiveSubject] = useState(getSubjectKey(defaultSubject));
 
   React.useEffect(() => {
     if (open) {
       setLocalSelectedStandards(selectedStandards);
+      // Reset grade and subject when modal opens with new defaults
+      setSelectedGrade(getGradeKey(defaultGrade));
+      setActiveSubject(getSubjectKey(defaultSubject));
     }
-  }, [open, selectedStandards]);
+  }, [open, selectedStandards, defaultGrade, defaultSubject]);
 
   const currentStandards = useMemo(() => {
     const gradeStandards = FORM.STANDARDS.COMMON_CORE_STANDARDS[selectedGrade];

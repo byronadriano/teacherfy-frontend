@@ -69,8 +69,13 @@ const FilterButton = ({ label, isSelected, selectedCount, onClick }) => (
             backgroundColor: '#FFFFFF',
             border: isSelected ? '1px solid #2563EB' : '1px solid #E2E8F0',
             cursor: 'pointer',
-            minWidth: '115px',
+            minWidth: '100px', // Reduced from 115px
+            maxWidth: '200px', // Added max width
             position: 'relative',
+            flexShrink: 0, // Prevent shrinking
+            whiteSpace: 'nowrap', // Prevent text wrapping
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
             '&:hover': {
                 backgroundColor: '#F8FAFC',
                 borderColor: isSelected ? '#2563EB' : '#CBD5E1'
@@ -79,8 +84,10 @@ const FilterButton = ({ label, isSelected, selectedCount, onClick }) => (
     >
         <Typography sx={{ 
             color: isSelected ? '#2563EB' : '#64748B',
-            fontSize: '0.9375rem',
-            fontWeight: isSelected ? 600 : 500
+            fontSize: '0.875rem', // Slightly smaller font
+            fontWeight: isSelected ? 600 : 500,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
         }}>
             {label}
         </Typography>
@@ -88,9 +95,9 @@ const FilterButton = ({ label, isSelected, selectedCount, onClick }) => (
             <Box
                 sx={{
                     position: 'absolute',
-                    top: -6,
-                    right: -6,
-                    backgroundColor: '#2563EB',
+                    top: -1,
+                    right: -1,
+                    backgroundColor: '#7c3aed',
                     color: 'white',
                     width: 18,
                     height: 18,
@@ -99,13 +106,14 @@ const FilterButton = ({ label, isSelected, selectedCount, onClick }) => (
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '0.7rem',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    flexShrink: 0
                 }}
             >
                 {selectedCount}
             </Box>
         )}
-        <ChevronDown size={18} color={isSelected ? '#2563EB' : '#94A3B8'} />
+        <ChevronDown size={16} color={isSelected ? '#2563EB' : '#94A3B8'} />
     </Box>
 );
 
@@ -135,7 +143,7 @@ const PresentationOptions = ({
                 mt: 0,
                 ml: -0.5,
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
-                border: '1px solid #E2E8F0',
+                border: '1px solidrgb(240, 226, 239)',
                 borderRadius: '8px',
                 minWidth: '200px'
             }
@@ -245,100 +253,118 @@ const FiltersBar = ({ formState, handleFormChange }) => {
         ? formState.resourceType.length 
         : (formState.resourceType ? 1 : 0);
 
-    return (
-        <Box sx={{ 
-            display: 'flex',
-            gap: 1.5,
-            mb: 3,
-            flexWrap: 'wrap',
-            justifyContent: 'flex-start'
-          }}>
-            {/* Resource Button */}
-            <FilterButton
-                label="Resources"
-                isSelected={selectedResourceCount > 0}
-                selectedCount={selectedResourceCount}
-                onClick={(e) => handleFilterClick(e, 'resourceType')}
-            />
+return (
+    <Box sx={{ 
+        display: 'flex',
+        gap: 1.5,
+        mb: 3,
+        flexWrap: 'wrap',
+        justifyContent: 'center', // Changed from flex-start to center
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: '100%',
+        // Ensure items don't grow beyond their content
+        '& > *': {
+            flexShrink: 0
+        }
+    }}>
+        {/* Resource Button */}
+        <FilterButton
+            label="Resources"
+            isSelected={selectedResourceCount > 0}
+            selectedCount={selectedResourceCount}
+            onClick={(e) => handleFilterClick(e, 'resourceType')}
+        />
 
-            {/* Grade Level Button */}
-            <FilterButton
-                label={formState.gradeLevel || "Grade"}
-                isSelected={!!formState.gradeLevel}
-                onClick={(e) => handleFilterClick(e, 'gradeLevel')}
-            />
+        {/* Grade Level Button */}
+        <FilterButton
+            label={formState.gradeLevel || "Grade"}
+            isSelected={!!formState.gradeLevel}
+            onClick={(e) => handleFilterClick(e, 'gradeLevel')}
+        />
 
-            {/* Subject Button */}
-            <FilterButton
-                label={formState.subjectFocus || "Subject"}
-                isSelected={!!formState.subjectFocus}
-                onClick={(e) => handleFilterClick(e, 'subjectFocus')}
-            />
+        {/* Subject Button */}
+        <FilterButton
+            label={formState.subjectFocus || "Subject"}
+            isSelected={!!formState.subjectFocus}
+            onClick={(e) => handleFilterClick(e, 'subjectFocus')}
+        />
 
-            {/* Standards Button */}
-            <FilterButton
-                label={
-                    formState.selectedStandards?.length
-                        ? `${formState.selectedStandards.length} Standard${
-                            formState.selectedStandards.length === 1 ? '' : 's'
-                          } Selected`
-                        : "Standards"
-                }
-                isSelected={formState.selectedStandards?.length > 0}
-                onClick={(e) => handleFilterClick(e, 'standards')}
-            />
+        {/* Standards Button */}
+        <FilterButton
+            label={
+                formState.selectedStandards?.length
+                    ? `${formState.selectedStandards.length} Standard${
+                        formState.selectedStandards.length === 1 ? '' : 's'
+                      } `
+                    : "Standards"
+            }
+            isSelected={formState.selectedStandards?.length > 0}
+            onClick={(e) => handleFilterClick(e, 'standards')}
+        />
 
-            {/* Language Button */}
-            <FilterButton
-                label={formState.language || "Language"}
-                isSelected={!!formState.language}
-                onClick={(e) => handleFilterClick(e, 'language')}
-            />
+        {/* Language Button */}
+        <FilterButton
+            label={formState.language || "Language"}
+            isSelected={!!formState.language}
+            onClick={(e) => handleFilterClick(e, 'language')}
+        />
 
-            {/* Display selected resource types as chips */}
-            {Array.isArray(formState.resourceType) && formState.resourceType.length > 0 && (
-                <Box sx={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: 1, 
-                    alignItems: 'center'
-                }}>
-                    {formState.resourceType.map(type => (
-                        <Chip
-                            key={type}
-                            label={type}
-                            onDelete={() => {
-                                const newTypes = formState.resourceType.filter(t => t !== type);
-                                handleFormChange('resourceType', newTypes.length ? newTypes : '');
-                            }}
-                            size="small"
-                            sx={{
-                                bgcolor: 'rgba(37, 99, 235, 0.1)',
-                                color: '#2563EB',
-                                fontWeight: '500',
-                                '& .MuiChip-deleteIcon': {
-                                    color: '#2563EB',
-                                    '&:hover': {
-                                        color: '#1E40AF'
-                                    }
+        {/* Display selected resource types as chips - moved to second row */}
+        {Array.isArray(formState.resourceType) && formState.resourceType.length > 0 && (
+            <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 1, 
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%', // Take full width to force new row
+                mt: 1 // Add margin top for spacing
+            }}>
+                {formState.resourceType.map(type => (
+                    <Chip
+                        key={type}
+                        label={type}
+                        onDelete={() => {
+                            const newTypes = formState.resourceType.filter(t => t !== type);
+                            handleFormChange('resourceType', newTypes.length ? newTypes : '');
+                        }}
+                        size="small"
+                        sx={{
+                            bgcolor: 'rgba(147, 51, 234, 0.1)', // Light purple background
+                            color: '#7c3aed', // Purple text
+                            fontWeight: '500',
+                            border: '1px solid rgba(147, 51, 234, 0.2)',
+                            '& .MuiChip-deleteIcon': {
+                                color: '#7c3aed',
+                                '&:hover': {
+                                    color: '#6d28d9'
                                 }
-                            }}
-                            deleteIcon={<X size={14} />}
-                        />
-                    ))}
-                </Box>
-            )}
+                            },
+                            '&:hover': {
+                                bgcolor: 'rgba(147, 51, 234, 0.15)'
+                            }
+                        }}
+                        deleteIcon={<X size={14} />}
+                    />
+                ))}
+            </Box>
+        )}
 
-            {/* Standards Modal */}
-            <StandardsModal
-                open={showStandardsModal}
-                onClose={() => setShowStandardsModal(false)}
-                selectedStandards={formState.selectedStandards || []}
-                onStandardsChange={(standards) => {
-                    handleFormChange('selectedStandards', standards);
-                    setShowStandardsModal(false);
-                }}
-            />
+        {/* Standards Modal */}
+        <StandardsModal
+            open={showStandardsModal}
+            onClose={() => setShowStandardsModal(false)}
+            selectedStandards={formState.selectedStandards || []}
+            onStandardsChange={(standards) => {
+                handleFormChange('selectedStandards', standards);
+                setShowStandardsModal(false);
+            }}
+            // Add these new props
+            defaultGrade={formState.gradeLevel}
+            defaultSubject={formState.subjectFocus}
+        />
+
 
             {/* Main Popover */}
             <Popover
