@@ -13,7 +13,6 @@ import theme from './styles/theme';
 import './styles/app.css';
 import './styles/global.css';
 
-
 // Note: Mobile CSS is imported conditionally if it exists
 try {
   require('./styles/mobile.css');
@@ -23,6 +22,7 @@ try {
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showFooter, setShowFooter] = useState(true);
   const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
@@ -43,6 +43,24 @@ function App() {
       document.body.classList.remove('is-mobile-device');
     }
   }, [isMobile]);
+
+  // Check footer visibility based on sessionStorage
+  useEffect(() => {
+    const checkFooterVisibility = () => {
+      const hideFooter = sessionStorage.getItem('hideFooter') === 'true';
+      setShowFooter(!hideFooter);
+    };
+    
+    // Initial check
+    checkFooterVisibility();
+    
+    // Check periodically since sessionStorage changes don't trigger storage event on same tab
+    const interval = setInterval(checkFooterVisibility, 100);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleSidebarToggle = (collapsed) => {
     setSidebarCollapsed(collapsed);
@@ -79,8 +97,30 @@ function App() {
             </Routes>
           </Box>
           
-          {/* Footer displays outside the main content area */}
-          {window.location.pathname === '/' && <AppFooter />}
+          {/* Footer displays outside the main content area - only show when showFooter is true */}
+          {window.location.pathname === '/' && showFooter && (
+            <Box
+              component="footer"
+              sx={{
+                position: 'fixed',
+                bottom: 0,
+                left: '60px', // Account for sidebar width
+                right: 0,
+                py: 2,
+                px: 4,
+                backgroundColor: '#ffffff',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 3,
+                flexWrap: 'wrap',
+                zIndex: 5 // Below sidebar but above content
+              }}
+            >
+              <AppFooter />
+            </Box>
+          )}
         </Box>
       </ThemeProvider>
     </Router>

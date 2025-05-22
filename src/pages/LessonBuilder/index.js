@@ -1,4 +1,4 @@
-// src/pages/LessonBuilder/index.js
+// src/pages/LessonBuilder/index.js - Updated with logo and clean footer logic
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 
@@ -17,10 +17,10 @@ import useForm from './hooks/useForm';
 import useOutline from './hooks/useOutline';
 import usePresentation from './hooks/usePresentation';
 import { historyService } from '../../services';
+import Logo from '../../assets/images/Teacherfyoai.png';
 
-const LessonBuilder = () => {
+const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   // States
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [userSettings, setUserSettings] = useState({
     defaultGrade: '',
     defaultSubject: '',
@@ -65,8 +65,7 @@ const LessonBuilder = () => {
     isLoading: presentationLoading,
     googleSlidesState,
     subscriptionState,
-    // generatePresentation,
-    generateMultiResource, // New method for generating multiple resources
+    generateMultiResource,
     generateGoogleSlides,
   } = usePresentation({
     token: user?.token,
@@ -81,10 +80,6 @@ const LessonBuilder = () => {
     if (savedSettings) {
       setUserSettings(JSON.parse(savedSettings));
     }
-
-    // Restore sidebar collapsed state
-    const storedSidebarState = localStorage.getItem('sidebarCollapsed') === 'true';
-    setIsSidebarCollapsed(storedSidebarState);
   }, []);
 
   const handleSettingsChange = (newSettings) => {
@@ -96,20 +91,12 @@ const LessonBuilder = () => {
     handleFormChange('customPrompt', e.target.value);
   };
 
-  // Toggle sidebar and persist state
-  const toggleSidebar = () => {
-    const newCollapsedState = !isSidebarCollapsed;
-    setIsSidebarCollapsed(newCollapsedState);
-    localStorage.setItem('sidebarCollapsed', newCollapsedState.toString());
-  };
-
   // Save lesson to history after successful generation
   const saveToHistory = useCallback(async () => {
     if (contentState.structuredContent?.length > 0) {
       try {
         console.log('Saving lesson to history...');
         
-        // Create a clean version of the form state to save
         const cleanFormState = {
           resourceType: formState.resourceType,
           gradeLevel: formState.gradeLevel || '',
@@ -122,10 +109,8 @@ const LessonBuilder = () => {
           selectedStandards: Array.isArray(formState.selectedStandards) ? [...formState.selectedStandards] : []
         };
         
-        // Create a clean version of the structured content and generatedResources
         const cleanGeneratedResources = {};
         
-        // Clean up each resource type
         if (contentState.generatedResources) {
           Object.entries(contentState.generatedResources).forEach(([type, content]) => {
             cleanGeneratedResources[type] = content.map(slide => ({
@@ -150,24 +135,20 @@ const LessonBuilder = () => {
           right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
         }));
         
-        // NEW: Enhanced content state with title for tracking
         const enhancedContentState = {
-          title: contentState.title,  // Include the generated title
+          title: contentState.title,
           structuredContent: cleanStructuredContent,
           finalOutline: contentState.finalOutline || '',
           generatedResources: cleanGeneratedResources
         };
         
-        // Use the trackLessonGeneration method with enhanced content state
         await historyService.trackLessonGeneration(cleanFormState, enhancedContentState);
         
         console.log('Lesson successfully saved to history with title:', contentState.title);
       } catch (error) {
         console.error('Error saving to history:', error);
         
-        // If the server call fails, save directly to local storage
         try {
-          // NEW: Use the generated title for local storage fallback
           const lessonTitle = contentState.title || 
                             formState.lessonTopic || 
                             formState.subjectFocus || 
@@ -175,12 +156,12 @@ const LessonBuilder = () => {
           
           const localHistoryItem = {
             id: Date.now(),
-            title: lessonTitle,  // Use enhanced title
+            title: lessonTitle,
             types: Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'],
             date: 'Today',
             lessonData: {
               ...formState,
-              generatedTitle: contentState.title,  // Include generated title
+              generatedTitle: contentState.title,
               structuredContent: contentState.structuredContent,
               finalOutline: contentState.finalOutline,
               generatedResources: contentState.generatedResources
@@ -203,9 +184,17 @@ const LessonBuilder = () => {
     }
   }, [uiState.outlineConfirmed, contentState.structuredContent, saveToHistory]);
 
+  // Check if we should show the initial state (logo, title, form)
+  const showInitialState = !uiState.outlineConfirmed || contentState.structuredContent.length === 0;
+
+  // Communicate footer visibility to parent (App.js)
+  useEffect(() => {
+    // Set a flag in sessionStorage that App.js can read
+    sessionStorage.setItem('hideFooter', (!showInitialState).toString());
+  }, [showInitialState]);
+
   // Handle history item selection
   const handleHistoryItemSelect = (historyItem) => {
-    // Check if the history item has valid lesson data
     if (!historyItem || !historyItem.lessonData) {
       console.error('Invalid history item selected:', historyItem);
       return;
@@ -216,7 +205,6 @@ const LessonBuilder = () => {
     try {
       const { lessonData } = historyItem;
       
-      // For resource type, handle both array and string formats
       if (lessonData.resourceType) {
         const resourceType = Array.isArray(lessonData.resourceType) 
           ? lessonData.resourceType 
@@ -225,7 +213,6 @@ const LessonBuilder = () => {
         handleFormChange('resourceType', resourceType, true);
       }
       
-      // Handle other fields
       if (lessonData.gradeLevel) handleFormChange('gradeLevel', lessonData.gradeLevel);
       if (lessonData.subjectFocus) handleFormChange('subjectFocus', lessonData.subjectFocus);
       if (lessonData.language) handleFormChange('language', lessonData.language);
@@ -237,24 +224,20 @@ const LessonBuilder = () => {
         handleFormChange('selectedStandards', lessonData.selectedStandards);
       }
       
-      // Update content state with structured content
       const contentUpdate = {
-        title: lessonData.generatedTitle || historyItem.title || 'Loaded Lesson',  // NEW: Use generated title
+        title: lessonData.generatedTitle || historyItem.title || 'Loaded Lesson',
         finalOutline: lessonData.finalOutline || ''
       };
       
-      // Handle both generatedResources and structuredContent
       if (lessonData.generatedResources && typeof lessonData.generatedResources === 'object') {
         contentUpdate.generatedResources = lessonData.generatedResources;
         
-        // Get first resource type for structuredContent
         const primaryType = Object.keys(lessonData.generatedResources)[0];
         if (primaryType) {
           contentUpdate.structuredContent = lessonData.generatedResources[primaryType];
         }
       } else if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
         contentUpdate.structuredContent = lessonData.structuredContent;
-        // Create generatedResources with a single entry
         const resourceType = Array.isArray(lessonData.resourceType) 
           ? lessonData.resourceType[0] 
           : (lessonData.resourceType || 'Presentation');
@@ -269,7 +252,6 @@ const LessonBuilder = () => {
         ...contentUpdate
       }));
       
-      // Update UI state to show the loaded content
       setUiState(prev => ({
         ...prev,
         outlineConfirmed: true,
@@ -287,7 +269,6 @@ const LessonBuilder = () => {
     }
   };
   
-  // Track lesson generation in history
   const trackLessonInHistory = async () => {
     if (!contentState.structuredContent || contentState.structuredContent.length === 0) {
       return;
@@ -298,11 +279,9 @@ const LessonBuilder = () => {
       console.log('Lesson tracked in history');
     } catch (error) {
       console.error('Failed to track lesson in history:', error);
-      // Continue without failing the main flow
     }
   };
 
-  // Handler for generating resources - can generate specific type or all
   const handleGenerateResource = async (specificResourceTypes = null) => {
     try {
       setUiState(prev => ({
@@ -310,12 +289,10 @@ const LessonBuilder = () => {
         isLoading: true
       }));
       
-      // Only process resources that were explicitly selected
       const resourcesToGenerate = specificResourceTypes 
         ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
         : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
       
-      // Filter out already generated resources to avoid hitting the API unnecessarily
       const pendingResources = resourcesToGenerate.filter(type => 
         resourceStatus[type]?.status !== 'success'
       );
@@ -326,17 +303,14 @@ const LessonBuilder = () => {
         return;
       }
       
-      // Mark pending resources as generating
       const newStatus = { ...resourceStatus };
       pendingResources.forEach(type => {
         newStatus[type] = { status: 'generating' };
       });
       setResourceStatus(newStatus);
       
-      // Only generate resources that need to be generated
       const results = await generateMultiResource(formState, contentState, pendingResources);
       
-      // Update status based on results
       const updatedStatus = { ...newStatus };
       Object.entries(results).forEach(([type, result]) => {
         if (result.error) {
@@ -354,12 +328,10 @@ const LessonBuilder = () => {
       });
       setResourceStatus(updatedStatus);
       
-      // Save to history after generation
       saveToHistory();
     } catch (error) {
       console.error('Error generating resources:', error);
       
-      // Mark all resources as error
       const errorStatus = { ...resourceStatus };
       const resourcesToGenerate = specificResourceTypes 
         ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
@@ -373,7 +345,6 @@ const LessonBuilder = () => {
       });
       setResourceStatus(errorStatus);
       
-      // Set UI error
       setUiState(prev => ({
         ...prev,
         error: error.message || 'Error generating resources. Please try again.'
@@ -405,12 +376,10 @@ const LessonBuilder = () => {
       display: 'flex',
       height: '100vh',
       bgcolor: '#ffffff',
-      overflow: 'hidden', // Hide overflow at the root level
+      overflow: 'hidden',
       position: 'relative'
     }}>
       <Sidebar
-        isCollapsed={isSidebarCollapsed}
-        toggleSidebar={toggleSidebar}
         user={user}
         handleLogout={logout}
         handleLoginSuccess={handleLoginSuccess}
@@ -420,20 +389,18 @@ const LessonBuilder = () => {
         onHistoryItemSelect={handleHistoryItemSelect}
       />
 
-      {/* Main Content - Single scrollable container */}
+      {/* Main Content */}
       <Box 
         component="main"
         sx={{ 
-          marginLeft: isSidebarCollapsed ? '20px' : '240px',
+          marginLeft: '60px', // Fixed width for collapsed sidebar
           flex: 1,
           height: '100vh',
-          transition: 'margin-left 0.3s ease',
           display: 'flex', 
           flexDirection: 'column',
           position: 'relative',
-          overflowY: 'auto', // Only this should scroll
+          overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: '80px', // Add padding for footer
         }}
       >
         {/* Center all content vertically when no content is displayed */}
@@ -441,10 +408,11 @@ const LessonBuilder = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: contentState.structuredContent.length > 0 ? 'flex-start' : 'center',
-          minHeight: contentState.structuredContent.length > 0 ? 'auto' : '100%',
+          justifyContent: showInitialState ? 'center' : 'flex-start',
+          minHeight: showInitialState ? '100%' : 'auto',
           width: '100%',
-          pt: contentState.structuredContent.length > 0 ? { xs: 3, md: 4 } : 0,
+          pt: showInitialState ? 0 : { xs: 3, md: 4 },
+          pb: showInitialState ? '120px' : '40px', // Extra padding for footer only in initial state
         }}>
           {/* Content wrapper - centers horizontally */}
           <Box sx={{ 
@@ -453,23 +421,45 @@ const LessonBuilder = () => {
             alignItems: 'center',
             width: '100%',
             maxWidth: '1200px',
-            mx: 'auto', // Center horizontally
+            mx: 'auto',
             px: { xs: 2, sm: 4, md: 6 },
           }}>
-            {/* Title */}
-            {!contentState.structuredContent.length > 0 && (
-              <Typography 
-                variant="h1" 
-                sx={{ 
-                  color: '#1e3a8a',
-                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                  fontWeight: '300',
-                  textAlign: 'center',
-                  mb: { xs: 3, sm: 4, md: 6 },
-                }}
-              >
-                What would you like to create?
-              </Typography>
+            {/* Initial State: Logo + Title + Form */}
+            {showInitialState && (
+              <>
+                {/* Logo - Perplexity style */}
+                <Box sx={{ 
+                  mb: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <img
+                    src={Logo}
+                    alt="Teacherfy AI Logo"
+                    style={{ 
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '16px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </Box>
+
+                {/* Title */}
+                <Typography 
+                  variant="h1" 
+                  sx={{ 
+                    color: '#1e3a8a',
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                    fontWeight: '300',
+                    textAlign: 'center',
+                    mb: { xs: 3, sm: 4, md: 6 },
+                  }}
+                >
+                  What would you like to create?
+                </Typography>
+              </>
             )}
 
             {/* Form container - Always centered */}
@@ -542,9 +532,8 @@ const LessonBuilder = () => {
                     resourceStatus={resourceStatus}
                     isLoading={presentationLoading}
                     onGenerateResource={handleGenerateResource}
-                    // Remove download limit props since downloads are now unlimited
-                    isPremium={true} // Always true for downloads
-                    downloadsRemaining={999} // Unlimited downloads
+                    isPremium={true}
+                    downloadsRemaining={999}
                   />
                 ) : (
                   <OutlineDisplay
@@ -555,7 +544,7 @@ const LessonBuilder = () => {
                     }}
                     subscriptionState={{
                       isPremium: subscriptionState.isPremium,
-                      generationsLeft: subscriptionState.generationsLeft, // Changed from downloadCount
+                      generationsLeft: subscriptionState.generationsLeft,
                       resetTime: subscriptionState.resetTime
                     }}
                     isAuthenticated={isAuthenticated}
@@ -574,6 +563,8 @@ const LessonBuilder = () => {
             )}
           </Box>
         </Box>
+
+
         
         {/* Modals */}
         <SignInPrompt
@@ -593,7 +584,7 @@ const LessonBuilder = () => {
           }}
           subscriptionState={{
             isPremium: subscriptionState.isPremium,
-            generationsLeft: subscriptionState.generationsLeft, // Changed from downloadCount
+            generationsLeft: subscriptionState.generationsLeft,
             resetTime: subscriptionState.resetTime
           }}
           setUiState={setUiState}
