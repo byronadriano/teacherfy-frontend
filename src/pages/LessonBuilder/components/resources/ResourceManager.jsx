@@ -99,11 +99,14 @@ const ResourceManager = ({
         }, 5000);
       } catch (error) {
         console.error('Error downloading resource:', error);
-        // Fallback to generating again
+        // Only count against limit when generating new content
         onGenerateResource(resourceType);
       }
     } else {
-      // Call the parent handler with the specific resource
+      // Only count against limit when generating new content
+      if (!isPremium && downloadsRemaining <= 0) {
+        return; // Don't allow new generations if limit reached
+      }
       onGenerateResource(resourceType);
     }
   };
