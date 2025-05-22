@@ -6,16 +6,17 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
   const [googleSlidesState, setGoogleSlidesState] = useState({ isGenerating: false });
   const [isLoading, setIsLoading] = useState(false);
   
-  // Update to track real limits
+  // Update to track generation limits (not download limits)
   const [subscriptionState, setSubscriptionState] = useState({ 
     isPremium: isAuthenticated && user?.isPremium, 
-    downloadCount: 0,
-    downloadsRemaining: 5
+    generationsUsed: 0,
+    generationsLeft: 5,
+    resetTime: null
   });
 
-  // Add useEffect to fetch the latest download limits
+  // Add useEffect to fetch the latest generation limits
   useEffect(() => {
-    const fetchDownloadLimits = async () => {
+    const fetchGenerationLimits = async () => {
       try {
         const response = await fetch(`${API.BASE_URL}/auth/check`, {
           method: 'GET',
@@ -28,30 +29,23 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
           if (data.usage_limits) {
             setSubscriptionState(prev => ({
               ...prev,
-              downloadCount: 5 - (data.usage_limits.downloads_left || 0),
-              downloadsRemaining: data.usage_limits.downloads_left || 0
+              generationsUsed: 5 - (data.usage_limits.generations_left || 0),
+              generationsLeft: data.usage_limits.generations_left || 0,
+              resetTime: data.usage_limits.reset_time || null
             }));
           }
         }
       } catch (error) {
-        console.error('Error fetching download limits:', error);
+        console.error('Error fetching generation limits:', error);
       }
     };
     
-    fetchDownloadLimits();
+    fetchGenerationLimits();
   }, [isAuthenticated]);
 
-  // Generate a single presentation (legacy support)
+  // Generate a single presentation (legacy support) - NO LIMITS CHECKED HERE
   const generatePresentation = async (formState, contentState) => {
     try {
-      // Check for download limits
-      if (!subscriptionState.isPremium && subscriptionState.downloadsRemaining <= 0) {
-        if (!isAuthenticated) {
-          setShowSignInPrompt();
-        }
-        throw new Error('Download limit reached. Please sign in or upgrade.');
-      }
-
       setIsLoading(true);
       console.log('Generating presentation with:', {
         baseUrl: API.BASE_URL,
@@ -68,7 +62,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
           title: slide.title,
           layout: slide.layout,
           contentLength: slide.content.length,
-          teacherNotesLength: slide.teacher_notes.length
+          teacherNotesLength: slide.teacher_notes?.length || 0
         });
       });
 
@@ -83,13 +77,6 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-
-      // Update subscription state after successful download
-      setSubscriptionState(prev => ({
-        ...prev,
-        downloadCount: prev.downloadCount + 1,
-        downloadsRemaining: Math.max(0, prev.downloadsRemaining - 1)
-      }));
 
       return { status: 'success' };
     } catch (error) {
@@ -112,7 +99,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
     }
   };
 
-  // Generate multiple resources
+  // Generate multiple resources - NO LIMITS CHECKED HERE (limits checked on outline generation)
   const generateMultiResource = async (formState, contentState) => {
     try {
       setIsLoading(true);
@@ -120,12 +107,6 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       // Check if we have valid content
       if (!contentState.structuredContent?.length) {
         throw new Error('No content available to generate resources');
-      }
-      
-      // Check for authentication if needed
-      if (!isAuthenticated && subscriptionState.downloadsRemaining <= 0) {
-        setShowSignInPrompt();
-        throw new Error('Download limit reached. Please sign in or upgrade.');
       }
       
       // Log generation details
@@ -138,18 +119,8 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         }
       });
       
-      // Call the service to generate resources
+      // Call the service to generate resources - NO LIMIT CHECKS
       const results = await presentationService.generateMultiResource(formState, contentState);
-      
-      // Update subscription state after successful generation
-      const successfulDownloads = Object.values(results).filter(r => !r.error).length;
-      if (successfulDownloads > 0) {
-        setSubscriptionState(prev => ({
-          ...prev,
-          downloadCount: prev.downloadCount + successfulDownloads,
-          downloadsRemaining: Math.max(0, prev.downloadsRemaining - successfulDownloads)
-        }));
-      }
       
       return results;
     } catch (error) {

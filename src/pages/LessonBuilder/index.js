@@ -494,6 +494,11 @@ const LessonBuilder = () => {
                 onSubmit={handleGenerateOutline}
                 isLoading={uiState.isLoading || outlineLoading}
                 error={uiState.error}
+                subscriptionState={{
+                  isPremium: subscriptionState.isPremium,
+                  generationsLeft: subscriptionState.generationsLeft,
+                  resetTime: subscriptionState.resetTime
+                }}
               />
             </Box>
 
@@ -537,9 +542,9 @@ const LessonBuilder = () => {
                     resourceStatus={resourceStatus}
                     isLoading={presentationLoading}
                     onGenerateResource={handleGenerateResource}
-                    downloadLimit={5}
-                    isPremium={subscriptionState.isPremium}
-                    downloadsRemaining={subscriptionState.isPremium ? 999 : (subscriptionState.downloadCount >= 5 ? 0 : 5 - subscriptionState.downloadCount)}
+                    // Remove download limit props since downloads are now unlimited
+                    isPremium={true} // Always true for downloads
+                    downloadsRemaining={999} // Unlimited downloads
                   />
                 ) : (
                   <OutlineDisplay
@@ -548,7 +553,11 @@ const LessonBuilder = () => {
                       ...uiState,
                       isLoading: presentationLoading
                     }}
-                    subscriptionState={subscriptionState}
+                    subscriptionState={{
+                      isPremium: subscriptionState.isPremium,
+                      generationsLeft: subscriptionState.generationsLeft, // Changed from downloadCount
+                      resetTime: subscriptionState.resetTime
+                    }}
                     isAuthenticated={isAuthenticated}
                     googleSlidesState={googleSlidesState}
                     resourceStatus={resourceStatus}
@@ -582,7 +591,11 @@ const LessonBuilder = () => {
             outlineToConfirm: contentState.outlineToConfirm,
             structuredContent: contentState.structuredContent
           }}
-          subscriptionState={subscriptionState}
+          subscriptionState={{
+            isPremium: subscriptionState.isPremium,
+            generationsLeft: subscriptionState.generationsLeft, // Changed from downloadCount
+            resetTime: subscriptionState.resetTime
+          }}
           setUiState={setUiState}
           setContentState={setContentState}
           handleRegenerateOutline={handleRegenerateOutline}

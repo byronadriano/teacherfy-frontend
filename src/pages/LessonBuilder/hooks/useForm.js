@@ -1,4 +1,4 @@
-// src/pages/LessonBuilder/hooks/useForm.js - CLEANED VERSION
+// src/pages/LessonBuilder/hooks/useForm.js - Updated with generation limit checking
 import { useState, useCallback } from "react";
 import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
@@ -30,7 +30,7 @@ const CLEAN_EXAMPLE_OUTLINE = {
   ]
 };
 
-export default function useForm({ setShowSignInPrompt }) {
+export default function useForm({ setShowSignInPrompt, subscriptionState }) {
   const [formState, setFormState] = useState({
     resourceType: [],
     gradeLevel: "",
@@ -168,6 +168,19 @@ export default function useForm({ setShowSignInPrompt }) {
       return;
     }
 
+    // NEW: Check generation limits before proceeding (unless using example)
+    if (!uiState.isExample && subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
+      setUiState(prev => ({
+        ...prev,
+        error: `You've reached your monthly generation limit. Your limit resets ${
+          subscriptionState.resetTime ? 
+          `on ${new Date(subscriptionState.resetTime).toLocaleDateString()}` : 
+          'next month'
+        }.`
+      }));
+      return;
+    }
+
     setUiState(prev => ({
       ...prev,
       isLoading: true,
@@ -177,7 +190,7 @@ export default function useForm({ setShowSignInPrompt }) {
 
     try {
       if (uiState.isExample) {
-        console.log('Using clean example data');
+        console.log('Using clean example data - NOT counting against limits');
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -202,8 +215,8 @@ export default function useForm({ setShowSignInPrompt }) {
         return;
       }
       
-      // Regular workflow - handle multiple resource types
-      console.log('Making API request with form data:', {
+      // Regular workflow - this WILL count against generation limits
+      console.log('Making API request with form data (will count against limits):', {
         resourceType: formState.resourceType,
         gradeLevel: formState.gradeLevel,
         subjectFocus: formState.subjectFocus,
@@ -242,8 +255,15 @@ export default function useForm({ setShowSignInPrompt }) {
           console.log(`API request for ${resourceType} successful:`, {
             hasMessages: Boolean(data.messages),
             hasTitle: Boolean(data.title),
-            structuredContentLength: data.structured_content?.length || 0
+            structuredContentLength: data.structured_content?.length || 0,
+            usageLimits: data.usage_limits
           });
+
+          // Update subscription state if usage_limits are returned
+          if (data.usage_limits && subscriptionState) {
+            subscriptionState.generationsLeft = data.usage_limits.generations_left || 0;
+            subscriptionState.resetTime = data.usage_limits.reset_time;
+          }
           
           if (!data.messages || !data.structured_content) {
             throw new Error(`Invalid response format from server for ${resourceType}`);
@@ -291,12 +311,12 @@ export default function useForm({ setShowSignInPrompt }) {
         
         let errorMessage = 'Error generating outline: ';
         
-        if (apiError.status === 405) {
+        if (apiError.status === 403) {
+          errorMessage += 'You have reached your generation limit. Please try again next month or upgrade to premium.';
+        } else if (apiError.status === 405) {
           errorMessage += 'The server endpoint is not properly configured. Please try the example instead.';
         } else if (apiError.status === 400) {
           errorMessage += 'Missing required field(s). Please ensure all fields are filled in.';
-        } else if (apiError.status === 403) {
-          errorMessage += 'You have reached your generation limit. Please try again later.';
         } else if (apiError.error) {
           errorMessage += apiError.error;
         } else {
@@ -314,13 +334,26 @@ export default function useForm({ setShowSignInPrompt }) {
         isLoading: false
       }));
     }
-  }, [formState, uiState.isExample]);
+  }, [formState, uiState.isExample, subscriptionState]);
 
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
       setUiState(prev => ({
         ...prev,
         error: "Maximum regeneration attempts (3) reached."
+      }));
+      return;
+    }
+
+    // Check generation limits for regeneration too
+    if (subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
+      setUiState(prev => ({
+        ...prev,
+        error: `You've reached your monthly generation limit. Your limit resets ${
+          subscriptionState.resetTime ? 
+          `on ${new Date(subscriptionState.resetTime).toLocaleDateString()}` : 
+          'next month'
+        }.`
       }));
       return;
     }
@@ -391,7 +424,7 @@ export default function useForm({ setShowSignInPrompt }) {
         isLoading: false
       }));
     }
-  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources, contentState.title]);
+  }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources, contentState.title, subscriptionState]);
     
   return {
     formState,
