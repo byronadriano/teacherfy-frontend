@@ -1,14 +1,28 @@
-//src/services/presentation.js
+//src/services/presentation.js - FIXED VERSION
 import { config } from '../utils/config';
 
 /**
  * Normalize resource type to match backend expectations
- * @param {string} resourceType - The resource type to normalize
+ * FIXED: Handle both string and array inputs properly
+ * @param {string|Array} resourceType - The resource type to normalize (can be string or array)
  * @return {string} - Normalized resource type
  */
 function normalizeResourceType(resourceType) {
+  // FIXED: Handle array inputs - take the first element if it's an array
+  let typeToProcess = resourceType;
+  if (Array.isArray(resourceType)) {
+    typeToProcess = resourceType[0]; // Take the first element
+    console.log('Resource type was array, using first element:', typeToProcess);
+  }
+  
+  // FIXED: Ensure we have a string before calling toLowerCase
+  if (!typeToProcess || typeof typeToProcess !== 'string') {
+    console.warn('Invalid resource type, defaulting to presentation:', typeToProcess);
+    return 'presentation';
+  }
+  
   // First convert to lowercase
-  const normalized = resourceType.toLowerCase();
+  const normalized = typeToProcess.toLowerCase();
   
   // Handle special cases
   if (normalized.includes('quiz') || normalized.includes('test')) {
@@ -29,8 +43,15 @@ export const presentationService = {
   async generateMultiResource(formState, contentState, specificResources = null) {
     try {
       // Get resources to generate - either specified or from form state
-      const resourceTypes = specificResources || 
-        (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+      // FIXED: Handle array resource types properly
+      let resourceTypes;
+      if (specificResources) {
+        resourceTypes = Array.isArray(specificResources) ? specificResources : [specificResources];
+      } else if (formState.resourceType) {
+        resourceTypes = Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType];
+      } else {
+        resourceTypes = ['Presentation']; // Default fallback
+      }
       
       console.log('Generating multiple resources with:', {
         resourceTypes,
@@ -62,10 +83,14 @@ export const presentationService = {
         }
         
         try {
+          // FIXED: Use the normalized function that handles arrays properly
+          const normalizedResourceType = normalizeResourceType(resourceType);
+          console.log(`Processing ${resourceType} -> normalized to: ${normalizedResourceType}`);
+          
           // Build request data for this resource type
           const requestData = {
             // Use the normalized resource type to ensure backend compatibility
-            resource_type: normalizeResourceType(resourceType),
+            resource_type: normalizedResourceType,
             lesson_outline: contentState.finalOutline || '',
             structured_content: structuredContent.map((slide, index) => ({
               title: slide.title || `Item ${index + 1}`,
