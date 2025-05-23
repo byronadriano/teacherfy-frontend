@@ -277,7 +277,7 @@ const OutlineDisplay = ({
           mb: 4
         }}
       >
-        Your Resources Are Ready!
+        Look What You've Created!
       </Typography>
 
       {/* Resource status notifications */}
