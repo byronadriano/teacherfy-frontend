@@ -113,7 +113,7 @@ function App() {
                 py: 2,
                 px: 4,
                 backgroundColor: '#ffffff',
-                borderTop: '1px solid #f1f5f9',
+                // borderTop: '1px solid #f1f5f9',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',

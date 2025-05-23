@@ -23,7 +23,7 @@ const IntegratedFooter = ({ className = '', sx = {} }) => {
         py: 3,
         px: 2,
         mt: 4,
-        borderTop: '1px solid #e2e8f0',
+        // borderTop: '1px solid #e2e8f0',
         backgroundColor: 'transparent',
         ...sx
       }}
