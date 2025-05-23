@@ -1,10 +1,12 @@
-// Updated RecentsList.jsx with ESLint fixes
+// COMPLETE FIX for src/components/sidebar/RecentsList.jsx
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
-import { FileText, Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
+import { Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
 import { historyService } from '../../services/history';
 import { useAuth } from '../../contexts/AuthContext';
 
+// FIXED: Updated resource type mapping with better logic
 const RESOURCE_TYPES = {
   PRESENTATION: {
     icon: Presentation,
@@ -16,7 +18,22 @@ const RESOURCE_TYPES = {
     color: '#dc2626',
     label: 'Quiz'
   },
+  'QUIZ/TEST': {
+    icon: FileQuestion,
+    color: '#dc2626', 
+    label: 'Quiz/Test'
+  },
+  TEST: {
+    icon: FileQuestion,
+    color: '#dc2626',
+    label: 'Test'
+  },
   LESSON_PLAN: {
+    icon: BookOpen,
+    color: '#059669',
+    label: 'Lesson Plan'
+  },
+  'LESSON PLAN': {
     icon: BookOpen,
     color: '#059669',
     label: 'Lesson Plan'
@@ -33,30 +50,82 @@ const RESOURCE_TYPES = {
   }
 };
 
-// Default to FileText icon for unknown resource types
+// FIXED: Completely rewritten resource type detection
 const getResourceTypeInfo = (resourceType) => {
-  const typeKey = resourceType?.toUpperCase?.() || 'PRESENTATION';
-  return RESOURCE_TYPES[typeKey] || {
-    icon: FileText,
-    color: '#4b5563',
-    label: resourceType || 'Resource'
-  };
+  console.log('🔍 Analyzing resource type:', resourceType, typeof resourceType);
+  
+  if (!resourceType) {
+    console.log('❌ No resource type provided, defaulting to PRESENTATION');
+    return RESOURCE_TYPES.PRESENTATION;
+  }
+  
+  // Convert to string and normalize
+  const typeStr = String(resourceType).toUpperCase().trim();
+  console.log('📝 Normalized type string:', typeStr);
+  
+  // Direct mapping first (exact matches)
+  if (RESOURCE_TYPES[typeStr]) {
+    console.log('✅ Direct match found:', typeStr);
+    return RESOURCE_TYPES[typeStr];
+  }
+  
+  // Pattern matching for variations
+  if (typeStr.includes('QUIZ') || typeStr.includes('TEST')) {
+    console.log('✅ Detected as QUIZ/TEST type');
+    return RESOURCE_TYPES['QUIZ/TEST'];
+  }
+  
+  if (typeStr.includes('LESSON') && typeStr.includes('PLAN')) {
+    console.log('✅ Detected as LESSON PLAN type');
+    return RESOURCE_TYPES['LESSON PLAN'];
+  }
+  
+  if (typeStr.includes('WORKSHEET')) {
+    console.log('✅ Detected as WORKSHEET type');
+    return RESOURCE_TYPES.WORKSHEET;
+  }
+  
+  if (typeStr.includes('PRESENTATION') || typeStr.includes('SLIDE')) {
+    console.log('✅ Detected as PRESENTATION type');
+    return RESOURCE_TYPES.PRESENTATION;
+  }
+  
+  // Fallback
+  console.log('❌ No pattern match, defaulting to PRESENTATION');
+  return RESOURCE_TYPES.PRESENTATION;
 };
 
 const RecentItem = ({ item, onClick }) => {
-  // Extract info from the history item
-  const lessonData = item.lessonData || {};
+  // FIXED: Better data extraction with debugging
+  console.log('🏷️ Processing history item:', item);
   
-  // Use subject as the main title, fallback to regular title if not available
+  const lessonData = item.lessonData || {};
   const title = item.title || 'Untitled Lesson';
   const subject = lessonData.subjectFocus || '';
   
-  // Handle both string and array formats for types
-  const types = Array.isArray(item.types) ? item.types : [item.types || 'PRESENTATION'];
+  // FIXED: Handle both string and array formats for types
+  let types;
+  if (Array.isArray(item.types)) {
+    types = item.types;
+  } else if (item.types) {
+    types = [item.types];
+  } else if (lessonData.resourceType) {
+    // Fallback to lessonData.resourceType
+    types = Array.isArray(lessonData.resourceType) 
+      ? lessonData.resourceType 
+      : [lessonData.resourceType];
+  } else {
+    types = ['Presentation']; // Default fallback
+  }
+  
+  console.log('📋 Extracted types:', types);
+  
   const date = item.date || 'Today';
   
   // Get resource info for the primary type
-  const primaryType = types[0]?.toUpperCase?.() || 'PRESENTATION';
+  const primaryType = types[0] || 'Presentation';
+  console.log('🎯 Primary type for icon:', primaryType);
+  
   const resourceType = getResourceTypeInfo(primaryType);
   const Icon = resourceType.icon;
 
@@ -106,17 +175,23 @@ const RecentItem = ({ item, onClick }) => {
           gap: 1,
           mt: 0.5
         }}>
-          <Chip
-            label={resourceType.label}
-            size="small"
-            sx={{
-              height: '18px',
-              fontSize: '0.625rem',
-              backgroundColor: `${resourceType.color}15`,
-              color: resourceType.color,
-              fontWeight: '500'
-            }}
-          />
+          {types.map((type, index) => {
+            const typeInfo = getResourceTypeInfo(type);
+            return (
+              <Chip
+                key={index}
+                label={typeInfo.label}
+                size="small"
+                sx={{
+                  height: '18px',
+                  fontSize: '0.625rem',
+                  backgroundColor: `${typeInfo.color}15`,
+                  color: typeInfo.color,
+                  fontWeight: '500'
+                }}
+              />
+            );
+          })}
           
           <Typography sx={{ 
             fontSize: '0.625rem',
@@ -130,6 +205,7 @@ const RecentItem = ({ item, onClick }) => {
   );
 };
 
+// Rest of the component remains the same...
 const RecentsList = ({ onSelectItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,15 +214,10 @@ const RecentsList = ({ onSelectItem }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { isAuthenticated } = useAuth();
   
-  // Add a ref to track if the component is mounted
   const isMounted = useRef(true);
-  
-  // Add a ref to track if we've already fetched history
   const hasInitiallyFetched = useRef(false);
 
-  // Wrap fetchHistory with useCallback to prevent recreation on every render
   const fetchHistory = useCallback(async () => {
-    // Don't fetch if we've already done the initial fetch and auth hasn't changed
     if (hasInitiallyFetched.current && !loading) {
       return;
     }
@@ -155,62 +226,54 @@ const RecentsList = ({ onSelectItem }) => {
       setLoading(true);
       setError(null);
       
-      // Fetch history from server
       const response = await historyService.getUserHistory();
       
-      // Check if component is still mounted before updating state
       if (!isMounted.current) return;
       
       if (response.error) {
         throw new Error(response.error);
       }
       
-      // If authenticated user and history returned
+      // FIXED: Add debugging for fetched history
+      console.log('📦 Fetched history items:', response.history);
+      
       if (response.history && Array.isArray(response.history)) {
         setHistoryItems(response.history);
-      } 
-      // For anonymous users, try to get from local storage as fallback
-      else if (!isAuthenticated) {
+      } else if (!isAuthenticated) {
         const localHistory = historyService.getLocalHistory();
+        console.log('💾 Using local history:', localHistory);
         setHistoryItems(localHistory);
       }
       
-      // Mark that we've done the initial fetch
       hasInitiallyFetched.current = true;
     } catch (err) {
-      // Check if component is still mounted before updating state
       if (!isMounted.current) return;
       
       console.error('Error fetching history:', err);
       setError('Failed to load history. Please try again later.');
       
-      // Use local storage as fallback
       if (!isAuthenticated) {
         const localHistory = historyService.getLocalHistory();
         setHistoryItems(localHistory);
       }
     } finally {
-      // Check if component is still mounted before updating state
       if (isMounted.current) {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, loading]); // Include dependencies the function relies on
+  }, [isAuthenticated, loading]);
 
   useEffect(() => {
-    // Set up the mounted ref
     isMounted.current = true;
     
-    // Only fetch if we haven't already or if auth state changed
     if (!hasInitiallyFetched.current || loading) {
       fetchHistory();
     }
     
-    // Cleanup function
     return () => {
       isMounted.current = false;
     };
-  }, [isAuthenticated, fetchHistory, loading]); // Added fetchHistory and loading as dependencies
+  }, [isAuthenticated, fetchHistory, loading]);
 
   const handleItemClick = (item) => {
     if (onSelectItem) {
@@ -230,17 +293,10 @@ const RecentsList = ({ onSelectItem }) => {
     try {
       setIsClearingHistory(true);
       
-      // Clear history through the service
       await historyService.clearHistory();
-      
-      // Update local state
       setHistoryItems([]);
-      
-      // Refetch to ensure we have the latest
       hasInitiallyFetched.current = false;
       await fetchHistory();
-      
-      // Close the dialog
       closeConfirmDialog();
     } catch (error) {
       console.error('Error clearing history:', error);

@@ -131,39 +131,59 @@ export const historyService = {
    */
   async trackLessonGeneration(formState, contentState) {
     try {
-      // NEW: Use the generated title from contentState if available
+      // Extract the generated title from contentState if available
       const lessonTitle = contentState.title || 
-                         formState.lessonTopic || 
-                         formState.subjectFocus || 
-                         'Untitled Lesson';
+                        formState.lessonTopic || 
+                        formState.subjectFocus || 
+                        'Untitled Lesson';
       
-      console.log('Tracking lesson with title:', lessonTitle);
+      console.log('💾 Saving to history with title:', lessonTitle);
       
-      const historyItem = {
-        title: lessonTitle,  // Use the enhanced title logic
-        resourceType: formState.resourceType || 'PRESENTATION',
-        lessonData: {
-          ...formState,
-          // Include the generated title in lesson data
-          generatedTitle: contentState.title,
-          structuredContent: contentState.structuredContent.map(slide => ({
-            title: slide.title || '',
-            layout: slide.layout || 'TITLE_AND_CONTENT',
-            content: Array.isArray(slide.content) ? [...slide.content] : [],
-            teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
-            visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
-            left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
-            right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-          })),
-          finalOutline: contentState.finalOutline || '',
-          // Include generated resources if available
-          generatedResources: contentState.generatedResources || {}
-        }
-      };
+      // FIXED: Ensure resource types are properly formatted and stored
+      let resourceTypes;
+      if (Array.isArray(formState.resourceType)) {
+        resourceTypes = formState.resourceType;
+      } else if (formState.resourceType) {
+        resourceTypes = [formState.resourceType];
+      } else {
+        resourceTypes = ['Presentation']; // Default fallback
+      }
       
-      return await this.saveHistoryItem(historyItem);
+      console.log('📝 Resource types to save:', resourceTypes);
+      
+      // FIXED: Save each resource type separately for better tracking
+      const historyPromises = resourceTypes.map(async (resourceType) => {
+        const historyItem = {
+          title: lessonTitle,
+          resourceType: resourceType, // Single resource type per item
+          lessonData: {
+            ...formState,
+            generatedTitle: contentState.title,
+            resourceType: resourceType, // Ensure it's in lesson data too
+            structuredContent: contentState.structuredContent.map(slide => ({
+              title: slide.title || '',
+              layout: slide.layout || 'TITLE_AND_CONTENT',
+              content: Array.isArray(slide.content) ? [...slide.content] : [],
+              teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
+              visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
+              left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
+              right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
+            })),
+            finalOutline: contentState.finalOutline || '',
+            generatedResources: contentState.generatedResources || {}
+          }
+        };
+        
+        return await this.saveHistoryItem(historyItem);
+      });
+      
+      // Wait for all history items to be saved
+      const results = await Promise.all(historyPromises);
+      console.log('✅ All history items saved:', results);
+      
+      return { success: true, results };
     } catch (error) {
-      console.error('Error tracking lesson generation:', error);
+      console.error('❌ Error tracking lesson generation:', error);
       // Continue even if tracking fails
       return { success: false, error: error.message };
     }
