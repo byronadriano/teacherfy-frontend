@@ -1,8 +1,8 @@
-// src/contexts/AuthContext.js
+// src/contexts/AuthContext.jsx - FIXED VERSION
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AUTH } from '../utils/constants';
+import { API } from '../utils/constants/api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -17,48 +17,151 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load auth state from session storage on mount
+  // Check authentication status on mount
   useEffect(() => {
-    const loadAuthState = () => {
-      try {
-        const storedToken = sessionStorage.getItem(AUTH.STORAGE_KEYS.USER_TOKEN);
-        const storedUserInfo = sessionStorage.getItem(AUTH.STORAGE_KEYS.USER_INFO);
-
-        if (storedToken && storedUserInfo) {
-          const userInfo = JSON.parse(storedUserInfo);
-          setUser(userInfo);
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Error loading auth state:', error);
-        // Clean up on error
-        sessionStorage.removeItem(AUTH.STORAGE_KEYS.USER_TOKEN);
-        sessionStorage.removeItem(AUTH.STORAGE_KEYS.USER_INFO);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAuthState();
+    checkAuthStatus();
   }, []);
 
-  const login = (userInfo, token) => {
-    const enhancedUser = { ...userInfo, token };
-    setUser(enhancedUser);
-    setIsAuthenticated(true);
-    sessionStorage.setItem(AUTH.STORAGE_KEYS.USER_TOKEN, token);
-    sessionStorage.setItem(AUTH.STORAGE_KEYS.USER_INFO, JSON.stringify(enhancedUser));
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      console.log('🔍 Checking auth status...');
+      
+      const response = await fetch(`${API.BASE_URL}/auth/check`, {
+        method: 'GET',
+        credentials: 'include', // CRITICAL: Include cookies for Flask sessions
+        headers: {
+          ...API.HEADERS,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Auth check successful:', data);
+        
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        console.log('❌ Auth check failed:', response.status);
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('❌ Auth check error:', error);
+      setUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    sessionStorage.removeItem(AUTH.STORAGE_KEYS.USER_TOKEN);
-    sessionStorage.removeItem(AUTH.STORAGE_KEYS.USER_INFO);
+  const login = async (credentialResponse) => {
+    try {
+      console.log('🔐 Starting login process...');
+      
+      // Decode the credential to get user info for display
+      const credential = credentialResponse.credential;
+      const userInfo = JSON.parse(atob(credential.split('.')[1]));
+      
+      console.log('👤 User info from Google:', {
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture
+      });
+
+      // For OAuth login, redirect to your backend OAuth endpoint
+      // This will handle the server-side session creation
+      const authUrl = `${API.BASE_URL}/authorize`;
+      console.log('🔗 Redirecting to:', authUrl);
+      
+      // Open OAuth in a popup to handle the flow
+      const popup = window.open(
+        authUrl,
+        'oauth',
+        'width=500,height=600,scrollbars=yes'
+      );
+
+      // Listen for the OAuth callback
+      const handleAuthComplete = (event) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'AUTH_SUCCESS') {
+          console.log('✅ OAuth success:', event.data);
+          popup.close();
+          
+          // Refresh auth status after successful OAuth
+          setTimeout(() => {
+            checkAuthStatus();
+          }, 1000);
+          
+          window.removeEventListener('message', handleAuthComplete);
+        } else if (event.data.type === 'AUTH_ERROR') {
+          console.error('❌ OAuth error:', event.data);
+          popup.close();
+          window.removeEventListener('message', handleAuthComplete);
+        }
+      };
+
+      window.addEventListener('message', handleAuthComplete);
+
+      // Fallback: Check if popup was closed manually
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', handleAuthComplete);
+          // Check auth status in case login succeeded
+          setTimeout(() => {
+            checkAuthStatus();
+          }, 1000);
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      console.log('🚪 Logging out...');
+      
+      // Call backend logout endpoint
+      await fetch(`${API.BASE_URL}/logout`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: API.HEADERS,
+      });
+
+      // Clear local state
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      console.log('✅ Logout successful');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Clear local state even if backend call fails
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  const value = {
+    user,
+    isAuthenticated,
+    isLoading,
+    login,
+    logout,
+    checkAuthStatus
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

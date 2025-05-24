@@ -1,18 +1,16 @@
-// src/pages/LessonBuilder/index.js - Updated with logo and clean footer logic
+// src/pages/LessonBuilder/index.js - FIXED to use AuthContext
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
 import FiltersBar from '../../components/filters/FiltersBar';
 import CustomizationForm from '../../components/form/CustomizationForm';
-import SignInPrompt from '../../components/modals/SignInPrompt';
-import UpgradeModal from '../../components/modals/UpgradeModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
 import OutlineDisplay from './components/OutlineDisplay';
 import ResourceManager from './components/resources/ResourceManager';
 import DebugPanel from '../../components/debug/DebugPanel';
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext'; // Use the context
 import useForm from './hooks/useForm';
 import useOutline from './hooks/useOutline';
 import usePresentation from './hooks/usePresentation';
@@ -20,6 +18,9 @@ import { historyService } from '../../services';
 import Logo from '../../assets/images/Teacherfyoai.png';
 
 const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
+  // REMOVED: Local auth state - now using context
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  
   // States
   const [userSettings, setUserSettings] = useState({
     defaultGrade: '',
@@ -32,15 +33,6 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
   const [showResourceManager, setShowResourceManager] = useState(false);
-
-  // Use auth context instead of hook
-  const { user, isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
-
-  const handleLoginSuccess = (credentialResponse) => {
-    const credential = credentialResponse.credential;
-    const userInfo = JSON.parse(atob(credential.split('.')[1]));
-    login(userInfo, credential);
-  };
 
   const {
     formState,
@@ -56,7 +48,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   } = useForm({
     token: user?.token,
     user,
-    setShowSignInPrompt: () => setUiState(prev => ({ ...prev, showSignInPrompt: true }))
+    setShowSignInPrompt: () => console.log('Sign in required') // Not needed with new auth flow
   });
 
   const { isLoading: outlineLoading } = useOutline();
@@ -71,7 +63,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     token: user?.token,
     user,
     isAuthenticated,
-    setShowSignInPrompt: () => setUiState(prev => ({ ...prev, showSignInPrompt: true }))
+    setShowSignInPrompt: () => console.log('Sign in required') // Not needed with new auth flow
   });
 
   // Load user settings from session storage
@@ -95,7 +87,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   const saveToHistory = useCallback(async () => {
     if (contentState.structuredContent?.length > 0) {
       try {
-        console.log('Saving lesson to history...');
+        console.log('💾 Saving lesson to history...');
         
         const cleanFormState = {
           resourceType: formState.resourceType,
@@ -142,12 +134,17 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           generatedResources: cleanGeneratedResources
         };
         
-        await historyService.trackLessonGeneration(cleanFormState, enhancedContentState);
+        const result = await historyService.trackLessonGeneration(cleanFormState, enhancedContentState);
         
-        console.log('Lesson successfully saved to history with title:', contentState.title);
+        if (result.success) {
+          console.log('✅ Lesson successfully saved to history with title:', contentState.title);
+        } else {
+          console.log('⚠️ History save had issues but continued:', result.error);
+        }
       } catch (error) {
-        console.error('Error saving to history:', error);
+        console.error('❌ Error saving to history:', error);
         
+        // Fallback to local history
         try {
           const lessonTitle = contentState.title || 
                             formState.lessonTopic || 
@@ -169,9 +166,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           };
           
           historyService.saveLocalHistory(localHistoryItem);
-          console.log('Lesson saved to local history as fallback with title:', lessonTitle);
+          console.log('💾 Lesson saved to local history as fallback with title:', lessonTitle);
         } catch (localError) {
-          console.error('Failed to save to local history:', localError);
+          console.error('❌ Failed to save to local history:', localError);
         }
       }
     }
@@ -189,21 +186,20 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
 
   // Communicate footer visibility to parent (App.js)
   useEffect(() => {
-    // Set a flag in sessionStorage that App.js can read
     sessionStorage.setItem('hideFooter', (!showInitialState).toString());
   }, [showInitialState]);
 
   // Handle history item selection
-  const handleHistoryItemSelect = (historyItem) => {
-    if (!historyItem || !historyItem.lessonData) {
-      console.error('Invalid history item selected:', historyItem);
+  const handleHistoryItemSelect = (item) => {
+    if (!item || !item.lessonData) {
+      console.error('❌ Invalid history item selected:', item);
       return;
     }
     
-    console.log('Loading lesson from history:', historyItem.title);
+    console.log('📂 Loading lesson from history:', item.title);
     
     try {
-      const { lessonData } = historyItem;
+      const { lessonData } = item;
       
       if (lessonData.resourceType) {
         const resourceType = Array.isArray(lessonData.resourceType) 
@@ -225,7 +221,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       }
       
       const contentUpdate = {
-        title: lessonData.generatedTitle || historyItem.title || 'Loaded Lesson',
+        title: lessonData.generatedTitle || item.title || 'Loaded Lesson',
         finalOutline: lessonData.finalOutline || ''
       };
       
@@ -259,9 +255,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         error: ''
       }));
       
-      console.log('Lesson loaded from history with title:', contentUpdate.title);
+      console.log('✅ Lesson loaded from history with title:', contentUpdate.title);
     } catch (error) {
-      console.error('Error loading lesson from history:', error);
+      console.error('❌ Error loading lesson from history:', error);
       setUiState(prev => ({
         ...prev,
         error: 'Failed to load lesson from history'
@@ -276,9 +272,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     
     try {
       await historyService.trackLessonGeneration(formState, contentState);
-      console.log('Lesson tracked in history');
+      console.log('✅ Lesson tracked in history');
     } catch (error) {
-      console.error('Failed to track lesson in history:', error);
+      console.error('❌ Failed to track lesson in history:', error);
     }
   };
 
@@ -298,7 +294,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       );
       
       if (pendingResources.length === 0) {
-        console.log('No new resources to generate, skipping API call');
+        console.log('ℹ️ No new resources to generate, skipping API call');
         setUiState(prev => ({ ...prev, isLoading: false }));
         return;
       }
@@ -330,7 +326,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       
       saveToHistory();
     } catch (error) {
-      console.error('Error generating resources:', error);
+      console.error('❌ Error generating resources:', error);
       
       const errorStatus = { ...resourceStatus };
       const resourcesToGenerate = specificResourceTypes 
@@ -380,9 +376,6 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       position: 'relative'
     }}>
       <Sidebar
-        user={user}
-        handleLogout={logout}
-        handleLoginSuccess={handleLoginSuccess}
         defaultSettings={userSettings}
         onSettingsChange={handleSettingsChange}
         onLogoReset={resetForm}
@@ -564,15 +557,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           </Box>
         </Box>
 
-
-        
         {/* Modals */}
-        <SignInPrompt
-          open={uiState.showSignInPrompt}
-          onClose={() => setUiState(prev => ({ ...prev, showSignInPrompt: false }))}
-          onSuccess={handleLoginSuccess}
-        />
-
         <ConfirmationModal 
           uiState={{
             ...uiState,
@@ -592,11 +577,6 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           handleRegenerateOutline={handleRegenerateOutline}
           handleDownload={handleGenerateResource}
           onFinalize={trackLessonInHistory}
-        />
-
-        <UpgradeModal 
-          open={uiState.showUpgradeModal}
-          onClose={() => setUiState(prev => ({ ...prev, showUpgradeModal: false }))}
         />
 
         {process.env.NODE_ENV === 'development' && (

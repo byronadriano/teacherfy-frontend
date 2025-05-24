@@ -1,4 +1,4 @@
-// Updated Sidebar.jsx with mobile-specific fixes - CORRECTED
+// Updated Sidebar.jsx - FIXED to use AuthContext properly
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button, Avatar, Popover, Paper, Modal } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
@@ -14,6 +14,7 @@ import UserSettingsModal from '../modals/UserSettingsModal';
 import PricingModal from '../modals/PricingModal';
 import Logo from '../../assets/images/Teacherfyoai.png';
 import { GOOGLE_CLIENT_ID } from '../../utils/constants';
+import { useAuth } from '../../contexts/AuthContext'; // Import the hook
 
 const SIDEBAR_WIDTH_COLLAPSED = 60;
 
@@ -41,7 +42,7 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
         backgroundColor: isActive ? '#f0f4f8' : 'transparent',
         color: isActive ? '#2563eb' : '#64748b',
         transition: 'all 0.2s ease',
-        mb: 1, // Add margin bottom for mobile spacing
+        mb: 1,
         '&:hover': {
           backgroundColor: '#f8fafc',
           color: '#374151'
@@ -365,14 +366,14 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
 };
 
 const Sidebar = ({ 
-    user,
-    handleLogout,
-    handleLoginSuccess,
     defaultSettings,
     onSettingsChange,
     onLogoReset,
     onHistoryItemSelect
 }) => {
+    // FIXED: Use the auth context instead of props
+    const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+    
     const [showSettings, setShowSettings] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -391,7 +392,6 @@ const Sidebar = ({
             const mobile = window.innerWidth <= 600;
             setIsMobile(mobile);
             
-            // Add/remove mobile class to body
             if (mobile) {
                 document.body.classList.add('is-mobile-device');
             } else {
@@ -422,7 +422,6 @@ const Sidebar = ({
                 onLogoReset && onLogoReset();
                 break;
             case 'history':
-                // History is handled by hover, but click can also open it
                 break;
             default:
                 console.log(`Navigation clicked: ${action}`);
@@ -441,7 +440,7 @@ const Sidebar = ({
         popoverTimeoutRef.current = setTimeout(() => {
             setHistoryPopoverOpen(false);
             setHistoryAnchorEl(null);
-        }, 300); // Small delay to allow moving to popover
+        }, 300);
     };
 
     const handlePopoverMouseEnter = () => {
@@ -479,6 +478,24 @@ const Sidebar = ({
         }
     };
 
+    const handleLoginSuccess = async (credentialResponse) => {
+        try {
+            console.log('🔐 Login success, calling auth context login');
+            await login(credentialResponse);
+        } catch (error) {
+            console.error('❌ Login error:', error);
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            console.log('🚪 Logout requested');
+            await logout();
+        } catch (error) {
+            console.error('❌ Logout error:', error);
+        }
+    };
+
     // Clean up timeout on unmount
     useEffect(() => {
         return () => {
@@ -487,6 +504,28 @@ const Sidebar = ({
             }
         };
     }, []);
+
+    if (isLoading) {
+        return (
+            <Box
+                sx={{
+                    width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
+                    height: '100vh',
+                    position: 'fixed',
+                    left: 0,
+                    top: 0,
+                    backgroundColor: '#ffffff',
+                    borderRight: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10,
+                }}
+            >
+                <Typography variant="body2">Loading...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <>
@@ -505,7 +544,6 @@ const Sidebar = ({
                     py: 2,
                     zIndex: 10,
                     overflow: 'visible',
-                    // CRITICAL: Mobile-specific bottom padding to avoid browser controls
                     paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 50px)' : '16px',
                     boxSizing: 'border-box'
                 }}
@@ -588,11 +626,10 @@ const Sidebar = ({
                         color: 'white',
                         mb: 2,
                         transition: 'all 0.2s ease',
-// Mobile-specific adjustments
                         ...(isMobile && {
                             minHeight: '48px',
                             minWidth: '48px',
-                            mb: 3, // More space on mobile
+                            mb: 3,
                         }),
                         '&:hover': {
                             backgroundColor: '#6d28d9',
@@ -604,7 +641,7 @@ const Sidebar = ({
                 </Button>
 
                 {/* User Section */}
-                {user ? (
+                {isAuthenticated && user ? (
                     <UserMenu 
                         user={user}
                         onSettings={() => setShowSettings(true)}
@@ -622,11 +659,10 @@ const Sidebar = ({
                             backgroundColor: 'transparent',
                             color: '#64748b',
                             transition: 'all 0.2s ease',
-                            // Mobile-specific adjustments - INCREASED bottom margin
                             ...(isMobile && {
                                 minHeight: '48px',
                                 minWidth: '48px',
-                                mb: 4, // INCREASED from 1 to 4 for more space on mobile
+                                mb: 4,
                             }),
                             '&:hover': {
                                 backgroundColor: '#f8fafc',

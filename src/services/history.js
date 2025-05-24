@@ -1,5 +1,4 @@
-// src/services/history.js
-import { httpClient } from './http';
+// src/services/history.js - FIXED VERSION
 import { API } from '../utils/constants/api';
 
 // Cache storage
@@ -19,26 +18,40 @@ export const historyService = {
       // Check if we have fresh cached data
       const now = Date.now();
       if (historyCache.data && (now - historyCache.timestamp < historyCache.expiresIn)) {
-        console.log('Using cached history data');
+        console.log('📦 Using cached history data');
         return historyCache.data;
       }
       
-      console.log('Fetching user history from server...');
-      const response = await httpClient.get(API.ENDPOINTS.USER_HISTORY);
+      console.log('🔍 Fetching user history from server...');
       
-      // Cache the successful response
-      if (response && !response.error) {
-        historyCache.data = response;
-        historyCache.timestamp = now;
+      const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`, {
+        method: 'GET',
+        credentials: 'include', // CRITICAL: Include cookies for Flask sessions
+        headers: {
+          ...API.HEADERS,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return response;
+      const responseData = await response.json();
+      
+      // Cache the successful response
+      if (responseData && !responseData.error) {
+        historyCache.data = responseData;
+        historyCache.timestamp = now;
+        console.log('✅ History cached successfully');
+      }
+      
+      return responseData;
     } catch (error) {
-      console.error('Error fetching user history:', error);
+      console.error('❌ Error fetching user history:', error);
       
       // If we have cached data, return it even if expired
       if (historyCache.data) {
-        console.log('Returning stale cached history due to error');
+        console.log('📦 Returning stale cached history due to error');
         return historyCache.data;
       }
       
@@ -57,17 +70,21 @@ export const historyService = {
   invalidateCache() {
     historyCache.data = null;
     historyCache.timestamp = 0;
+    console.log('🗑️ History cache invalidated');
   },
 
   /**
    * Saves a history item to the server.
    * For authenticated users, it saves to the database.
    * For anonymous users, it saves to the session.
-   * 
-   * @param {Object} data - The history item data to save
    */
   async saveHistoryItem(data) {
     try {
+      console.log('💾 Saving history item:', {
+        title: data.title,
+        resourceType: data.resourceType
+      });
+      
       // First save to local storage as backup
       this.saveLocalHistory({
         id: Date.now(),
@@ -77,15 +94,31 @@ export const historyService = {
         lessonData: data.lessonData
       });
       
-      // Then try to save to server
-      const serverResponse = await httpClient.post(API.ENDPOINTS.USER_HISTORY, data);
+      // Then try to save to server with proper session handling
+      const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`, {
+        method: 'POST',
+        credentials: 'include', // CRITICAL: Include cookies for Flask sessions
+        headers: {
+          ...API.HEADERS,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const serverResponse = await response.json();
+      console.log('✅ History saved to server:', serverResponse);
       
       // Invalidate the cache so next getUserHistory call will fetch fresh data
       this.invalidateCache();
       
       return serverResponse;
     } catch (error) {
-      console.error('Error saving history item to server:', error);
+      console.error('❌ Error saving history item to server:', error);
+      
       // Save to local storage if server save fails
       this.saveLocalHistory({
         id: Date.now(),
@@ -94,7 +127,9 @@ export const historyService = {
         date: 'Today',
         lessonData: data.lessonData
       });
-      throw error;
+      
+      // Don't throw - allow the app to continue
+      return { success: false, error: error.message };
     }
   },
 
@@ -103,18 +138,34 @@ export const historyService = {
    */
   async clearHistory() {
     try {
+      console.log('🗑️ Clearing history...');
+      
       // First clear local storage
       this.clearLocalHistory();
       
       // Then try to clear server history
-      const clearResponse = await httpClient.post(API.ENDPOINTS.CLEAR_HISTORY);
+      const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.CLEAR_HISTORY}`, {
+        method: 'POST',
+        credentials: 'include', // CRITICAL: Include cookies for Flask sessions
+        headers: {
+          ...API.HEADERS,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const clearResponse = await response.json();
+      console.log('✅ History cleared from server:', clearResponse);
       
       // Invalidate the cache
       this.invalidateCache();
       
       return { success: true, response: clearResponse };
     } catch (error) {
-      console.error('Error clearing history from server:', error);
+      console.error('❌ Error clearing history from server:', error);
       return { 
         success: false,
         error: error.message
@@ -124,10 +175,7 @@ export const historyService = {
 
   /**
    * Track lesson generation for history.
-   * Enhanced to use the generated title from the outline.
-   * 
-   * @param {Object} formState - The form state with lesson details
-   * @param {Object} contentState - The content state with structured content and title
+   * Enhanced to use the generated title from the outline and proper session handling.
    */
   async trackLessonGeneration(formState, contentState) {
     try {
@@ -137,9 +185,9 @@ export const historyService = {
                         formState.subjectFocus || 
                         'Untitled Lesson';
       
-      console.log('💾 Saving to history with title:', lessonTitle);
+      console.log('💾 Tracking lesson generation with title:', lessonTitle);
       
-      // FIXED: Ensure resource types are properly formatted and stored
+      // Handle resource types properly
       let resourceTypes;
       if (Array.isArray(formState.resourceType)) {
         resourceTypes = formState.resourceType;
@@ -151,7 +199,7 @@ export const historyService = {
       
       console.log('📝 Resource types to save:', resourceTypes);
       
-      // FIXED: Save each resource type separately for better tracking
+      // Save each resource type separately for better tracking
       const historyPromises = resourceTypes.map(async (resourceType) => {
         const historyItem = {
           title: lessonTitle,
@@ -159,8 +207,8 @@ export const historyService = {
           lessonData: {
             ...formState,
             generatedTitle: contentState.title,
-            resourceType: resourceType, // Ensure it's in lesson data too
-            structuredContent: contentState.structuredContent.map(slide => ({
+            resourceType: resourceType,
+            structuredContent: contentState.structuredContent?.map(slide => ({
               title: slide.title || '',
               layout: slide.layout || 'TITLE_AND_CONTENT',
               content: Array.isArray(slide.content) ? [...slide.content] : [],
@@ -168,7 +216,7 @@ export const historyService = {
               visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
               left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
               right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-            })),
+            })) || [],
             finalOutline: contentState.finalOutline || '',
             generatedResources: contentState.generatedResources || {}
           }
@@ -178,13 +226,12 @@ export const historyService = {
       });
       
       // Wait for all history items to be saved
-      const results = await Promise.all(historyPromises);
-      console.log('✅ All history items saved:', results);
+      const results = await Promise.allSettled(historyPromises);
+      console.log('✅ All history items processed:', results);
       
       return { success: true, results };
     } catch (error) {
       console.error('❌ Error tracking lesson generation:', error);
-      // Continue even if tracking fails
       return { success: false, error: error.message };
     }
   },
@@ -202,16 +249,13 @@ export const historyService = {
       
       return JSON.parse(localHistory);
     } catch (error) {
-      console.error('Error reading local history:', error);
+      console.error('❌ Error reading local history:', error);
       return [];
     }
   },
   
   /**
    * Saves history to local storage for anonymous users.
-   * Enhanced to preserve titles properly.
-   * 
-   * @param {Object} historyItem - The history item to save
    */
   saveLocalHistory(historyItem) {
     try {
@@ -224,7 +268,6 @@ export const historyService = {
       
       // Ensure we have a good title
       if (!historyItem.title || historyItem.title === 'Untitled Lesson') {
-        // Try to extract a better title from lesson data
         if (historyItem.lessonData) {
           historyItem.title = historyItem.lessonData.generatedTitle || 
                              historyItem.lessonData.lessonTopic || 
@@ -233,7 +276,7 @@ export const historyService = {
         }
       }
       
-      console.log('Saving local history item with title:', historyItem.title);
+      console.log('💾 Saving local history item with title:', historyItem.title);
       
       // Check if an item with the same title and resource type already exists
       const existingIndex = history.findIndex(item => 
@@ -257,7 +300,7 @@ export const historyService = {
       localStorage.setItem('anonymous_history', JSON.stringify(history));
       return true;
     } catch (error) {
-      console.error('Error saving local history:', error);
+      console.error('❌ Error saving local history:', error);
       return false;
     }
   },
@@ -267,6 +310,7 @@ export const historyService = {
    */
   clearLocalHistory() {
     localStorage.removeItem('anonymous_history');
+    console.log('🗑️ Local history cleared');
   }
 };
 
