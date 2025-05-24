@@ -506,7 +506,7 @@ const Sidebar = ({
                     zIndex: 10,
                     overflow: 'visible',
                     // CRITICAL: Mobile-specific bottom padding to avoid browser controls
-                    paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 30px)' : '16px',
+                    paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 50px)' : '16px',
                     boxSizing: 'border-box'
                 }}
             >
@@ -622,11 +622,11 @@ const Sidebar = ({
                             backgroundColor: 'transparent',
                             color: '#64748b',
                             transition: 'all 0.2s ease',
-                            // Mobile-specific adjustments
+                            // Mobile-specific adjustments - INCREASED bottom margin
                             ...(isMobile && {
                                 minHeight: '48px',
                                 minWidth: '48px',
-                                mb: 1, // Extra bottom margin on mobile
+                                mb: 4, // INCREASED from 1 to 4 for more space on mobile
                             }),
                             '&:hover': {
                                 backgroundColor: '#f8fafc',
