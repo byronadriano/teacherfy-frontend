@@ -1,21 +1,63 @@
+/* Updated mobile.css with iOS safe area fixes - NO EMPTY RULES */
+
+/* iOS Safe Area Support - Critical for buttons not being hidden */
+@supports (-webkit-touch-callout: none) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  
+  /* Ensure sidebar buttons stay above iOS navigation */
+  .sidebar {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+  }
+}
 
 /* Fix for Google Sign-in button on mobile */
 .is-mobile-device .google-login-container {
-  margin-bottom: 40px !important; /* Reduced to avoid excess scroll */
+  margin-bottom: 40px !important;
 }
 
-/* Prevent buttons from touching screen edge */
+/* Prevent buttons from touching screen edge or being hidden by browser UI */
 .is-mobile-device .view-plans-button,
 .is-mobile-device .signin-button {
   margin-bottom: 16px !important;
 }
 
-/* Content padding — only add minimal space for UI breathing room */
+/* Content padding adjustments for mobile */
 .is-mobile-device .main-content {
-  padding-bottom: 40px !important; /* Matches typical safe UI space */
+  padding-bottom: 40px !important;
 }
 
-/* Sidebar toggle button */
+/* Critical: Sidebar positioning fixes for mobile */
+.sidebar {
+  /* Add minimum bottom padding to prevent buttons from being hidden */
+  padding-bottom: 20px;
+}
+
+/* Mobile-specific sidebar adjustments */
+@media (max-width: 600px) {
+  .sidebar {
+    /* Ensure sidebar content doesn't extend to the very bottom */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
+    /* Add some space at the bottom for browser navigation */
+    box-sizing: border-box;
+  }
+  
+  /* Make buttons more accessible on mobile */
+  .sidebar button {
+    min-height: 48px !important; /* Increased touch target */
+    min-width: 48px !important;
+    margin-bottom: 8px !important; /* Space between buttons */
+  }
+  
+  /* Specific fixes for user and upgrade buttons */
+  .sidebar > *:last-child,
+  .sidebar > *:nth-last-child(2) {
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Sidebar toggle button positioning */
 .sidebar-toggle-button {
   position: absolute !important;
   z-index: 1000 !important;
@@ -82,13 +124,35 @@
   z-index: -1;
 }
 
-/* iOS-specific safe area support */
+/* Enhanced iOS-specific safe area support */
 @supports (-webkit-touch-callout: none) {
+  /* This targets iOS devices specifically */
   body {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   .sidebar-toggle-button {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2) !important;
+  }
+  
+  /* Ensure sidebar buttons are above iOS controls */
+  .sidebar {
+    /* Use calc to add safe area + extra space */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 25px) !important;
+  }
+  
+  /* For the main content area */
+  .main-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+  }
+}
+
+/* Additional fix for viewport height on mobile */
+@media (max-width: 600px) {
+  .sidebar {
+    /* Use viewport height minus safe areas */
+    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    /* Ensure flexbox accounts for safe areas */
+    box-sizing: border-box;
   }
 }

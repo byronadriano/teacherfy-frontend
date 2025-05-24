@@ -1,4 +1,5 @@
-/* Updated global.css 
+/* Updated global.css with mobile fixes - NO EMPTY RULES */
+
 /* Base reset and defaults */
 html {
   box-sizing: border-box;
@@ -23,7 +24,9 @@ body {
   color: #1e293b;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal scrolling */
-  /* Remove fixed bottom padding - now handled dynamically in App.js */
+  /* iOS safe area support */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 /* Root container */
@@ -31,24 +34,34 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* Ensure full viewport coverage on mobile */
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 /* Mobile-specific fixes */
 @media (max-width: 600px) {
-  /* Remove fixed bottom padding for mobile too */
-  
   /* Prevent zooming on inputs in mobile Safari */
   input[type="text"],
   input[type="email"],
   input[type="search"],
-  input[type="password"] {
-    font-size: 16px;
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
   }
   
-  /* Fix for footer overlapping content - removed since footer is now conditional */
-  .MuiBox-root[component="footer"] {
-    position: relative;
-    margin-top: 2rem;
+  /* Mobile viewport fixes */
+  body {
+    /* Ensure proper mobile viewport handling */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+    /* Add safe area padding for iOS */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  }
+  
+  /* Fix for buttons being hidden by browser UI */
+  .MuiButton-root {
+    min-height: 44px !important; /* Apple's recommended touch target size */
   }
 }
 
@@ -92,5 +105,76 @@ body {
   }
   100% {
     background-position: 1000px 0;
+  }
+}
+
+/* Critical iOS Safari fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific fixes */
+  body {
+    /* Ensure proper safe area handling */
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* Fix for iOS viewport issues */
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Prevent iOS zoom on form inputs */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  
+  /* Fix for iOS button positioning - FIXED: Use standard appearance property */
+  button {
+    appearance: none; /* Standard property */
+    -webkit-appearance: none; /* WebKit fallback */
+    border-radius: 8px;
+  }
+}
+
+/* Additional mobile fixes for specific components */
+@media (max-width: 600px) {
+  /* Ensure modals and popovers work properly on mobile */
+  .MuiPopover-root {
+    z-index: 9999 !important;
+  }
+  
+  .MuiModal-root {
+    z-index: 9999 !important;
+  }
+  
+  /* Fix for Material-UI components on mobile */
+  .MuiDialog-root {
+    z-index: 9999 !important;
+  }
+}
+
+/* Mobile-specific class for conditional styling - FIXED: Added actual styles */
+.is-mobile-device {
+  /* Mobile-specific overrides */
+  -webkit-tap-highlight-color: rgba(0,0,0,0); /* Remove tap highlight on mobile */
+  touch-action: manipulation; /* Improve touch responsiveness */
+}
+
+.is-mobile-device .sidebar {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
+}
+
+.is-mobile-device button {
+  min-height: 48px !important;
+  min-width: 48px !important;
+}
+
+/* Ensure proper spacing for touch interfaces */
+@media (hover: none) and (pointer: coarse) {
+  /* This targets touch devices specifically */
+  button, .MuiButton-root {
+    min-height: 48px !important;
+    min-width: 48px !important;
+  }
+  
+  /* Add more space between interactive elements */
+  .sidebar > * {
+    margin-bottom: 8px !important;
   }
 }

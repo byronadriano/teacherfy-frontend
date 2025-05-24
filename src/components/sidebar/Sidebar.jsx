@@ -1,4 +1,4 @@
-// src/components/sidebar/Sidebar.jsx - Fixed Perplexity-style with hover expansion
+// Updated Sidebar.jsx with mobile-specific fixes - CORRECTED
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button, Avatar, Popover, Paper, Modal } from '@mui/material';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
@@ -41,6 +41,7 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
         backgroundColor: isActive ? '#f0f4f8' : 'transparent',
         color: isActive ? '#2563eb' : '#64748b',
         transition: 'all 0.2s ease',
+        mb: 1, // Add margin bottom for mobile spacing
         '&:hover': {
           backgroundColor: '#f8fafc',
           color: '#374151'
@@ -379,9 +380,33 @@ const Sidebar = ({
     const [activeNav, setActiveNav] = useState('home');
     const [historyPopoverOpen, setHistoryPopoverOpen] = useState(false);
     const [historyAnchorEl, setHistoryAnchorEl] = useState(null);
+    const [isMobile, setIsMobile] = useState(false);
     
     const historyButtonRef = useRef(null);
     const popoverTimeoutRef = useRef(null);
+
+    // Detect mobile device and add class to body
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth <= 600;
+            setIsMobile(mobile);
+            
+            // Add/remove mobile class to body
+            if (mobile) {
+                document.body.classList.add('is-mobile-device');
+            } else {
+                document.body.classList.remove('is-mobile-device');
+            }
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+            document.body.classList.remove('is-mobile-device');
+        };
+    }, []);
 
     const handleLogoClick = () => {
         console.log("Logo clicked");
@@ -479,7 +504,10 @@ const Sidebar = ({
                     alignItems: 'center',
                     py: 2,
                     zIndex: 10,
-                    overflow: 'visible' // Important for popovers
+                    overflow: 'visible',
+                    // CRITICAL: Mobile-specific bottom padding to avoid browser controls
+                    paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 30px)' : '16px',
+                    boxSizing: 'border-box'
                 }}
             >
                 {/* Logo Section */}
@@ -560,6 +588,12 @@ const Sidebar = ({
                         color: 'white',
                         mb: 2,
                         transition: 'all 0.2s ease',
+// Mobile-specific adjustments
+                        ...(isMobile && {
+                            minHeight: '48px',
+                            minWidth: '48px',
+                            mb: 3, // More space on mobile
+                        }),
                         '&:hover': {
                             backgroundColor: '#6d28d9',
                             transform: 'scale(1.05)'
@@ -588,6 +622,12 @@ const Sidebar = ({
                             backgroundColor: 'transparent',
                             color: '#64748b',
                             transition: 'all 0.2s ease',
+                            // Mobile-specific adjustments
+                            ...(isMobile && {
+                                minHeight: '48px',
+                                minWidth: '48px',
+                                mb: 1, // Extra bottom margin on mobile
+                            }),
                             '&:hover': {
                                 backgroundColor: '#f8fafc',
                                 color: '#374151'
