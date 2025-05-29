@@ -1,7 +1,6 @@
-// Updated Sidebar.jsx - FIXED to use AuthContext properly
+// src/components/sidebar/Sidebar.jsx - FIXED VERSION without conflicting OAuth
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button, Avatar, Popover, Paper, Modal } from '@mui/material';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { 
   Stars, 
   Home,
@@ -13,8 +12,7 @@ import RecentsList from './RecentsList';
 import UserSettingsModal from '../modals/UserSettingsModal';
 import PricingModal from '../modals/PricingModal';
 import Logo from '../../assets/images/Teacherfyoai.png';
-import { GOOGLE_CLIENT_ID } from '../../utils/constants';
-import { useAuth } from '../../contexts/AuthContext'; // Import the hook
+import { useAuth } from '../../contexts/AuthContext';
 
 const SIDEBAR_WIDTH_COLLAPSED = 60;
 
@@ -115,7 +113,7 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
   );
 };
 
-const LoginModal = ({ open, onClose, onSuccess }) => {
+const LoginModal = ({ open, onClose, onLoginClick }) => {
   return (
     <Modal
       open={open}
@@ -158,21 +156,24 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
           </Typography>
         </Box>
 
-        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-          <GoogleLogin
-            onSuccess={(credentialResponse) => {
-              onSuccess(credentialResponse);
-              onClose();
-            }}
-            onError={() => {
-              console.error("Login Failed");
-              alert("Login Failed. Please try again.");
-            }}
-            shape="pill"
-            size="large"
-            width="100%"
-          />
-        </GoogleOAuthProvider>
+        {/* FIXED: Use custom login button instead of Google OAuth Provider */}
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={onLoginClick}
+          sx={{
+            backgroundColor: '#4285f4',
+            color: 'white',
+            py: 1.5,
+            textTransform: 'none',
+            fontSize: '1rem',
+            '&:hover': {
+              backgroundColor: '#3367d6'
+            }
+          }}
+        >
+          Sign in with Google
+        </Button>
         
         <Button 
           onClick={onClose}
@@ -371,7 +372,6 @@ const Sidebar = ({
     onLogoReset,
     onHistoryItemSelect
 }) => {
-    // FIXED: Use the auth context instead of props
     const { user, isAuthenticated, login, logout, isLoading } = useAuth();
     
     const [showSettings, setShowSettings] = useState(false);
@@ -478,12 +478,15 @@ const Sidebar = ({
         }
     };
 
-    const handleLoginSuccess = async (credentialResponse) => {
+    const handleLoginClick = async () => {
         try {
-            console.log('🔐 Login success, calling auth context login');
-            await login(credentialResponse);
+            console.log('🔐 Starting login process...');
+            setShowLoginModal(false);
+            await login();
+            console.log('✅ Login successful');
         } catch (error) {
             console.error('❌ Login error:', error);
+            alert(`Login failed: ${error.message}`);
         }
     };
 
@@ -692,7 +695,7 @@ const Sidebar = ({
             <LoginModal
                 open={showLoginModal}
                 onClose={() => setShowLoginModal(false)}
-                onSuccess={handleLoginSuccess}
+                onLoginClick={handleLoginClick}
             />
 
             {/* Settings Modal */}

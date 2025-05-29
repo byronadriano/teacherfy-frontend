@@ -1,4 +1,4 @@
-// Fixed App.js - Completely remove footer container when hidden
+// src/App.js - FIXED VERSION without conflicting Google OAuth Provider
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -101,25 +101,24 @@ function App() {
             </Routes>
           </Box>
           
-          {/* FIXED: Only render footer container when showFooter is true AND on home page */}
+          {/* Footer only on home page when showFooter is true */}
           {window.location.pathname === '/' && showFooter && !isMobile && (
             <Box
               component="footer"
               sx={{
                 position: 'fixed',
                 bottom: 0,
-                left: '60px', // Account for sidebar width
+                left: '60px',
                 right: 0,
                 py: 2,
                 px: 4,
                 backgroundColor: '#ffffff',
-                // borderTop: '1px solid #f1f5f9',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 gap: 3,
                 flexWrap: 'wrap',
-                zIndex: 5 // Below sidebar but above content
+                zIndex: 5
               }}
             >
               <AppFooter />
