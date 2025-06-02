@@ -1,4 +1,4 @@
-// src/components/sidebar/Sidebar.jsx - FIXED VERSION without conflicting OAuth
+// src/components/sidebar/Sidebar.jsx - FIXED for mobile visibility
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button, Avatar, Popover, Paper, Modal } from '@mui/material';
 import { 
@@ -35,6 +35,7 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
         width: '44px',
         height: '44px',
         minWidth: '44px',
+        minHeight: '48px', // Increased for mobile
         p: 0,
         borderRadius: '12px',
         backgroundColor: isActive ? '#f0f4f8' : 'transparent',
@@ -44,6 +45,15 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
         '&:hover': {
           backgroundColor: '#f8fafc',
           color: '#374151'
+        },
+        // Mobile-specific touch improvements
+        '@media (max-width: 600px)': {
+          minHeight: '48px',
+          minWidth: '48px',
+          '&:active': {
+            transform: 'scale(0.95)',
+            transition: 'transform 0.1s ease'
+          }
         }
       }}
     >
@@ -74,7 +84,13 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          // Mobile adjustments
+          '@media (max-width: 600px)': {
+            width: 'calc(100vw - 80px)',
+            maxWidth: '300px',
+            maxHeight: '60vh'
+          }
         }
       }}
     >
@@ -105,6 +121,11 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
             background: '#cbd5e1',
             borderRadius: '4px',
           },
+          // Mobile scroll improvements
+          '@media (max-width: 600px)': {
+            maxHeight: '50vh',
+            '-webkit-overflow-scrolling': 'touch'
+          }
         }}>
           <RecentsList onSelectItem={onHistoryItemSelect} />
         </Box>
@@ -126,7 +147,8 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 400,
+          width: { xs: 'calc(100vw - 32px)', sm: 400 },
+          maxWidth: '400px',
           bgcolor: 'background.paper',
           borderRadius: '12px',
           boxShadow: 24,
@@ -134,7 +156,12 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 3
+          gap: 3,
+          // Mobile adjustments
+          '@media (max-width: 600px)': {
+            p: 3,
+            gap: 2
+          }
         }}
       >
         <img
@@ -156,7 +183,6 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           </Typography>
         </Box>
 
-        {/* FIXED: Use custom login button instead of Google OAuth Provider */}
         <Button
           variant="contained"
           fullWidth
@@ -167,6 +193,7 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
             py: 1.5,
             textTransform: 'none',
             fontSize: '1rem',
+            minHeight: '48px', // Touch-friendly
             '&:hover': {
               backgroundColor: '#3367d6'
             }
@@ -180,6 +207,9 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           variant="text"
           color="inherit"
           size="small"
+          sx={{
+            minHeight: '44px' // Touch-friendly
+          }}
         >
           Continue without signing in
         </Button>
@@ -213,12 +243,22 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
           width: '44px',
           height: '44px',
           minWidth: '44px',
+          minHeight: '48px', // Mobile-friendly
           p: 0,
           borderRadius: '12px',
           backgroundColor: 'transparent',
           transition: 'all 0.2s ease',
           '&:hover': {
             backgroundColor: '#f8fafc'
+          },
+          // Mobile touch improvements
+          '@media (max-width: 600px)': {
+            minHeight: '48px',
+            minWidth: '48px',
+            '&:active': {
+              transform: 'scale(0.95)',
+              transition: 'transform 0.1s ease'
+            }
           }
         }}
       >
@@ -268,7 +308,12 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            // Mobile adjustments
+            '@media (max-width: 600px)': {
+              width: 'calc(100vw - 80px)',
+              maxWidth: '280px'
+            }
           }
         }}
       >
@@ -330,6 +375,7 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
                 color: '#374151',
                 textTransform: 'none',
                 fontSize: '0.875rem',
+                minHeight: '44px', // Touch-friendly
                 '&:hover': {
                   backgroundColor: '#f8fafc'
                 }
@@ -352,6 +398,7 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
                 color: '#dc2626',
                 textTransform: 'none',
                 fontSize: '0.875rem',
+                minHeight: '44px', // Touch-friendly
                 '&:hover': {
                   backgroundColor: '#fef2f2'
                 }
@@ -386,27 +433,70 @@ const Sidebar = ({
     const historyButtonRef = useRef(null);
     const popoverTimeoutRef = useRef(null);
 
-    // Detect mobile device and add class to body
+    // Enhanced mobile detection and class management
     useEffect(() => {
         const checkMobile = () => {
             const mobile = window.innerWidth <= 600;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isTouch = 'ontouchstart' in window;
+            
             setIsMobile(mobile);
             
+            // Add multiple classes for better targeting
             if (mobile) {
                 document.body.classList.add('is-mobile-device');
+                if (isIOS) {
+                    document.body.classList.add('is-ios-device');
+                }
+                if (isTouch) {
+                    document.body.classList.add('is-touch-device');
+                }
             } else {
-                document.body.classList.remove('is-mobile-device');
+                document.body.classList.remove('is-mobile-device', 'is-ios-device', 'is-touch-device');
             }
         };
         
         checkMobile();
         window.addEventListener('resize', checkMobile);
+        window.addEventListener('orientationchange', checkMobile);
         
         return () => {
             window.removeEventListener('resize', checkMobile);
-            document.body.classList.remove('is-mobile-device');
+            window.removeEventListener('orientationchange', checkMobile);
+            document.body.classList.remove('is-mobile-device', 'is-ios-device', 'is-touch-device');
         };
     }, []);
+
+    // Handle viewport changes for mobile keyboards
+    useEffect(() => {
+        if (!isMobile) return;
+
+        const handleVisualViewportChange = () => {
+            if (window.visualViewport) {
+                const viewport = window.visualViewport;
+                const heightDiff = window.innerHeight - viewport.height;
+                
+                if (heightDiff > 150) { // Keyboard is likely open
+                    document.body.classList.add('keyboard-active');
+                } else {
+                    document.body.classList.remove('keyboard-active');
+                }
+            }
+        };
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleVisualViewportChange);
+            window.visualViewport.addEventListener('scroll', handleVisualViewportChange);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleVisualViewportChange);
+                window.visualViewport.removeEventListener('scroll', handleVisualViewportChange);
+            }
+            document.body.classList.remove('keyboard-active');
+        };
+    }, [isMobile]);
 
     const handleLogoClick = () => {
         console.log("Logo clicked");
@@ -536,6 +626,7 @@ const Sidebar = ({
                 sx={{
                     width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
                     height: '100vh',
+                    height: '100dvh', // Dynamic viewport height for mobile
                     position: 'fixed',
                     left: 0,
                     top: 0,
@@ -545,10 +636,23 @@ const Sidebar = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     py: 2,
-                    zIndex: 10,
+                    zIndex: 1000, // Increased z-index for mobile
                     overflow: 'visible',
-                    paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 50px)' : '16px',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    
+                    // Critical mobile improvements
+                    paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
+                    paddingBottom: isMobile 
+                        ? 'max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px))' 
+                        : '16px',
+                    
+                    // Mobile-specific adjustments
+                    '@media (max-width: 600px)': {
+                        height: '100vh',
+                        height: '100dvh',
+                        paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom, 0px) + 80px))',
+                        justifyContent: 'space-between' // Better spacing on mobile
+                    }
                 }}
             >
                 {/* Logo Section */}
@@ -565,7 +669,13 @@ const Sidebar = ({
                         transform: isLogoHovered ? 'scale(1.1)' : 'scale(1)',
                         backgroundColor: isLogoHovered ? '#f0f4f8' : 'transparent',
                         mb: 3,
-                        position: 'relative'
+                        position: 'relative',
+                        // Mobile touch improvements
+                        '@media (max-width: 600px)': {
+                            minHeight: '48px',
+                            minWidth: '48px',
+                            mb: 2
+                        }
                     }}
                     onClick={handleLogoClick}
                     onMouseEnter={() => setIsLogoHovered(true)}
@@ -596,7 +706,14 @@ const Sidebar = ({
                 </Box>
 
                 {/* Main Navigation */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 1,
+                    '@media (max-width: 600px)': {
+                        gap: 1.5 // More space on mobile
+                    }
+                }}>
                     {NAV_ITEMS.map((item) => (
                         <Box
                             key={item.id}
@@ -613,69 +730,100 @@ const Sidebar = ({
                     ))}
                 </Box>
 
-                {/* Spacer */}
-                <Box sx={{ flex: 1 }} />
+                {/* Spacer - Modified for mobile */}
+                <Box sx={{ 
+                    flex: 1,
+                    '@media (max-width: 600px)': {
+                        flex: 0, // Don't stretch on mobile
+                        minHeight: '20px' // Minimal spacer
+                    }
+                }} />
 
-                {/* Upgrade Button */}
-                <Button
-                    onClick={() => setShowPricing(true)}
-                    sx={{
-                        width: '44px',
-                        height: '44px',
-                        minWidth: '44px',
-                        p: 0,
-                        borderRadius: '12px',
-                        backgroundColor: '#7c3aed',
-                        color: 'white',
-                        mb: 2,
-                        transition: 'all 0.2s ease',
-                        ...(isMobile && {
-                            minHeight: '48px',
-                            minWidth: '48px',
-                            mb: 3,
-                        }),
-                        '&:hover': {
-                            backgroundColor: '#6d28d9',
-                            transform: 'scale(1.05)'
-                        }
-                    }}
-                >
-                    <Crown size={20} />
-                </Button>
-
-                {/* User Section */}
-                {isAuthenticated && user ? (
-                    <UserMenu 
-                        user={user}
-                        onSettings={() => setShowSettings(true)}
-                        onLogout={handleLogout}
-                    />
-                ) : (
+                {/* Bottom buttons container - Critical for mobile positioning */}
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    '@media (max-width: 600px)': {
+                        // Fixed positioning from bottom on mobile
+                        marginTop: 'auto',
+                        paddingBottom: 0,
+                        gap: 3
+                    }
+                }}>
+                    {/* Upgrade Button */}
                     <Button
-                        onClick={handleUserButtonClick}
+                        onClick={() => setShowPricing(true)}
                         sx={{
                             width: '44px',
                             height: '44px',
                             minWidth: '44px',
+                            minHeight: '48px', // Mobile-friendly
                             p: 0,
                             borderRadius: '12px',
-                            backgroundColor: 'transparent',
-                            color: '#64748b',
+                            backgroundColor: '#7c3aed',
+                            color: 'white',
                             transition: 'all 0.2s ease',
-                            ...(isMobile && {
+                            '&:hover': {
+                                backgroundColor: '#6d28d9',
+                                transform: 'scale(1.05)'
+                            },
+                            // Mobile improvements
+                            '@media (max-width: 600px)': {
                                 minHeight: '48px',
                                 minWidth: '48px',
-                                mb: 4,
-                            }),
-                            '&:hover': {
-                                backgroundColor: '#f8fafc',
-                                color: '#374151'
+                                '&:active': {
+                                    transform: 'scale(0.95)',
+                                    transition: 'transform 0.1s ease'
+                                }
                             }
                         }}
                     >
-                        <User size={20} />
+                        <Crown size={20} />
                     </Button>
-                )}
+
+                    {/* User Section - Critical mobile positioning */}
+                    {isAuthenticated && user ? (
+                        <UserMenu 
+                            user={user}
+                            onSettings={() => setShowSettings(true)}
+                            onLogout={handleLogout}
+                        />
+                    ) : (
+                        <Button
+                            onClick={handleUserButtonClick}
+                            sx={{
+                                width: '44px',
+                                height: '44px',
+                                minWidth: '44px',
+                                minHeight: '48px', // Mobile-friendly
+                                p: 0,
+                                borderRadius: '12px',
+                                backgroundColor: 'transparent',
+                                color: '#64748b',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    backgroundColor: '#f8fafc',
+                                    color: '#374151'
+                                },
+                                // Mobile improvements
+                                '@media (max-width: 600px)': {
+                                    minHeight: '48px',
+                                    minWidth: '48px',
+                                    // Ensure this button is always visible
+                                    position: 'relative',
+                                    '&:active': {
+                                        transform: 'scale(0.95)',
+                                        transition: 'transform 0.1s ease'
+                                    }
+                                }
+                            }}
+                        >
+                            <User size={20} />
+                        </Button>
+                    )}
+                </Box>
             </Box>
 
             {/* History Popover */}
@@ -718,6 +866,15 @@ const Sidebar = ({
                 @keyframes twinkle {
                     from { opacity: 0.6; transform: scale(0.8); }
                     to { opacity: 1; transform: scale(1); }
+                }
+                
+                /* Debug helper - remove in production */
+                .debug-mobile .sidebar {
+                    background-color: rgba(255, 0, 0, 0.1) !important;
+                }
+                
+                .debug-mobile .sidebar > *:last-child {
+                    background-color: rgba(0, 255, 0, 0.3) !important;
                 }
             `}</style>
         </>

@@ -1,4 +1,4 @@
-// src/pages/LessonBuilder/hooks/useForm.js - FIXED to ensure regeneration counts as generation
+// src/pages/LessonBuilder/hooks/useForm.js - FIXED state reset issue
 import { useState, useCallback } from "react";
 import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
@@ -62,7 +62,10 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
     generatedResources: {}
   });
 
+  // FIXED: More comprehensive reset function
   const resetForm = useCallback(() => {
+    console.log('🔄 Resetting form state completely');
+    
     setFormState({
       resourceType: [],
       gradeLevel: "",
@@ -75,8 +78,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       customPrompt: ""
     });
 
-    setUiState(prev => ({
-      ...prev,
+    setUiState({
       isLoading: false,
       error: "",
       outlineModalOpen: false,
@@ -85,8 +87,9 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       modifiedPrompt: "",
       generateOutlineClicked: false,
       isExample: false
-    }));
+    });
 
+    // FIXED: Complete content state reset
     setContentState({
       title: "",
       outlineToConfirm: "",
@@ -94,9 +97,36 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       structuredContent: [],
       generatedResources: {}
     });
+
+    // FIXED: Clear any cached data that might interfere
+    sessionStorage.removeItem('lastGeneratedOutline');
+    sessionStorage.removeItem('lastContentState');
+    
+    console.log('✅ Form reset complete');
   }, []);
 
   const handleFormChange = useCallback((field, value, isMultiSelect = false) => {
+    // FIXED: Reset content when form changes significantly
+    const significantFields = ['resourceType', 'gradeLevel', 'subjectFocus', 'lessonTopic'];
+    
+    if (significantFields.includes(field)) {
+      console.log(`🔄 Significant field changed: ${field}, clearing content state`);
+      setContentState({
+        title: "",
+        outlineToConfirm: "",
+        finalOutline: "",
+        structuredContent: [],
+        generatedResources: {}
+      });
+      
+      setUiState(prev => ({
+        ...prev,
+        outlineConfirmed: false,
+        error: "",
+        regenerationCount: 0
+      }));
+    }
+    
     setFormState(prev => {
       if (field === 'resourceType' && isMultiSelect) {
         let newResourceTypes;
@@ -138,19 +168,53 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
 
   const toggleExample = useCallback((isChecked) => {
     if (isChecked) {
+      // FIXED: Reset everything before setting example
+      setContentState({
+        title: "",
+        outlineToConfirm: "",
+        finalOutline: "",
+        structuredContent: [],
+        generatedResources: {}
+      });
+      
+      setUiState(prev => ({
+        ...prev,
+        outlineConfirmed: false,
+        error: "",
+        regenerationCount: 0,
+        isExample: true
+      }));
+      
       setFormState(prev => ({
         ...EXAMPLE_FORM_DATA,
         resourceType: [EXAMPLE_FORM_DATA.resourceType],
         numSlides: prev.numSlides,
         includeImages: prev.includeImages
       }));
-      setUiState(prev => ({ ...prev, isExample: true }));
     } else {
       resetForm();
     }
   }, [resetForm]);
 
   const handleGenerateOutline = useCallback(async () => {
+    // FIXED: Clear previous content before generating new
+    console.log('🚀 Starting outline generation - clearing previous content');
+    
+    setContentState({
+      title: "",
+      outlineToConfirm: "",
+      finalOutline: "",
+      structuredContent: [],
+      generatedResources: {}
+    });
+    
+    setUiState(prev => ({
+      ...prev,
+      outlineConfirmed: false,
+      regenerationCount: 0,
+      error: ""
+    }));
+
     // Validate required fields
     if (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0) || 
         !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
@@ -168,7 +232,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       return;
     }
 
-    // FIXED: Check generation limits before proceeding (unless using example)
+    // Check generation limits before proceeding (unless using example)
     if (!uiState.isExample && subscriptionState) {
       if (!subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
         setUiState(prev => ({
@@ -218,12 +282,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       }
       
       // Regular workflow - this WILL count against generation limits
-      console.log('Making API request with form data (will count against limits):', {
-        resourceType: formState.resourceType,
-        gradeLevel: formState.gradeLevel,
-        subjectFocus: formState.subjectFocus,
-        language: formState.language,
-      });
+      console.log('Making API request with form data (will count against limits)');
       
       try {
         const resourceTypes = Array.isArray(formState.resourceType) 
@@ -254,7 +313,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           
           const data = await outlineService.generate(requestData);
           
-          // IMPROVED: Handle rate limit errors specifically
+          // Handle rate limit errors specifically
           if (data.error === 'RATE_LIMIT_EXCEEDED') {
             setUiState(prev => ({
               ...prev,
@@ -270,18 +329,12 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
             throw new Error(data.error);
           }
           
-          console.log(`API request for ${resourceType} successful:`, {
-            hasMessages: Boolean(data.messages),
-            hasTitle: Boolean(data.title),
-            structuredContentLength: data.structured_content?.length || 0,
-            usageLimits: data.usage_limits
-          });
+          console.log(`API request for ${resourceType} successful`);
 
-          // FIXED: Update subscription state if usage_limits are returned
+          // Update subscription state if usage_limits are returned
           if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
             subscriptionState.updateSubscriptionFromResponse(data);
           } else if (data.usage_limits) {
-            // Fallback: update the subscriptionState object directly if it's passed from parent
             Object.assign(subscriptionState, {
               generationsLeft: data.usage_limits.generations_left || 0,
               resetTime: data.usage_limits.reset_time,
@@ -316,7 +369,8 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           }
         }
         
-        // Set content state
+        // FIXED: Set content state with fresh data
+        console.log('✅ Setting new content state');
         setContentState({
           title: generatedTitle,
           outlineToConfirm: formattedOutline,
@@ -370,7 +424,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       return;
     }
 
-    // FIXED: Check generation limits for regeneration too (regeneration counts as generation)
+    // Check generation limits for regeneration too
     if (subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
       setUiState(prev => ({
         ...prev,
@@ -397,17 +451,16 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         
       const primaryResourceType = resourceTypes[0];
       
-      // FIXED: Mark this as regeneration so it counts as generation
       const requestData = {
         ...formState,
         resourceType: primaryResourceType,
-        regeneration: true,  // This flag ensures it counts as generation
+        regeneration: true,
         regenerationCount: uiState.regenerationCount + 1,
         previous_outline: contentState.outlineToConfirm,
         custom_prompt: uiState.modifiedPrompt
       };
 
-      console.log('Making regeneration API request (will count as generation):', requestData);
+      console.log('Making regeneration API request (will count as generation)');
 
       const data = await outlineService.generate(requestData);
       
@@ -415,7 +468,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         throw new Error('Invalid response format from server');
       }
 
-      // FIXED: Update subscription state after regeneration
+      // Update subscription state after regeneration
       if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
         subscriptionState.updateSubscriptionFromResponse(data);
       } else if (data.usage_limits) {
@@ -427,7 +480,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         });
       }
 
-      // Clean the structured content - SIMPLIFIED structure
+      // Clean the structured content
       const cleanStructuredContent = data.structured_content.map(item => ({
         title: item.title || 'Untitled',
         layout: item.layout || 'TITLE_AND_CONTENT',
@@ -444,6 +497,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         [primaryResourceType]: cleanStructuredContent
       };
 
+      // FIXED: Completely replace content state with new data
       setContentState({
         title: regeneratedTitle,
         outlineToConfirm: formattedOutline,

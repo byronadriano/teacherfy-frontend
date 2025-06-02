@@ -1,232 +1,314 @@
-/* Complete mobile.css with all fixes for iOS safe area and user button visibility */
+/* Updated mobile.css with comprehensive iPhone fixes */
 
-/* iOS Safe Area Support - Critical for buttons not being hidden */
-@supports (-webkit-touch-callout: none) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom, 20px);
-  }
-  
-  /* Ensure sidebar buttons stay above iOS navigation */
-  .sidebar {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
-  }
-  
-  /* iOS specific fixes for the user button */
-  @media (max-width: 600px) {
-    .sidebar > *:last-child {
-      margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
-    }
-  }
-}
-
-/* Fix for Google Sign-in button on mobile */
-.is-mobile-device .google-login-container {
-  margin-bottom: 40px !important;
-}
-
-/* Prevent buttons from touching screen edge or being hidden by browser UI */
-.is-mobile-device .view-plans-button,
-.is-mobile-device .signin-button {
-  margin-bottom: 16px !important;
-}
-
-/* Content padding adjustments for mobile */
-.is-mobile-device .main-content {
-  padding-bottom: 40px !important;
-}
-
-/* Mobile-specific class styles */
+/* Base mobile device detection and setup */
 .is-mobile-device {
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
 }
 
-.is-mobile-device .sidebar {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
+/* Critical iOS Safe Area Support */
+@supports (-webkit-touch-callout: none) {
+  body {
+    /* Ensure proper safe area handling */
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    /* Fix iOS viewport issues */
+    -webkit-text-size-adjust: 100%;
+    height: 100vh; /* Use viewport height */
+    height: 100dvh; /* Dynamic viewport height for iOS */
+  }
+  
+  /* Main content area safe area handling */
+  .main-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
 }
 
-.is-mobile-device button {
-  min-height: 48px !important;
-  min-width: 48px !important;
-}
-
-/* Critical: Sidebar positioning fixes for mobile */
+/* Enhanced sidebar positioning for mobile */
 .sidebar {
-  /* Add minimum bottom padding to prevent buttons from being hidden */
-  padding-bottom: 20px;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height */
+  width: 60px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-sizing: border-box;
+  overflow: visible;
+  
+  /* Critical: Add padding for iOS safe areas and navigation */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 /* Mobile-specific sidebar adjustments */
 @media (max-width: 600px) {
   .sidebar {
-    /* Ensure sidebar content doesn't extend to the very bottom */
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
-    /* Add some space at the bottom for browser navigation */
-    box-sizing: border-box;
+    /* Increase bottom padding significantly for mobile browsers */
+    padding-bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px)) !important;
+    
+    /* Ensure sidebar content is properly spaced */
+    justify-content: space-between;
   }
   
-  /* Make buttons more accessible on mobile */
+  /* Make all buttons more accessible on mobile */
   .sidebar button {
-    min-height: 48px !important; /* Increased touch target */
+    min-height: 48px !important;
     min-width: 48px !important;
-    margin-bottom: 8px !important; /* Space between buttons */
+    margin-bottom: 12px !important;
+    border-radius: 12px !important;
+    touch-action: manipulation;
   }
   
-  /* Specific fixes for user and upgrade buttons */
+  /* Critical: Fix for user button positioning */
   .sidebar > *:last-child {
-    margin-bottom: 50px !important; /* Even more space for the last element (user button) */
+    /* Push the last element (user button) up from the bottom */
+    margin-bottom: max(50px, calc(env(safe-area-inset-bottom, 0px) + 30px)) !important;
+    margin-top: auto; /* Push to bottom but with margin */
   }
   
+  /* Fix for upgrade button positioning */
   .sidebar > *:nth-last-child(2) {
     margin-bottom: 16px !important;
   }
-}
-
-/* Emergency fix for iOS bottom navigation overlap */
-@media (max-width: 600px) and (-webkit-min-device-pixel-ratio: 2) {
-  .sidebar {
-    padding-bottom: 80px !important;
-  }
   
-  .sidebar > *:last-child {
-    margin-bottom: 60px !important;
+  /* Spacer should not interfere with button positioning */
+  .sidebar .spacer,
+  .sidebar > div[sx*="flex: 1"] {
+    flex: 0 !important;
+    min-height: 0 !important;
   }
 }
 
-/* Sidebar toggle button positioning */
-.sidebar-toggle-button {
-  position: absolute !important;
-  z-index: 1000 !important;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) !important;
-  border: 2px solid #ffffff !important;
-  background-color: #fff;
-  border-radius: 50%;
-}
-
-/* Highlight animation */
-@keyframes highlight-toggle {
-  0% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(29, 78, 216, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0); }
-}
-
-.new-user .sidebar-toggle-button {
-  animation: highlight-toggle 2s ease-in-out 3;
-}
-
-/* Mobile screen optimizations */
-@media (max-width: 600px) {
-  .sidebar-toggle-button {
-    right: -18px !important;
-    width: 32px !important;
-    height: 32px !important;
-    top: 70px !important;
-  }
-
-  .form-container {
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-  }
-
-  h1.page-title {
-    font-size: 1.5rem !important;
-    margin-top: 1rem !important;
-    margin-bottom: 1.5rem !important;
-  }
-
-  button {
-    min-height: 44px !important;
-  }
-
-  .filter-button {
-    margin-right: 5px !important;
-    margin-bottom: 5px !important;
-  }
-
-  .sidebar-collapsed {
-    width: 0 !important;
-  }
-}
-
-/* Overlap fix for toggle */
-.sidebar-toggle-button::after {
-  content: "";
-  position: absolute;
-  left: -5px;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background-color: #ffffff;
-  z-index: -1;
-}
-
-/* Enhanced iOS-specific safe area support */
-@supports (-webkit-touch-callout: none) {
-  /* This targets iOS devices specifically */
-  body {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-
-  .sidebar-toggle-button {
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2) !important;
-  }
-  
-  /* Ensure sidebar buttons are above iOS controls */
-  .sidebar {
-    /* Use calc to add safe area + extra space */
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
-  }
-  
-  /* For the main content area */
-  .main-content {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
-  }
-}
-
-/* Additional fix for viewport height on mobile */
-@media (max-width: 600px) {
-  .sidebar {
-    /* Use viewport height minus safe areas */
-    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    /* Ensure flexbox accounts for safe areas */
-    box-sizing: border-box;
-  }
-}
-
-/* Specific targeting for different iOS devices */
+/* Specific iPhone device targeting */
 @media (max-width: 600px) {
   /* iPhone with home indicator (iPhone X and newer) */
   @supports (padding: max(0px)) {
     .sidebar {
-      padding-bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 40px)) !important;
+      padding-bottom: max(100px, calc(env(safe-area-inset-bottom, 34px) + 60px)) !important;
     }
     
     .sidebar > *:last-child {
-      margin-bottom: max(40px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
+      margin-bottom: max(60px, calc(env(safe-area-inset-bottom, 34px) + 40px)) !important;
+    }
+  }
+  
+  /* iPhone 8 and smaller (with physical home button) */
+  @media (max-height: 667px) {
+    .sidebar {
+      padding-bottom: 90px !important;
+    }
+    
+    .sidebar > *:last-child {
+      margin-bottom: 60px !important;
+    }
+  }
+  
+  /* Modern tall iPhones */
+  @media (min-height: 800px) {
+    .sidebar {
+      padding-bottom: max(110px, calc(env(safe-area-inset-bottom, 34px) + 70px)) !important;
+    }
+    
+    .sidebar > *:last-child {
+      margin-bottom: max(70px, calc(env(safe-area-inset-bottom, 34px) + 50px)) !important;
     }
   }
 }
 
-/* Fallback for older iOS devices without safe-area-inset */
-@media (max-width: 600px) and (max-height: 667px) {
-  /* iPhone 8 and smaller */
-  .sidebar {
-    padding-bottom: 70px !important;
+/* Main content area adjustments for mobile */
+@media (max-width: 600px) {
+  .main-content {
+    margin-left: 60px !important;
+    padding: 16px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Ensure content doesn't get hidden behind browser UI */
+    min-height: calc(100vh - 120px);
+    min-height: calc(100dvh - 120px);
   }
   
-  .sidebar > *:last-child {
-    margin-bottom: 50px !important;
+  /* Form and content spacing */
+  .form-container {
+    padding: 16px !important;
+    margin-bottom: 20px !important;
+  }
+  
+  /* Title adjustments */
+  h1.page-title {
+    font-size: 1.5rem !important;
+    margin-top: 1rem !important;
+    margin-bottom: 1.5rem !important;
+    text-align: center;
+  }
+  
+  /* Input field improvements */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    min-height: 44px !important;
+  }
+  
+  /* Button improvements */
+  button {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Filter buttons */
+  .filter-button {
+    margin-right: 8px !important;
+    margin-bottom: 8px !important;
+    min-height: 44px !important;
   }
 }
 
-/* For taller phones */
-@media (max-width: 600px) and (min-height: 800px) {
-  /* Modern iPhones and Android phones */
+/* Material-UI specific mobile fixes */
+@media (max-width: 600px) {
+  /* Dialog and modal positioning */
+  .MuiDialog-root {
+    z-index: 9999 !important;
+  }
+  
+  .MuiDialog-paper {
+    margin: 16px !important;
+    max-height: calc(100vh - 64px) !important;
+    max-height: calc(100dvh - 64px) !important;
+  }
+  
+  /* Popover positioning */
+  .MuiPopover-root {
+    z-index: 9998 !important;
+  }
+  
+  .MuiPopover-paper {
+    max-height: calc(100vh - 200px) !important;
+    max-height: calc(100dvh - 200px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* Button spacing in Material-UI */
+  .MuiButton-root {
+    min-height: 48px !important;
+    margin: 4px !important;
+  }
+  
+  /* Input field fixes */
+  .MuiTextField-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .MuiOutlinedInput-input {
+    font-size: 16px !important; /* Prevents iOS zoom */
+  }
+}
+
+/* Sidebar toggle button positioning (if used) */
+.sidebar-toggle-button {
+  position: fixed !important;
+  z-index: 1001 !important;
+  right: -18px !important;
+  top: 70px !important;
+  width: 36px !important;
+  height: 36px !important;
+  background-color: #ffffff !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Enhanced touch targets for mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* This targets touch devices specifically */
+  button, .MuiButton-root, .clickable {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Increase spacing between interactive elements */
+  .sidebar > *:not(:last-child) {
+    margin-bottom: 12px !important;
+  }
+  
+  /* Better touch feedback */
+  button:active, .MuiButton-root:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 900px) and (orientation: landscape) {
   .sidebar {
-    padding-bottom: calc(env(safe-area-inset-bottom, 34px) + 50px) !important;
+    padding-bottom: 60px !important;
   }
   
   .sidebar > *:last-child {
-    margin-bottom: calc(env(safe-area-inset-bottom, 34px) + 30px) !important;
+    margin-bottom: 40px !important;
+  }
+  
+  .main-content {
+    padding: 12px !important;
+  }
+}
+
+/* Fix for iOS keyboard appearing */
+@media (max-width: 600px) {
+  /* When keyboard appears, adjust viewport */
+  .keyboard-active body {
+    height: 100vh !important; /* Fallback */
+    height: 100dvh !important; /* Use dynamic viewport height */
+  }
+  
+  /* Prevent viewport jumping when keyboard appears */
+  .MuiTextField-root.Mui-focused {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* Debug styles for development (remove in production) */
+@media (max-width: 600px) {
+  .debug-mobile .sidebar {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+  }
+  
+  .debug-mobile .sidebar > *:last-child {
+    background-color: rgba(0, 255, 0, 0.3) !important;
+  }
+  
+  .debug-mobile .main-content {
+    background-color: rgba(0, 0, 255, 0.1) !important;
+  }
+}
+
+/* Critical: Override any conflicting styles */
+@media (max-width: 600px) {
+  .sidebar {
+    height: 100vh !important;
+    height: 100dvh !important;
+    position: fixed !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure user button is always visible */
+  .sidebar button[aria-label*="user"],
+  .sidebar button:last-child,
+  .sidebar > *:last-child button {
+    position: relative !important;
+    bottom: 0 !important;
+    margin-bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 40px)) !important;
   }
 }
