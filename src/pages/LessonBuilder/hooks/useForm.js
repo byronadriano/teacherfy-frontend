@@ -1,4 +1,4 @@
-// src/pages/LessonBuilder/hooks/useForm.js - Updated with generation limit checking
+// src/pages/LessonBuilder/hooks/useForm.js - FIXED to ensure regeneration counts as generation
 import { useState, useCallback } from "react";
 import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
@@ -168,17 +168,19 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       return;
     }
 
-    // Check generation limits before proceeding (unless using example)
-    if (!uiState.isExample && subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
-      setUiState(prev => ({
-        ...prev,
-        error: `You've reached your monthly generation limit. Your limit resets ${
-          subscriptionState.resetTime ? 
-          `on ${new Date(subscriptionState.resetTime).toLocaleDateString()}` : 
-          'next month'
-        }.`
-      }));
-      return;
+    // FIXED: Check generation limits before proceeding (unless using example)
+    if (!uiState.isExample && subscriptionState) {
+      if (!subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
+        setUiState(prev => ({
+          ...prev,
+          error: `You've reached your monthly generation limit. Your limit resets ${
+            subscriptionState.resetTime ? 
+            `on ${new Date(subscriptionState.resetTime).toLocaleDateString()}` : 
+            'next month'
+          }.`
+        }));
+        return;
+      }
     }
 
     setUiState(prev => ({
@@ -275,10 +277,17 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
             usageLimits: data.usage_limits
           });
 
-          // Update subscription state if usage_limits are returned
-          if (data.usage_limits && subscriptionState) {
-            subscriptionState.generationsLeft = data.usage_limits.generations_left || 0;
-            subscriptionState.resetTime = data.usage_limits.reset_time;
+          // FIXED: Update subscription state if usage_limits are returned
+          if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
+            subscriptionState.updateSubscriptionFromResponse(data);
+          } else if (data.usage_limits) {
+            // Fallback: update the subscriptionState object directly if it's passed from parent
+            Object.assign(subscriptionState, {
+              generationsLeft: data.usage_limits.generations_left || 0,
+              resetTime: data.usage_limits.reset_time,
+              isPremium: data.usage_limits.is_premium || false,
+              tier: data.usage_limits.user_tier || 'free'
+            });
           }
           
           if (!data.messages || !data.structured_content) {
@@ -361,7 +370,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       return;
     }
 
-    // Check generation limits for regeneration too
+    // FIXED: Check generation limits for regeneration too (regeneration counts as generation)
     if (subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
       setUiState(prev => ({
         ...prev,
@@ -388,19 +397,34 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         
       const primaryResourceType = resourceTypes[0];
       
+      // FIXED: Mark this as regeneration so it counts as generation
       const requestData = {
         ...formState,
         resourceType: primaryResourceType,
-        regeneration: true,
+        regeneration: true,  // This flag ensures it counts as generation
         regenerationCount: uiState.regenerationCount + 1,
         previous_outline: contentState.outlineToConfirm,
         custom_prompt: uiState.modifiedPrompt
       };
 
+      console.log('Making regeneration API request (will count as generation):', requestData);
+
       const data = await outlineService.generate(requestData);
       
       if (!data.messages || !data.structured_content) {
         throw new Error('Invalid response format from server');
+      }
+
+      // FIXED: Update subscription state after regeneration
+      if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
+        subscriptionState.updateSubscriptionFromResponse(data);
+      } else if (data.usage_limits) {
+        Object.assign(subscriptionState, {
+          generationsLeft: data.usage_limits.generations_left || 0,
+          resetTime: data.usage_limits.reset_time,
+          isPremium: data.usage_limits.is_premium || false,
+          tier: data.usage_limits.user_tier || 'free'
+        });
       }
 
       // Clean the structured content - SIMPLIFIED structure

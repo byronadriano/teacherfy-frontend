@@ -1,3 +1,4 @@
+//src/pages/LessonBuilder/hooks/usePresentation.js
 import { useState, useEffect } from 'react';
 import { presentationService } from '../../../services';
 import { API } from '../../../utils/constants';
@@ -6,17 +7,30 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
   const [googleSlidesState, setGoogleSlidesState] = useState({ isGenerating: false });
   const [isLoading, setIsLoading] = useState(false);
   
-  // Update to track generation limits (not download limits)
+  // FIXED: Track subscription state properly
   const [subscriptionState, setSubscriptionState] = useState({ 
-    isPremium: isAuthenticated && user?.isPremium, 
+    isPremium: false,
+    tier: 'free',
     generationsUsed: 0,
-    generationsLeft: 5,
+    generationsLeft: 10,  // Default for free tier
     resetTime: null
   });
 
-  // Add useEffect to fetch the latest generation limits
+  // FIXED: Fetch the latest generation limits when user changes
   useEffect(() => {
     const fetchGenerationLimits = async () => {
+      if (!isAuthenticated) {
+        // Set anonymous user limits
+        setSubscriptionState({
+          isPremium: false,
+          tier: 'free',
+          generationsUsed: 0,
+          generationsLeft: 10,
+          resetTime: null
+        });
+        return;
+      }
+
       try {
         const response = await fetch(`${API.BASE_URL}/auth/check`, {
           method: 'GET',
@@ -26,22 +40,55 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         
         if (response.ok) {
           const data = await response.json();
-          if (data.usage_limits) {
-            setSubscriptionState(prev => ({
-              ...prev,
-              generationsUsed: 5 - (data.usage_limits.generations_left || 0),
-              generationsLeft: data.usage_limits.generations_left || 0,
-              resetTime: data.usage_limits.reset_time || null
-            }));
-          }
+          
+          // FIXED: Extract subscription info from auth response
+          const userInfo = data.user || {};
+          const usageLimits = data.usage_limits || {};
+          
+          setSubscriptionState({
+            isPremium: userInfo.is_premium || false,
+            tier: userInfo.subscription_tier || 'free',
+            generationsUsed: usageLimits.current_usage?.generations_used || 0,
+            generationsLeft: usageLimits.generations_left || (userInfo.is_premium ? 999999 : 10),
+            resetTime: usageLimits.reset_time || null
+          });
+          
+          console.log('Updated subscription state:', {
+            isPremium: userInfo.is_premium || false,
+            tier: userInfo.subscription_tier || 'free',
+            generationsLeft: usageLimits.generations_left || (userInfo.is_premium ? 999999 : 10)
+          });
         }
       } catch (error) {
         console.error('Error fetching generation limits:', error);
+        // Default to free tier on error
+        setSubscriptionState({
+          isPremium: false,
+          tier: 'free',
+          generationsUsed: 0,
+          generationsLeft: 10,
+          resetTime: null
+        });
       }
     };
     
     fetchGenerationLimits();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.email]); // Re-fetch when auth state changes
+
+  // FIXED: Update subscription state when usage limits are returned from API calls
+  const updateSubscriptionFromResponse = (responseData) => {
+    if (responseData?.usage_limits) {
+      const limits = responseData.usage_limits;
+      setSubscriptionState(prev => ({
+        ...prev,
+        isPremium: limits.is_premium || false,
+        tier: limits.user_tier || 'free',
+        generationsUsed: limits.current_usage?.generations_used || prev.generationsUsed,
+        generationsLeft: limits.generations_left || (limits.is_premium ? 999999 : 10),
+        resetTime: limits.reset_time || prev.resetTime
+      }));
+    }
+  };
 
   // Generate a single presentation (legacy support) - NO LIMITS CHECKED HERE
   const generatePresentation = async (formState, contentState) => {
@@ -166,6 +213,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
     generatePresentation,
     generateMultiResource,
     generateGoogleSlides,
+    updateSubscriptionFromResponse, // Export this for use in other hooks
   };
 };
 
