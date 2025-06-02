@@ -311,8 +311,29 @@ const CustomizationForm = ({
             fontSize: '0.875rem',
             fontWeight: 500
           }}>
-            {error}
+            {error.includes('Unexpected error') 
+              ? 'Service temporarily unavailable. Please try again later.' 
+              : error}
           </Typography>
+          
+          {(error.includes('generation limit') || error.includes('upgrade')) && (
+            <Button 
+              variant="outlined" 
+              size="small"
+              sx={{ 
+                ml: 2, 
+                borderColor: '#DC2626', 
+                color: '#DC2626',
+                '&:hover': {
+                  backgroundColor: '#FEE2E2',
+                  borderColor: '#DC2626'
+                }
+              }}
+              onClick={() => window.open('/pricing', '_blank')}
+            >
+              Upgrade Account
+            </Button>
+          )}
         </Box>
       )}
 

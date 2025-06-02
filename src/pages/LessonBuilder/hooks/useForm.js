@@ -89,7 +89,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       isExample: false
     });
 
-    // FIXED: Complete content state reset
+    // CRITICAL: Clear content state completely
     setContentState({
       title: "",
       outlineToConfirm: "",
@@ -98,7 +98,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       generatedResources: {}
     });
 
-    // FIXED: Clear any cached data that might interfere
+    // Clear any cached data
     sessionStorage.removeItem('lastGeneratedOutline');
     sessionStorage.removeItem('lastContentState');
     
@@ -331,16 +331,20 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           
           console.log(`API request for ${resourceType} successful`);
 
-          // Update subscription state if usage_limits are returned
-          if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
-            subscriptionState.updateSubscriptionFromResponse(data);
-          } else if (data.usage_limits) {
-            Object.assign(subscriptionState, {
-              generationsLeft: data.usage_limits.generations_left || 0,
-              resetTime: data.usage_limits.reset_time,
-              isPremium: data.usage_limits.is_premium || false,
-              tier: data.usage_limits.user_tier || 'free'
-            });
+          // SAFELY Update subscription state if usage_limits are returned
+          if (data.usage_limits) {
+            if (subscriptionState) {
+              if (typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
+                subscriptionState.updateSubscriptionFromResponse(data);
+              } else if (typeof subscriptionState === 'object') {
+                Object.assign(subscriptionState, {
+                  generationsLeft: data.usage_limits.generations_left || 0,
+                  resetTime: data.usage_limits.reset_time,
+                  isPremium: data.usage_limits.is_premium || false,
+                  tier: data.usage_limits.user_tier || 'free'
+                });
+              }
+            }
           }
           
           if (!data.messages || !data.structured_content) {
@@ -391,11 +395,13 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         let errorMessage = 'Error generating outline: ';
         
         if (apiError.status === 403) {
-          errorMessage += 'You have reached your generation limit. Please try again next month or upgrade to premium.';
+          errorMessage += 'You have reached your generation limit.';
         } else if (apiError.status === 405) {
-          errorMessage += 'The server endpoint is not properly configured. Please try the example instead.';
+          errorMessage += 'Server configuration error. Try the example instead.';
         } else if (apiError.status === 400) {
-          errorMessage += 'Missing required field(s). Please ensure all fields are filled in.';
+          errorMessage += 'Missing required field(s).';
+        } else if (apiError.message?.includes('Unexpected error')) {
+          errorMessage = 'Service temporarily unavailable. Please try again later.';
         } else if (apiError.error) {
           errorMessage += apiError.error;
         } else {
@@ -414,6 +420,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       }));
     }
   }, [formState, uiState.isExample, subscriptionState]);
+
 
   const handleRegenerateOutline = useCallback(async () => {
     if (uiState.regenerationCount >= 3) {
@@ -468,16 +475,20 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         throw new Error('Invalid response format from server');
       }
 
-      // Update subscription state after regeneration
-      if (data.usage_limits && subscriptionState && typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
-        subscriptionState.updateSubscriptionFromResponse(data);
-      } else if (data.usage_limits) {
-        Object.assign(subscriptionState, {
-          generationsLeft: data.usage_limits.generations_left || 0,
-          resetTime: data.usage_limits.reset_time,
-          isPremium: data.usage_limits.is_premium || false,
-          tier: data.usage_limits.user_tier || 'free'
-        });
+      // SAFELY Update subscription state after regeneration
+      if (data.usage_limits) {
+        if (subscriptionState) {
+          if (typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
+            subscriptionState.updateSubscriptionFromResponse(data);
+          } else if (typeof subscriptionState === 'object') {
+            Object.assign(subscriptionState, {
+              generationsLeft: data.usage_limits.generations_left || 0,
+              resetTime: data.usage_limits.reset_time,
+              isPremium: data.usage_limits.is_premium || false,
+              tier: data.usage_limits.user_tier || 'free'
+            });
+          }
+        }
       }
 
       // Clean the structured content
@@ -508,9 +519,27 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
 
     } catch (error) {
       console.error("Error regenerating outline:", error);
+      
+      let errorMessage = "Error regenerating outline: ";
+      
+      if (error.status === 403) {
+        errorMessage += 'You have reached your generation limit.';
+      } else if (error.status === 405) {
+        errorMessage += 'Server configuration error. Try the example instead.';
+      } else if (error.status === 400) {
+        errorMessage += 'Missing required field(s).';
+      } else if (error.message?.includes('Unexpected error')) {
+        errorMessage = 'Service temporarily unavailable. Please try again later.';
+      } else if (error.error) {
+        errorMessage += error.error;
+      } else {
+        errorMessage += 'Unexpected error occurred. Please try again later.';
+      }
+      
       setUiState(prev => ({
         ...prev,
-        error: error.message || "Error regenerating outline. Please try again."
+        error: errorMessage,
+        isLoading: false
       }));
     } finally {
       setUiState(prev => ({
@@ -519,7 +548,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       }));
     }
   }, [formState, uiState.regenerationCount, uiState.modifiedPrompt, contentState.outlineToConfirm, contentState.generatedResources, contentState.title, subscriptionState]);
-    
+      
   return {
     formState,
     uiState,
