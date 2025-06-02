@@ -625,8 +625,7 @@ const Sidebar = ({
             <Box
                 sx={{
                     width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
-                    height: '100vh',
-                    height: '100dvh', // Dynamic viewport height for mobile
+                    height: '100dvh', // Dynamic viewport height for mobile, fallback handled in media query
                     position: 'fixed',
                     left: 0,
                     top: 0,
@@ -648,10 +647,14 @@ const Sidebar = ({
                     
                     // Mobile-specific adjustments
                     '@media (max-width: 600px)': {
-                        height: '100vh',
-                        height: '100dvh',
+                        height: '100vh', // Fallback for older browsers
                         paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom, 0px) + 80px))',
                         justifyContent: 'space-between' // Better spacing on mobile
+                    },
+                    
+                    // Support for dynamic viewport height
+                    '@supports (height: 100dvh)': {
+                        height: '100dvh'
                     }
                 }}
             >
@@ -672,8 +675,8 @@ const Sidebar = ({
                         position: 'relative',
                         // Mobile touch improvements
                         '@media (max-width: 600px)': {
-                            minHeight: '48px',
-                            minWidth: '48px',
+                            width: '48px', // Ensure consistent sizing
+                            height: '48px', // Single height declaration
                             mb: 2
                         }
                     }}
