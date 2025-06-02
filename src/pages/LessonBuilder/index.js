@@ -538,6 +538,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                 onSubmit={handleGenerateOutline}
                 isLoading={uiState.isLoading || outlineLoading}
                 error={uiState.error}
+                rateLimitInfo={uiState.rateLimitInfo} // Add this line
                 subscriptionState={{
                   isPremium: subscriptionState.isPremium,
                   generationsLeft: subscriptionState.generationsLeft,

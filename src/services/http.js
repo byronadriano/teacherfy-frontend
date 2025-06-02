@@ -1,14 +1,21 @@
-// src/services/http.js
-import { API } from '../utils/constants';
+// src/services/http.js - CLEANED VERSION
+import { config } from '../utils/config';
+
+const DEFAULT_TIMEOUT = 100000; // 100 seconds for OpenAI API calls
+const DEFAULT_HEADERS = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  'X-Requested-With': 'XMLHttpRequest'
+};
 
 class HttpClient {
-  constructor(baseURL) {
+  constructor(baseURL = config.apiUrl) {
     this.baseURL = baseURL;
   }
 
   async fetch(endpoint, options = {}) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API.TIMEOUT);
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
 
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -16,18 +23,13 @@ class HttpClient {
         signal: controller.signal,
         credentials: 'include',
         headers: {
-          ...API.HEADERS,
+          ...DEFAULT_HEADERS,
           ...options.headers,
         },
         mode: 'cors'
       });
 
       clearTimeout(timeoutId);
-
-      // Handle OPTIONS preflight response
-      if (options.method === 'OPTIONS') {
-        return response;
-      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({
@@ -36,7 +38,7 @@ class HttpClient {
         throw new Error(errorData.message || 'Network response was not ok');
       }
 
-      // Check if the response is a blob (for file downloads)
+      // Handle different content types
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
         return response.blob();
@@ -53,7 +55,6 @@ class HttpClient {
     }
   }
 
-  // Helper methods for common HTTP methods
   async get(endpoint, options = {}) {
     return this.fetch(endpoint, { ...options, method: 'GET' });
   }
@@ -79,4 +80,4 @@ class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient(API.BASE_URL);
+export const httpClient = new HttpClient();

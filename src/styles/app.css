@@ -1,15 +1,9 @@
-/* App.css */
-
-/* 
-  If you're using the sidebar layout from LessonBuilder, 
-  you typically wouldn't set the entire body to 
-  display:flex or height:100vh here. Instead, keep it minimal. 
-*/
+/* src/styles/app.css - CLEANED VERSION */
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #ffffff; /* White background */
+  background-color: #ffffff;
   color: #333;
 }
 
@@ -41,7 +35,7 @@ h1 {
   margin: 0;
 }
 
-/* Form Styling */
+/* Form Elements */
 .form {
   margin-top: 20px;
 }
@@ -73,7 +67,7 @@ textarea {
   resize: none;
 }
 
-/* Generate Button Styling */
+/* Buttons */
 button.generate-button {
   width: 100%;
   padding: 12px;
@@ -93,12 +87,14 @@ button.generate-button:hover {
   transform: scale(1.05);
 }
 
+/* Error Messages */
 .error {
   color: red;
   margin-top: 15px;
   font-size: 14px;
 }
 
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
   .container {
     padding: 15px;

@@ -94,6 +94,7 @@ const CustomizationForm = ({
   onSubmit,
   isLoading,
   error,
+  rateLimitInfo = null,
   subscriptionState = { isPremium: false, generationsLeft: 5 },
   resetTime = null
 }) => {
@@ -190,8 +191,111 @@ const CustomizationForm = ({
         />
       </Box>
 
-      {/* Display error message if present */}
-      {error && (
+      {/* Display rate limit message if rate limit exceeded */}
+      {error === 'RATE_LIMIT_EXCEEDED' && (
+        <Box sx={{ 
+          px: 3, 
+          py: 2.5, 
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          borderLeft: '4px solid #64748b'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ 
+                color: '#475569',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                mb: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Clock size={16} />
+                Generation Limit Reached
+              </Typography>
+              
+              <Typography sx={{ 
+                color: '#64748b',
+                fontSize: '0.8rem',
+                lineHeight: 1.5,
+                mb: 1.5
+              }}>
+                You've used all <strong>{rateLimitInfo?.hourlyLimit || 3}</strong> of your hourly generations.
+                {rateLimitInfo?.resetTime && (
+                  <> Your limit resets in <strong>{rateLimitInfo.resetTime}</strong>.</>
+                )}
+              </Typography>
+
+              <Box sx={{ 
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                p: 2,
+                mb: 2
+              }}>
+                <Typography sx={{ 
+                  fontSize: '0.8rem',
+                  color: '#374151',
+                  fontWeight: 500,
+                  mb: 1
+                }}>
+                  Free Plan Limits:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    • 3 generations per hour
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    • 10 generations per month
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                borderRadius: '8px',
+                p: 2
+              }}>
+                <Typography sx={{ 
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  mb: 1
+                }}>
+                  ✨ Upgrade to Premium
+                </Typography>
+                <Typography sx={{ fontSize: '0.75rem', opacity: 0.9, mb: 1.5 }}>
+                  Unlimited generations • Priority support • Advanced features
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 2,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                    }
+                  }}
+                  onClick={() => {
+                    window.open('https://buy.stripe.com/9AQbJAfWy9oMduU6oo', '_blank');
+                  }}
+                >
+                  Upgrade Now
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* Display other errors normally */}
+      {error && error !== 'RATE_LIMIT_EXCEEDED' && (
         <Box sx={{ 
           px: 3, 
           py: 2, 

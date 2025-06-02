@@ -1,4 +1,4 @@
-// src/components/common/Button/index.jsx
+// src/components/common/Button/index.jsx - CLEANED VERSION
 import React from 'react';
 import { Button as MuiButton } from '@mui/material';
 

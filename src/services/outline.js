@@ -1,4 +1,4 @@
-// src/services/outline.js
+// src/services/outline.js - IMPROVED with better error handling
 import { API, handleApiError } from '../utils/constants/api';
 
 export const outlineService = {
@@ -8,25 +8,15 @@ export const outlineService = {
       
       // Create a clean request body with proper field naming
       const requestBody = {
-        // Required fields - keep as is from form data
         resourceType: formData.resourceType,
         gradeLevel: formData.gradeLevel,
         subjectFocus: formData.subjectFocus,
         language: formData.language,
-        
-        // FIXED: Force lessonTopic to be the subjectFocus if empty
-        // This ensures we always have a lessonTopic
         lessonTopic: formData.lessonTopic || formData.subjectFocus || "General Learning",
-        
-        // Handle both naming conventions for custom prompt
         custom_prompt: formData.custom_prompt || formData.customPrompt || '',
-        
-        // Standards selection - clean and consistent format
         selectedStandards: Array.isArray(formData.selectedStandards) 
           ? formData.selectedStandards 
           : [],
-        
-        // Resource type specific options
         ...(formData.resourceType === 'Presentation' && {
           numSlides: parseInt(formData.numSlides || 5, 10),
           includeImages: Boolean(formData.includeImages)
@@ -40,10 +30,8 @@ export const outlineService = {
 
       console.log('Cleaned request body:', requestBody);
 
-      // Create controller for timeout functionality - use a longer timeout
-      // OpenAI API calls can take 30+ seconds, especially on first request
       const controller = new AbortController();
-      const timeout = API.TIMEOUT || 120000; // Use 120 seconds (2 minutes) as fallback
+      const timeout = API.TIMEOUT || 120000;
       console.log(`Setting request timeout to ${timeout/1000} seconds`);
       
       const timeoutId = setTimeout(() => {
@@ -64,49 +52,71 @@ export const outlineService = {
           signal: controller.signal
         });
         
-        // Clear timeout once response is received
         clearTimeout(timeoutId);
 
-        // Enhanced error handling for non-OK responses
         if (!response.ok) {
           console.error('Server returned non-OK status:', response.status);
           
-          // Create a clone of the response before reading it
-          const errorResponseClone = response.clone();
+          // IMPROVED: Handle rate limit errors specifically
+          if (response.status === 429) {
+            try {
+              const errorJson = await response.json();
+              console.log('Rate limit response:', errorJson);
+              
+              return {
+                error: 'RATE_LIMIT_EXCEEDED',
+                rateLimit: {
+                  hourlyLimit: errorJson.hourly_limit || 3,
+                  hourlyUsed: errorJson.hourly_used || 3,
+                  resetTime: errorJson.reset_time || '1 hour',
+                  userTier: errorJson.user_tier || 'free',
+                  message: errorJson.message || 'Rate limit exceeded'
+                }
+              };
+            } catch (e) {
+              return {
+                error: 'RATE_LIMIT_EXCEEDED',
+                rateLimit: {
+                  hourlyLimit: 3,
+                  hourlyUsed: 3,
+                  resetTime: '1 hour',
+                  userTier: 'free',
+                  message: 'You have reached your hourly generation limit.'
+                }
+              };
+            }
+          }
           
+          // Handle other error statuses
+          const errorResponseClone = response.clone();
           let errorMessage = `HTTP error! status: ${response.status}`;
+          
           try {
             const errorText = await errorResponseClone.text();
-            console.error('Error response text:', errorText);
+            console.log('Error response text:', errorText);
             
             try {
-              // Try to parse as JSON
               const errorJson = JSON.parse(errorText);
               errorMessage = errorJson.error || errorMessage;
               
-              // Add appropriate status code to the error object
               return {
                 error: errorMessage,
                 status: response.status,
                 details: errorJson.details || 'No additional details available'
               };
             } catch (e) {
-              // If not JSON, use text
               errorMessage = `${errorMessage}, message: ${errorText.substring(0, 100)}...`;
             }
           } catch (e) {
             console.error('Could not read error response text:', e);
           }
           
-          console.error('Final error message:', errorMessage);
           throw new Error(errorMessage);
         }
 
-        // Create a clone of the response before parsing the JSON
         const responseClone = response.clone();
         
         try {
-          // Parse JSON response with validation
           const data = await response.json();
           
           console.log('Received response from server:', {
@@ -115,13 +125,11 @@ export const outlineService = {
             structuredContentLength: data.structured_content?.length || 0
           });
 
-          // Validate response structure
           if (!data.messages || !data.structured_content) {
             console.error('Invalid server response format:', data);
             throw new Error('Invalid response format from server. Expected messages and structured_content.');
           }
 
-          // Validate structured content format
           if (!Array.isArray(data.structured_content) || data.structured_content.length === 0) {
             console.error('Empty or invalid structured_content:', data.structured_content);
             throw new Error('Server returned empty or invalid structured content.');
@@ -149,23 +157,19 @@ export const outlineService = {
         } catch (jsonError) {
           console.error('Error parsing JSON response:', jsonError);
           
-          // If JSON parsing fails, try to get the text content to see what went wrong
           try {
             const textContent = await responseClone.text();
             console.error('Response was not valid JSON, text content:', textContent.substring(0, 200));
             throw new Error(`Failed to parse server response as JSON: ${jsonError.message}`);
           } catch (textError) {
             console.error('Error reading response text:', textError);
-            throw jsonError; // Throw the original JSON parsing error
+            throw jsonError;
           }
         }
       } catch (fetchError) {
-        // Clear timeout to prevent multiple aborts
         clearTimeout(timeoutId);
-        
         console.error('Fetch error:', fetchError);
         
-        // Handle aborted requests (timeout)
         if (fetchError.name === 'AbortError') {
           throw new Error('Request timeout - the server is taking too long to respond. This may be because the OpenAI API is slow. Try using the example feature instead.');
         }
@@ -177,17 +181,15 @@ export const outlineService = {
     } catch (error) {
       console.error('Outline generation error:', error);
       
-      // Return a structured error object
+      // Return a structured error object instead of throwing
       const errorObj = handleApiError(error);
       console.error('Structured error:', errorObj);
       
-      return errorObj; // Return the error object instead of throwing
+      return errorObj;
     }
   },
   
-  // Add a regenerate method for outline regeneration if needed
   async regenerate(formData, modifiedPrompt) {
-    // Add regeneration-specific logic here if needed
     return this.generate({
       ...formData,
       customPrompt: modifiedPrompt || formData.customPrompt,

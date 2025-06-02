@@ -1,37 +1,19 @@
-//src/services/presentation.js - FIXED VERSION
+// src/services/presentation.js - CLEANED VERSION
 import { config } from '../utils/config';
 
 /**
  * Normalize resource type to match backend expectations
- * FIXED: Handle both string and array inputs properly
- * @param {string|Array} resourceType - The resource type to normalize (can be string or array)
- * @return {string} - Normalized resource type
  */
 function normalizeResourceType(resourceType) {
-  console.log('🔧 normalizeResourceType input:', resourceType, 'type:', typeof resourceType);
+  // Handle array inputs - take the first element if it's an array
+  let typeToProcess = Array.isArray(resourceType) ? resourceType[0] : resourceType;
   
-  // FIXED: Handle array inputs - take the first element if it's an array
-  let typeToProcess = resourceType;
-  if (Array.isArray(resourceType)) {
-    typeToProcess = resourceType[0]; // Take the first element
-    console.log('📋 Resource type was array, using first element:', typeToProcess);
-  }
-  
-  // FIXED: Ensure we have a string before calling toLowerCase
-  if (!typeToProcess) {
-    console.warn('⚠️ No resource type provided, defaulting to presentation');
+  // Ensure we have a string
+  if (!typeToProcess || typeof typeToProcess !== 'string') {
     return 'presentation';
   }
   
-  // Convert to string if it's not already
-  if (typeof typeToProcess !== 'string') {
-    console.warn('⚠️ Resource type is not a string, converting:', typeToProcess);
-    typeToProcess = String(typeToProcess);
-  }
-  
-  // Now safe to call toLowerCase
   const normalized = typeToProcess.toLowerCase();
-  console.log('✅ Normalized resource type:', normalized);
   
   // Handle special cases
   if (normalized.includes('quiz') || normalized.includes('test')) {
@@ -48,69 +30,55 @@ function normalizeResourceType(resourceType) {
   return normalized.replace(/\s+/g, '_').replace('/', '_');
 }
 
+/**
+ * Create a download link for a blob
+ */
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  
+  // Clean up after download
+  setTimeout(() => {
+    try {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error cleaning up download resources:', err);
+    }
+  }, 5000);
+}
+
+/**
+ * Get appropriate file extension based on content type
+ */
+function getFileExtension(contentType, resourceType) {
+  if (contentType?.includes('presentation')) return '.pptx';
+  if (contentType?.includes('document')) return '.docx';
+  if (contentType?.includes('pdf')) return '.pdf';
+  
+  // Fallback based on resource type
+  return resourceType === 'Presentation' ? '.pptx' : '.docx';
+}
+
 export const presentationService = {
   async generateMultiResource(formState, contentState, specificResources = null) {
     try {
-      // Get resources to generate - either specified or from form state
-      // FIXED: Handle array resource types properly
-      let resourceTypes;
-      if (specificResources) {
-        // Handle specificResources being a string or array
-        if (Array.isArray(specificResources)) {
-          resourceTypes = specificResources;
-        } else if (typeof specificResources === 'string') {
-          resourceTypes = [specificResources];
-        } else {
-          console.warn('⚠️ Unexpected specificResources type:', typeof specificResources, specificResources);
-          resourceTypes = ['Presentation']; // Default fallback
-        }
-      } else if (formState.resourceType) {
-        // Handle formState.resourceType being a string or array
-        if (Array.isArray(formState.resourceType)) {
-          resourceTypes = formState.resourceType;
-        } else if (typeof formState.resourceType === 'string') {
-          resourceTypes = [formState.resourceType];
-        } else {
-          console.warn('⚠️ Unexpected formState.resourceType type:', typeof formState.resourceType, formState.resourceType);
-          resourceTypes = ['Presentation']; // Default fallback
-        }
-      } else {
-        resourceTypes = ['Presentation']; // Default fallback
+      // Determine resource types to generate
+      let resourceTypes = specificResources || formState.resourceType;
+      
+      // Normalize to array
+      if (!Array.isArray(resourceTypes)) {
+        resourceTypes = resourceTypes ? [resourceTypes] : ['Presentation'];
       }
-
-      console.log('🔧 generateMultiResource processing:', {
-        specificResources,
-        'formState.resourceType': formState.resourceType,
-        'final resourceTypes': resourceTypes,
-        'types of resourceTypes': resourceTypes.map(t => typeof t)
-      });
-
-      // Validate that all resourceTypes are strings
-      resourceTypes = resourceTypes.map(type => {
-        if (typeof type !== 'string') {
-          console.warn('⚠️ Converting non-string resource type to string:', type);
-          return String(type);
-        }
-        return type;
-      });
-
-      console.log('✅ Validated resourceTypes:', resourceTypes);
       
-      console.log('Generating multiple resources with:', {
-        resourceTypes,
-        formState: {
-          resourceType: formState.resourceType,
-          gradeLevel: formState.gradeLevel,
-          subjectFocus: formState.subjectFocus,
-          language: formState.language
-        },
-        contentState: {
-          hasStructuredContent: Boolean(contentState.structuredContent),
-          resourcesGenerated: Object.keys(contentState.generatedResources || {})
-        }
-      });
-      
-      // For each resource type, generate the file
+      // Validate resource types are strings
+      resourceTypes = resourceTypes.map(type => String(type));
+
       const results = {};
       
       for (const resourceType of resourceTypes) {
@@ -119,20 +87,16 @@ export const presentationService = {
           contentState.structuredContent;
           
         // Skip if no content available
-        if (!structuredContent || !Array.isArray(structuredContent) || structuredContent.length === 0) {
-          console.warn(`No content available for ${resourceType}, skipping generation`);
+        if (!structuredContent?.length) {
           results[resourceType] = { error: 'No content available' };
           continue;
         }
         
         try {
-          // FIXED: Use the normalized function that handles arrays properly
           const normalizedResourceType = normalizeResourceType(resourceType);
-          console.log(`Processing ${resourceType} -> normalized to: ${normalizedResourceType}`);
           
-          // Build request data for this resource type
+          // Build request data
           const requestData = {
-            // Use the normalized resource type to ensure backend compatibility
             resource_type: normalizedResourceType,
             lesson_outline: contentState.finalOutline || '',
             structured_content: structuredContent.map((slide, index) => ({
@@ -142,13 +106,7 @@ export const presentationService = {
             }))
           };
           
-          // Determine API URL
-          const apiUrl = config.apiUrl || 
-            (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://teacherfy.ai');
-          
-          console.log(`Sending request to generate ${resourceType} to: ${apiUrl}/generate`);
-          
-          const response = await fetch(`${apiUrl}/generate`, {
+          const response = await fetch(`${config.apiUrl}/generate`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -158,23 +116,16 @@ export const presentationService = {
             body: JSON.stringify(requestData)
           });
           
-          console.log(`${resourceType} response status:`, response.status);
-          
           if (!response.ok) {
-            console.error(`Server returned error for ${resourceType}:`, response.status);
             let errorMessage = `Server error: ${response.status}`;
-            
             try {
               const contentType = response.headers.get('content-type');
-              if (contentType && contentType.includes('application/json')) {
+              if (contentType?.includes('application/json')) {
                 const errorJson = await response.json();
                 errorMessage = errorJson.error || errorJson.message || errorMessage;
-              } else {
-                const errorText = await response.text();
-                errorMessage = `${errorMessage}. Details: ${errorText.substring(0, 150)}...`;
               }
             } catch (e) {
-              console.error('Failed to parse error response:', e);
+              // Use default error message
             }
             
             results[resourceType] = { error: errorMessage };
@@ -183,229 +134,117 @@ export const presentationService = {
           
           // Verify response content type
           const contentType = response.headers.get('content-type');
-          
-          // Different content types for different resources
           const validTypes = [
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // DOCX
-            'application/pdf', // PDF
-            'application/octet-stream' // Generic binary
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/pdf',
+            'application/octet-stream'
           ];
           
           if (!contentType || !validTypes.some(type => contentType.includes(type))) {
-            console.warn(`Unexpected content type for ${resourceType}:`, contentType);
-            
-            try {
-              const textContent = await response.text();
-              console.error(`Unexpected response content for ${resourceType} (first 200 chars):`, textContent.substring(0, 200));
-            } catch (err) {
-              console.error('Could not read response content:', err);
-            }
-            
             results[resourceType] = { 
               error: `Invalid response type from server: ${contentType || 'unknown'}` 
             };
             continue;
           }
           
-          // Get the blob and store it in results
           const blob = await response.blob();
-          console.log(`Got blob for ${resourceType} of size:`, blob.size);
           
-          if (blob.size < 1000) {  // Files should be at least a few KB
-            console.error(`Received file for ${resourceType} is suspiciously small:`, blob.size, 'bytes');
+          if (blob.size < 1000) {
             results[resourceType] = { 
               error: 'File returned from server appears to be invalid or incomplete' 
             };
             continue;
           }
           
-          // Add the blob to results
+          // Store result and trigger download
           results[resourceType] = { blob, contentType };
           
-          // Generate appropriate file extension
-          let fileExt = '.bin';
-          if (contentType.includes('presentation')) fileExt = '.pptx';
-          else if (contentType.includes('document')) fileExt = '.docx';
-          else if (contentType.includes('pdf')) fileExt = '.pdf';
-          
-          // Create and trigger download
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-            
-          // Create a meaningful filename
+          // Create filename and download
           const topicSlug = formState.lessonTopic 
             ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
             : 'lesson';
-              
-          a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
-          document.body.appendChild(a);
-            
-          console.log(`Triggering download for ${resourceType} with filename:`, a.download);
-          a.click();
-            
-          // Clean up with longer timeout and better error handling
-          setTimeout(() => {
-            try {
-              window.URL.revokeObjectURL(url);
-              document.body.removeChild(a);
-              console.log(`Download complete for ${resourceType} and resources cleaned up`);
-            } catch (err) {
-              console.error('Error cleaning up download resources:', err);
-            }
-          }, 5000);
+          const fileExt = getFileExtension(contentType, resourceType);
+          const filename = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
+          
+          downloadBlob(blob, filename);
+          
         } catch (resourceError) {
-          console.error(`Error generating ${resourceType}:`, resourceError);
           results[resourceType] = { error: resourceError.message };
         }
       }
       
       return results;
     } catch (error) {
-      console.error('Multi-resource generation error:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
-      
       throw new Error(`Failed to generate resources: ${error.message}`);
     }
   },
   
-  // For backward compatibility, maintain the original function
+  // Legacy function for backward compatibility
   async generatePptx(formState, contentState) {
-    try {
-      console.log('Using legacy generatePptx function');
-      
-      // Validate content before sending to server
-      if (!contentState.structuredContent || !Array.isArray(contentState.structuredContent) || contentState.structuredContent.length === 0) {
-        console.error('Invalid content state:', contentState);
-        throw new Error('No slide content available for presentation generation');
-      }
-      
-      // Build a clean request object with only what the backend needs
-      const requestData = {
-        resource_type: 'presentation',
-        lesson_outline: contentState.finalOutline || '',
-        structured_content: contentState.structuredContent.map((slide, index) => ({
-          title: slide.title || `Slide ${index + 1}`,
-          layout: slide.layout || 'TITLE_AND_CONTENT',
-          content: Array.isArray(slide.content) ? slide.content : []
-        }))
-      };
-      
-      // Determine API URL
-      const apiUrl = config.apiUrl || 
-        (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://teacherfy.ai');
-      
-      console.log('Sending request to:', `${apiUrl}/generate`);
-      
-      const response = await fetch(`${apiUrl}/generate`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        },
-        body: JSON.stringify(requestData)
-      });
-  
-      console.log('Presentation response status:', response.status);
-      
-      if (!response.ok) {
-        console.error('Server returned error status:', response.status);
-        
-        let errorMessage = `Server error: ${response.status}`;
-        try {
-          // Try to get more details about the error
-          const contentType = response.headers.get('content-type');
-          
-          if (contentType && contentType.includes('application/json')) {
-            const errorJson = await response.json();
-            console.error('Error response JSON:', errorJson);
-            errorMessage = errorJson.error || errorJson.message || errorMessage;
-          } else {
-            const errorText = await response.text();
-            console.error('Error response text:', errorText);
-            errorMessage = `${errorMessage}. Details: ${errorText.substring(0, 150)}...`;
-          }
-        } catch (e) {
-          console.error('Failed to parse error response:', e);
-        }
-        
-        throw new Error(errorMessage);
-      }
-  
-      // Verify response content type
-      const contentType = response.headers.get('content-type');
-      console.log('Response content type:', contentType);
-      
-      if (!contentType || !contentType.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
-        console.warn('Unexpected content type:', contentType);
-        
-        // Try to log content for debugging
-        try {
-          const textContent = await response.text();
-          console.error('Unexpected response content (first 200 chars):', textContent.substring(0, 200));
-        } catch (err) {
-          console.error('Could not read response content:', err);
-        }
-        
-        throw new Error(`Invalid response type from server: ${contentType || 'unknown'}`);
-      }
-  
-      // Get the blob and create a download link
-      const blob = await response.blob();
-      console.log('Got blob of size:', blob.size);
-      
-      if (blob.size < 1000) {  // PPTX files should be at least a few KB
-        console.error('Received file is suspiciously small:', blob.size, 'bytes');
-        throw new Error('File returned from server appears to be invalid or incomplete');
-      }
-      
-      // Create and trigger download
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      
-      // Create a meaningful filename
-      const topicSlug = formState.lessonTopic 
-        ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
-        : 'lesson';
-        
-      a.download = `${topicSlug}_presentation.pptx`;
-      document.body.appendChild(a);
-      
-      console.log('Triggering download with filename:', a.download);
-      a.click();
-      
-      // Clean up
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        console.log('Download complete and resources cleaned up');
-      }, 1000);
-      
-      return blob;
-    } catch (error) {
-      console.error('Presentation generation error:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
-      
-      // Re-throw with a user-friendly message
-      throw new Error(`Failed to generate presentation: ${error.message}`);
+    if (!contentState.structuredContent?.length) {
+      throw new Error('No slide content available for presentation generation');
     }
+    
+    const requestData = {
+      resource_type: 'presentation',
+      lesson_outline: contentState.finalOutline || '',
+      structured_content: contentState.structuredContent.map((slide, index) => ({
+        title: slide.title || `Slide ${index + 1}`,
+        layout: slide.layout || 'TITLE_AND_CONTENT',
+        content: Array.isArray(slide.content) ? slide.content : []
+      }))
+    };
+    
+    const response = await fetch(`${config.apiUrl}/generate`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Server error: ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+          const errorJson = await response.json();
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+        }
+      } catch (e) {
+        // Use default error message
+      }
+      throw new Error(errorMessage);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation')) {
+      throw new Error(`Invalid response type from server: ${contentType || 'unknown'}`);
+    }
+
+    const blob = await response.blob();
+    
+    if (blob.size < 1000) {
+      throw new Error('File returned from server appears to be invalid or incomplete');
+    }
+    
+    // Create filename and download
+    const topicSlug = formState.lessonTopic 
+      ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
+      : 'lesson';
+    const filename = `${topicSlug}_presentation.pptx`;
+    
+    downloadBlob(blob, filename);
+    
+    return blob;
   },
   
-  // Google Slides generation function
   async generateGoogleSlides(formState, contentState, token) {
-    // Implementation remains unchanged
+    // Google Slides generation implementation
     console.log("Google Slides generation requested");
-    // Your Google Slides implementation here
+    // Implementation here
   }
 };

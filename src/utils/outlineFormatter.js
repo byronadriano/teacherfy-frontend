@@ -1,4 +1,4 @@
-// src/utils/outlineFormatter.js
+// src/utils/outlineFormatter.js - CLEANED VERSION
 
 export const OUTLINE_PROMPT_TEMPLATE = `
 CRITICAL REQUIREMENTS:
@@ -11,7 +11,7 @@ Additional Requirements:
 Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLevel} {subject} lesson on {topic} for {district} in SIMPLE MARKDOWN OR REGULAR TEXT. Each slide must be immediately usable with minimal teacher preparation. Ensure that each slide follows the structure below and includes actual examples or problems where relevant.
 
 1. Title (in {language}):
-   - A clear, concise title directly tied to the lesson’s objectives.
+   - A clear, concise title directly tied to the lesson's objectives.
 
 2. Content (in {language}):
    - Provide complete, specific teaching points, definitions, and examples (not placeholders).
@@ -21,16 +21,16 @@ Create a detailed {numSlides}-slide lesson outline in {language} for a {gradeLev
 
 3. Teacher Notes (in English):
    - ENGAGEMENT: Provide step-by-step, *fully written out* activities. 
-     - Example: If students must solve practice problems, list the actual problems (e.g., “1. ___, 2. ___, 3. ___”) so they can be posted or displayed as-is.
+     - Example: If students must solve practice problems, list the actual problems (e.g., "1. ___, 2. ___, 3. ___") so they can be posted or displayed as-is.
    - ASSESSMENT: Describe a clear, direct method to measure understanding, aligned with the exact problems or examples introduced.
-     - Example: “Have each group present their solution for Problem #2, explaining how they determined the answer.”
+     - Example: "Have each group present their solution for Problem #2, explaining how they determined the answer."
    - DIFFERENTIATION: Offer ready-to-use scaffolds (e.g., a printed worksheet with hints) or challenge tasks (e.g., more advanced problems) with explicit details.
-     - Example: “Scaffolded Worksheet: 3-step prompt with partially completed examples; Advanced Worksheet: 5 multi-step problems requiring higher-level reasoning.”
+     - Example: "Scaffolded Worksheet: 3-step prompt with partially completed examples; Advanced Worksheet: 5 multi-step problems requiring higher-level reasoning."
 
 4. Visual Elements (in English):
    - If referencing problems, list them fully here as well, so teachers can copy or project them instantly.
    - For other aids (e.g., slides, videos, diagrams), specify exactly what they are and how to use them.
-   - Provide minimal-prep resources or instructions (e.g., “Use the attached printable fraction chart” or “Draw this simple shape on the board”).
+   - Provide minimal-prep resources or instructions (e.g., "Use the attached printable fraction chart" or "Draw this simple shape on the board").
 
 FORMAT EACH SLIDE AS FOLLOWS:
 
@@ -57,9 +57,9 @@ IMPLEMENTATION GUIDELINES:
 - The final product should allow a teacher to copy and paste or read directly with no extra prep or guesswork.
 
 ADDITIONAL NOTES:
-- All “Content” must be in {language}. 
-- “Teacher Notes” and “Visual Elements” remain in English, containing specific details.
-- If students need to see certain problems or examples, ensure those exact items are listed under “Visual Elements” or “Teacher Notes.”
+- All "Content" must be in {language}. 
+- "Teacher Notes" and "Visual Elements" remain in English, containing specific details.
+- If students need to see certain problems or examples, ensure those exact items are listed under "Visual Elements" or "Teacher Notes."
 - Think of each slide as a ready-made segment of a presentation: Title, actual teaching content, teacher instructions, and prepared visuals/resources.
 `;
 
@@ -73,7 +73,7 @@ export const generateFullPrompt = (formState) => {
     .replace(/{subject}/g, formState.subjectFocus)
     .replace(/{numSlides}/g, formState.numSlides)
     .replace(/{custom_prompt}/g, formState.customPrompt || 'None')
-    // .replace(/{district}/g, formState.district || 'Not specified');
+    .replace(/{district}/g, formState.district || 'Not specified');
 };
 
 export const generateRegenerationPrompt = (formState, modifiedPrompt) => {
@@ -116,10 +116,7 @@ INTEGRATION INSTRUCTIONS:
     );
 };
 
-// src/utils/outlineFormatter.js - CLEANED VERSION
-
 export const formatOutlineForDisplay = (structuredContent) => {
-  // Add defensive programming to handle undefined/null input
   if (!structuredContent || !Array.isArray(structuredContent)) {
     console.warn('formatOutlineForDisplay: Invalid structured content provided');
     return 'No content available';
@@ -132,11 +129,9 @@ export const formatOutlineForDisplay = (structuredContent) => {
       output += '\n\n';
     }
     
-    // Safely get the title
     const title = item?.title || `Item ${index + 1}`;
     output += `## ${title}\n\n`;
     
-    // Safely get and format content
     output += '### Content\n\n';
     const content = item?.content || [];
     if (Array.isArray(content)) {
@@ -154,93 +149,4 @@ export const formatOutlineForDisplay = (structuredContent) => {
   });
 
   return output.trim();
-};
-
-export const parseOutlineToStructured = (outlineText, numItems = 5) => {
-  console.log('Parsing outline text to structured content', { 
-    textLength: outlineText?.length || 0,
-    requestedItems: numItems
-  });
-  
-  // Handle null/undefined input
-  if (!outlineText || typeof outlineText !== 'string') {
-    console.warn('parseOutlineToStructured: Invalid outline text provided');
-    return [{
-      title: 'Generated Content',
-      layout: 'TITLE_AND_CONTENT',
-      content: ['No content available']
-    }];
-  }
-  
-  // Normalize text
-  const normalizedText = outlineText
-    .replace(/\*\*Section (\d+):/g, 'Section $1:')
-    .replace(/\*\*Slide (\d+):/g, 'Slide $1:')
-    .replace(/\r\n/g, '\n');
-  
-  // Split by section/slide markers
-  const itemRegex = /\n?(?:Section \d+:|Slide \d+:|#{1,3} (?:Section|Slide) \d+:)/;
-  const items = normalizedText
-    .split(itemRegex)
-    .filter(Boolean)
-    .map(item => item.trim());
-  
-  console.log(`Found ${items.length} items in text`);
-  
-  if (items.length === 0) {
-    // Fallback: create a single item with all content
-    return [{
-      title: 'Generated Content',
-      layout: 'TITLE_AND_CONTENT',
-      content: [normalizedText]
-    }];
-  }
-
-  const structuredItems = [];
-
-  // Process each item
-  for (let i = 0; i < items.length && i < numItems; i++) {
-    const itemText = items[i];
-    
-    // Extract title (first line)
-    const titleMatch = itemText.match(/^(?:Section \d+:\s*|Slide \d+:\s*)?([^*\n]+?)(?:\n|$)/);
-    const title = titleMatch ? titleMatch[1].trim() : `Item ${i + 1}`;
-    
-    // Extract content after "Content:" header
-    const contentMatch = itemText.match(/Content:\s*(.*?)(?:$)/s);
-    let content = [];
-    
-    if (contentMatch) {
-      // Extract bullet points
-      const contentText = contentMatch[1].trim();
-      content = contentText
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line && line.length > 0)
-        .map(line => {
-          // Clean bullet points
-          return line.replace(/^[-•*]\s*/, '').trim();
-        })
-        .filter(line => line.length > 0);
-    }
-    
-    // If no content found, extract from raw text
-    if (content.length === 0) {
-      const lines = itemText.split('\n').map(line => line.trim()).filter(Boolean);
-      // Skip the first line (title) and extract remaining content
-      content = lines.slice(1).filter(line => 
-        !line.toLowerCase().startsWith('content:') &&
-        !line.startsWith('---')
-      );
-    }
-    
-    structuredItems.push({
-      title,
-      layout: 'TITLE_AND_CONTENT',
-      content
-    });
-  }
-  
-  console.log(`Created structured content with ${structuredItems.length} items`);
-  return structuredItems;
 };

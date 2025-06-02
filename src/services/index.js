@@ -1,6 +1,6 @@
-// src/services/index.js
+// src/services/index.js - CLEANED VERSION
 export { httpClient } from './http';
 export { outlineService } from './outline';
 export { presentationService } from './presentation';
+export { historyService } from './history';
 export { analyticsService } from './analytics';
-export { historyService } from './history'; // Add the new history service

@@ -1,11 +1,10 @@
-// FIXED VERSION - Replace your RecentsList.jsx with this
+// src/components/sidebar/RecentsList.jsx - COMPLETE CLEANED VERSION
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
 import { historyService } from '../../services/history';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Resource type mapping (keep your existing code)
 const RESOURCE_TYPES = {
   PRESENTATION: {
     icon: Presentation,
@@ -49,55 +48,45 @@ const RESOURCE_TYPES = {
   }
 };
 
-// Keep your existing getResourceTypeInfo function
 const getResourceTypeInfo = (resourceType) => {
-  console.log('🔍 Analyzing resource type:', resourceType, typeof resourceType);
-  
   if (!resourceType) {
-    console.log('❌ No resource type provided, defaulting to PRESENTATION');
     return RESOURCE_TYPES.PRESENTATION;
   }
   
   const typeStr = String(resourceType).toUpperCase().trim();
-  console.log('📝 Normalized type string:', typeStr);
   
+  // Direct mapping first
   if (RESOURCE_TYPES[typeStr]) {
-    console.log('✅ Direct match found:', typeStr);
     return RESOURCE_TYPES[typeStr];
   }
   
+  // Pattern matching
   if (typeStr.includes('QUIZ') || typeStr.includes('TEST')) {
-    console.log('✅ Detected as QUIZ/TEST type');
     return RESOURCE_TYPES['QUIZ/TEST'];
   }
   
   if (typeStr.includes('LESSON') && typeStr.includes('PLAN')) {
-    console.log('✅ Detected as LESSON PLAN type');
     return RESOURCE_TYPES['LESSON PLAN'];
   }
   
   if (typeStr.includes('WORKSHEET')) {
-    console.log('✅ Detected as WORKSHEET type');
     return RESOURCE_TYPES.WORKSHEET;
   }
   
   if (typeStr.includes('PRESENTATION') || typeStr.includes('SLIDE')) {
-    console.log('✅ Detected as PRESENTATION type');
     return RESOURCE_TYPES.PRESENTATION;
   }
   
-  console.log('❌ No pattern match, defaulting to PRESENTATION');
+  // Fallback
   return RESOURCE_TYPES.PRESENTATION;
 };
 
-// Keep your existing RecentItem component
 const RecentItem = ({ item, onClick }) => {
-  console.log('🏷️ Processing history item:', item);
-  
   const lessonData = item.lessonData || {};
   const title = item.title || 'Untitled Lesson';
   const subject = lessonData.subjectFocus || '';
   
+  // Handle both string and array formats for types
   let types;
   if (Array.isArray(item.types)) {
     types = item.types;
@@ -111,12 +100,8 @@ const RecentItem = ({ item, onClick }) => {
     types = ['Presentation'];
   }
   
-  console.log('📋 Extracted types:', types);
-  
   const date = item.date || 'Today';
   const primaryType = types[0] || 'Presentation';
-  console.log('🎯 Primary type for icon:', primaryType);
-  
   const resourceType = getResourceTypeInfo(primaryType);
   const Icon = resourceType.icon;
 
@@ -193,7 +178,6 @@ const RecentItem = ({ item, onClick }) => {
   );
 };
 
-// MAIN COMPONENT - FIXED VERSION
 const RecentsList = ({ onSelectItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,27 +198,18 @@ const RecentsList = ({ onSelectItem }) => {
       setLoading(true);
       setError(null);
       
-      // FIXED: Handle authenticated vs anonymous users differently
-      if (isAuthenticated) {
-        // For authenticated users, use server API
-        const response = await historyService.getUserHistory();
-        
-        if (!isMounted.current) return;
-        
-        if (response.error) {
-          throw new Error(response.error);
-        }
-        
-        if (response.history && Array.isArray(response.history)) {
-          setHistoryItems(response.history);
-        }
-      } else {
-        // FIXED: For anonymous users, read directly from localStorage
-        console.log('📦 Loading history from localStorage for anonymous user');
+      const response = await historyService.getUserHistory();
+      
+      if (!isMounted.current) return;
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      if (response.history && Array.isArray(response.history)) {
+        setHistoryItems(response.history);
+      } else if (!isAuthenticated) {
         const localHistory = historyService.getLocalHistory();
-        console.log('💾 Found local history items:', localHistory.length);
-        
-        if (!isMounted.current) return;
         setHistoryItems(localHistory);
       }
       
@@ -243,15 +218,11 @@ const RecentsList = ({ onSelectItem }) => {
       if (!isMounted.current) return;
       
       console.error('Error fetching history:', err);
+      setError('Failed to load history. Please try again later.');
       
-      // FALLBACK: Always try localStorage for anonymous users
       if (!isAuthenticated) {
-        console.log('📦 Fallback: Using localStorage for anonymous user');
         const localHistory = historyService.getLocalHistory();
         setHistoryItems(localHistory);
-        setError(null); // Clear error since we got fallback data
-      } else {
-        setError('Failed to load history. Please try again later.');
       }
     } finally {
       if (isMounted.current) {
@@ -278,29 +249,15 @@ const RecentsList = ({ onSelectItem }) => {
     }
   };
 
-  const openConfirmDialog = () => {
-    setConfirmDialogOpen(true);
-  };
-
-  const closeConfirmDialog = () => {
-    setConfirmDialogOpen(false);
-  };
-
   const handleClearHistory = async () => {
     try {
       setIsClearingHistory(true);
       
-      if (isAuthenticated) {
-        await historyService.clearHistory();
-      } else {
-        // FIXED: Clear localStorage for anonymous users
-        historyService.clearLocalHistory();
-      }
-      
+      await historyService.clearHistory();
       setHistoryItems([]);
       hasInitiallyFetched.current = false;
       await fetchHistory();
-      closeConfirmDialog();
+      setConfirmDialogOpen(false);
     } catch (error) {
       console.error('Error clearing history:', error);
       setError('Failed to clear history. Please try again later.');
@@ -335,7 +292,7 @@ const RecentsList = ({ onSelectItem }) => {
             variant="text"
             color="error"
             disabled={isClearingHistory}
-            onClick={openConfirmDialog}
+            onClick={() => setConfirmDialogOpen(true)}
             startIcon={<Trash2 size={14} />}
             sx={{ 
               fontSize: '0.7rem',
@@ -385,7 +342,7 @@ const RecentsList = ({ onSelectItem }) => {
             No recent activities yet.
             {!isAuthenticated && (
               <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
-                Sign in to save your history across devices.
+                Sign in to save your history.
               </Box>
             )}
           </Typography>
@@ -410,20 +367,23 @@ const RecentsList = ({ onSelectItem }) => {
       {/* Confirmation Dialog */}
       <Dialog
         open={confirmDialogOpen}
-        onClose={closeConfirmDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
+        onClose={() => setConfirmDialogOpen(false)}
+        aria-labelledby="clear-history-dialog-title"
       >
-        <DialogTitle id="alert-dialog-title">
+        <DialogTitle id="clear-history-dialog-title">
           Clear History?
         </DialogTitle>
         <DialogContent>
-          <Typography id="alert-dialog-description">
+          <Typography>
             Are you sure you want to clear your history? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeConfirmDialog} color="inherit" disabled={isClearingHistory}>
+          <Button 
+            onClick={() => setConfirmDialogOpen(false)} 
+            color="inherit" 
+            disabled={isClearingHistory}
+          >
             Cancel
           </Button>
           <Button 

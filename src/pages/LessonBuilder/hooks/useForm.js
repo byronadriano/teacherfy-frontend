@@ -168,7 +168,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       return;
     }
 
-    // NEW: Check generation limits before proceeding (unless using example)
+    // Check generation limits before proceeding (unless using example)
     if (!uiState.isExample && subscriptionState && !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0) {
       setUiState(prev => ({
         ...prev,
@@ -246,11 +246,27 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
               ? formState.selectedStandards 
               : [],
             numSlides: formState.numSlides || 5,
-            numSections: 5, // For non-presentation resources
+            numSections: 5,
             includeImages: Boolean(formState.includeImages)
           };
           
           const data = await outlineService.generate(requestData);
+          
+          // IMPROVED: Handle rate limit errors specifically
+          if (data.error === 'RATE_LIMIT_EXCEEDED') {
+            setUiState(prev => ({
+              ...prev,
+              error: 'RATE_LIMIT_EXCEEDED',
+              rateLimitInfo: data.rateLimit,
+              isLoading: false
+            }));
+            return;
+          }
+          
+          // Handle other errors
+          if (data.error) {
+            throw new Error(data.error);
+          }
           
           console.log(`API request for ${resourceType} successful:`, {
             hasMessages: Boolean(data.messages),
@@ -269,7 +285,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
             throw new Error(`Invalid response format from server for ${resourceType}`);
           }
 
-          // Clean the structured content - SIMPLIFIED structure
+          // Clean the structured content
           const cleanStructuredContent = data.structured_content.map(item => ({
             title: item.title || 'Untitled',
             layout: item.layout || 'TITLE_AND_CONTENT',

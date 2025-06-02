@@ -1,9 +1,8 @@
-// src/utils/constants/api.js
+// src/utils/constants/api.js - CLEANED VERSION
+import { config } from '../config';
+
 export const API = {
-  BASE_URL: process.env.REACT_APP_API_BASE_URL || 
-            (process.env.NODE_ENV === 'development' 
-              ? "http://localhost:5000"  
-              : "https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net"),
+  BASE_URL: config.apiUrl,
   ENDPOINTS: {
     OUTLINE: "/outline",
     GENERATE: "/generate",
@@ -11,19 +10,15 @@ export const API = {
     USER_HISTORY: "/user/history",
     CLEAR_HISTORY: "/user/history/clear"
   },
-  TIMEOUT: 100000, // Increase the timeout to 100 seconds since OpenAI API calls can take time
+  TIMEOUT: 100000, // 100 seconds for OpenAI API calls
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Origin': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+    'X-Requested-With': 'XMLHttpRequest'
   }
 };
 
 export const handleApiError = (error) => {
-  console.error('Full API Error:', error);
-  
-  // More comprehensive error handling
   if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
     return {
       error: 'Unable to connect to server. Please check your internet connection.',
