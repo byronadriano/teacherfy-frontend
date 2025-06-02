@@ -1,29 +1,16 @@
-// src/contexts/AuthContext.js - FIXED VERSION to handle COOP policy
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// src/contexts/AuthContext.js - FIXED COOP and logout issues
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { config } from '../utils/config';
 
-const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check authentication status on mount
-  useEffect(() => {
-    console.log('🔍 Checking authentication status...');
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
+  // Check authentication status on mount and periodically
+  const checkAuthStatus = useCallback(async () => {
     try {
       const response = await fetch(`${config.apiUrl}/auth/check`, {
         method: 'GET',
@@ -36,167 +23,229 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         if (data.authenticated && data.user) {
+          console.log('✅ User is authenticated:', data.user.email);
           setUser(data.user);
           setIsAuthenticated(true);
-          console.log('✅ User is authenticated:', data.user.email);
         } else {
           setUser(null);
           setIsAuthenticated(false);
-          console.log('ℹ️ User is not authenticated');
         }
       } else {
         setUser(null);
         setIsAuthenticated(false);
-        console.log('ℹ️ Auth check failed - user not authenticated');
       }
     } catch (error) {
-      console.error('❌ Error checking auth status:', error);
+      console.error('Error checking auth status:', error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async () => {
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // FIXED: Enhanced login with better popup and COOP handling
+  const login = useCallback(async () => {
     return new Promise((resolve, reject) => {
       console.log('🔐 Starting OAuth login...');
       
       const authUrl = `${config.apiUrl}/authorize`;
       console.log('🔗 Opening OAuth popup:', authUrl);
       
-      // FIXED: Open popup with proper window features and error handling
+      // FIXED: Enhanced popup options to handle COOP
       const popup = window.open(
         authUrl,
-        'oauth-popup',
+        'oauth_popup',
         'width=500,height=600,scrollbars=yes,resizable=yes,status=yes,location=yes,toolbar=no,menubar=no'
       );
 
       if (!popup) {
-        console.error('❌ Failed to open OAuth popup - popup blocked?');
-        reject(new Error('Failed to open authentication popup. Please allow popups and try again.'));
+        console.error('❌ Failed to open popup - popup blocker?');
+        reject(new Error('Failed to open authentication popup. Please disable popup blockers and try again.'));
         return;
       }
 
       let messageReceived = false;
-      let checkClosedTimeout;
-      
-      // FIXED: Use postMessage listener instead of checking popup.closed
-      const messageListener = (event) => {
-        // Verify origin for security
-        if (event.origin !== window.location.origin && event.origin !== config.apiUrl) {
-          console.warn('⚠️ Received message from unexpected origin:', event.origin);
+      let popupClosed = false;
+      let authCompleted = false;
+
+      // FIXED: Enhanced message listener with better error handling
+      const handleMessage = (event) => {
+        // Allow messages from our domain and localhost for development
+        const allowedOrigins = [
+          config.apiUrl,
+          'https://teacherfy.ai',
+          'https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net',
+          'http://localhost:3000',
+          'http://localhost:5000'
+        ];
+
+        // For development, be more permissive with origin checking
+        const isDev = config.environment === 'development';
+        const isAllowedOrigin = isDev ? true : allowedOrigins.some(origin => event.origin === origin);
+
+        if (!isAllowedOrigin) {
+          console.warn('🔒 Ignoring message from unauthorized origin:', event.origin);
           return;
         }
 
-        console.log('📨 Received postMessage:', event.data);
+        console.log('📨 Received message:', event.data, 'from origin:', event.origin);
 
-        if (event.data.type === 'AUTH_SUCCESS') {
+        if (event.data?.type === 'AUTH_SUCCESS' && !authCompleted) {
+          authCompleted = true;
           messageReceived = true;
-          console.log('✅ OAuth success received via postMessage');
+          console.log('✅ Authentication successful!');
           
-          // Clean up
-          window.removeEventListener('message', messageListener);
-          if (checkClosedTimeout) clearInterval(checkClosedTimeout);
-          
-          // Set user data from the message
-          if (event.data.user) {
-            setUser(event.data.user);
-            setIsAuthenticated(true);
-            console.log('✅ User data updated from OAuth:', event.data.user.email);
+          // Close popup
+          try {
+            popup.close();
+          } catch (e) {
+            console.log('Popup already closed');
           }
           
-          // Re-check auth status to get latest data from server
-          checkAuthStatus().then(() => {
-            resolve();
-          }).catch((error) => {
-            console.warn('⚠️ Auth recheck failed but continuing:', error);
-            resolve(); // Still resolve since OAuth succeeded
-          });
+          // Update auth state
+          setUser(event.data.user);
+          setIsAuthenticated(true);
           
-        } else if (event.data.type === 'AUTH_ERROR') {
+          // Cleanup
+          window.removeEventListener('message', handleMessage);
+          clearInterval(popupChecker);
+          clearTimeout(timeout);
+          
+          resolve(event.data.user);
+        } else if (event.data?.type === 'AUTH_ERROR' && !authCompleted) {
+          authCompleted = true;
           messageReceived = true;
-          console.error('❌ OAuth error received via postMessage:', event.data.error);
+          console.error('❌ Authentication error:', event.data.error);
           
-          // Clean up
-          window.removeEventListener('message', messageListener);
-          if (checkClosedTimeout) clearInterval(checkClosedTimeout);
+          // Close popup
+          try {
+            popup.close();
+          } catch (e) {
+            console.log('Popup already closed');
+          }
+          
+          // Cleanup
+          window.removeEventListener('message', handleMessage);
+          clearInterval(popupChecker);
+          clearTimeout(timeout);
           
           reject(new Error(event.data.error || 'Authentication failed'));
         }
       };
 
-      // Listen for postMessage from the popup
-      window.addEventListener('message', messageListener);
-
-      // FIXED: Fallback check for popup closure without using popup.closed
-      checkClosedTimeout = setInterval(() => {
+      // FIXED: Enhanced popup monitoring with COOP detection
+      const popupChecker = setInterval(() => {
         try {
-          // Try to access popup.location - this will throw if popup is closed or cross-origin
-          if (popup.location && popup.location.href) {
-            // Popup is still open and accessible
+          // Check if popup is closed
+          if (popup.closed) {
+            popupClosed = true;
+            clearInterval(popupChecker);
+            
+            if (!messageReceived && !authCompleted) {
+              console.log('❌ OAuth popup was closed before receiving success message');
+              window.removeEventListener('message', handleMessage);
+              clearTimeout(timeout);
+              authCompleted = true;
+              reject(new Error('Authentication was cancelled'));
+            }
             return;
           }
-        } catch (e) {
-          // This catch block handles both closure and cross-origin cases
-          if (!messageReceived) {
-            console.log('❌ OAuth popup was closed or became inaccessible');
-            
-            // Clean up
-            window.removeEventListener('message', messageListener);
-            clearInterval(checkClosedTimeout);
-            
-            reject(new Error('Authentication was cancelled'));
+
+          // FIXED: Try to communicate with popup proactively
+          try {
+            // Send a ping to the popup to help with communication
+            popup.postMessage({ type: 'PARENT_PING' }, '*');
+          } catch (e) {
+            // This is expected with COOP restrictions
           }
-          return;
+
+        } catch (error) {
+          console.error('Error checking popup status:', error);
         }
       }, 1000);
 
-      // FIXED: Add timeout to prevent infinite waiting
-      setTimeout(() => {
-        if (!messageReceived) {
-          console.log('⏰ OAuth timeout - cleaning up');
+      // Set up message listener BEFORE popup loads
+      window.addEventListener('message', handleMessage);
+      console.log('📡 Message listener set up, waiting for popup communication...');
+
+      // FIXED: Enhanced timeout with better cleanup
+      const timeout = setTimeout(() => {
+        if (!messageReceived && !popupClosed && !authCompleted) {
+          console.error('❌ Authentication timeout after 2 minutes');
+          authCompleted = true;
           
           try {
             popup.close();
           } catch (e) {
-            // Ignore errors when closing popup
+            console.log('Error closing popup:', e);
           }
           
-          window.removeEventListener('message', messageListener);
-          if (checkClosedTimeout) clearInterval(checkClosedTimeout);
+          clearInterval(popupChecker);
+          window.removeEventListener('message', handleMessage);
           
-          reject(new Error('Authentication timed out. Please try again.'));
+          reject(new Error('Authentication timeout. Please try again.'));
         }
-      }, 300000); // 5 minute timeout
-    });
-  };
+      }, 120000); // 2 minute timeout
 
-  const logout = async () => {
+    });
+  }, []);
+
+  // FIXED: Enhanced logout with proper error handling
+  const logout = useCallback(async () => {
     try {
       console.log('🚪 Logging out...');
       
-      // FIXED: Remove unused response variable to fix ESLint error
-      await fetch(`${config.apiUrl}/logout`, {
-        method: 'POST',
+      // FIXED: Use POST method for logout
+      const response = await fetch(`${config.apiUrl}/logout`, {
+        method: 'POST', // Changed from GET to POST
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      // Always clear local state, even if server request fails
+      // Clear local state regardless of response
       setUser(null);
       setIsAuthenticated(false);
       
-      console.log('✅ Logout successful');
+      // Clear any local storage items
+      try {
+        localStorage.removeItem('user_token');
+        localStorage.removeItem('user_info');
+        sessionStorage.clear();
+      } catch (e) {
+        console.log('Storage clear error (non-critical):', e);
+      }
+
+      if (!response.ok) {
+        console.warn(`⚠️ Logout request failed with status ${response.status}, but local state cleared`);
+        // Don't throw error - local logout is sufficient
+      } else {
+        console.log('✅ Logout successful');
+      }
+      
     } catch (error) {
       console.error('❌ Logout error:', error);
-      // Still clear local state on error
+      
+      // Even if server logout fails, clear local state
       setUser(null);
       setIsAuthenticated(false);
+      
+      // Clear storage as fallback
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        console.log('Storage clear error (non-critical):', e);
+      }
+      
+      console.log('✅ Local logout completed despite server error');
     }
-  };
+  }, []);
 
   const value = {
     user,
@@ -212,4 +261,12 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

@@ -1,6 +1,6 @@
-// src/components/sidebar/Sidebar.jsx - FIXED for mobile visibility
+// src/components/sidebar/Sidebar.jsx - FIXED with proper loading state
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Typography, Button, Avatar, Popover, Paper, Modal } from '@mui/material';
+import { Box, Typography, Button, Avatar, Popover, Paper, Modal, CircularProgress } from '@mui/material';
 import { 
   Stars, 
   Home,
@@ -35,7 +35,7 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
         width: '44px',
         height: '44px',
         minWidth: '44px',
-        minHeight: '48px', // Increased for mobile
+        minHeight: '48px',
         p: 0,
         borderRadius: '12px',
         backgroundColor: isActive ? '#f0f4f8' : 'transparent',
@@ -46,7 +46,6 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
           backgroundColor: '#f8fafc',
           color: '#374151'
         },
-        // Mobile-specific touch improvements
         '@media (max-width: 600px)': {
           minHeight: '48px',
           minWidth: '48px',
@@ -85,7 +84,6 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
           overflow: 'hidden',
-          // Mobile adjustments
           '@media (max-width: 600px)': {
             width: 'calc(100vw - 80px)',
             maxWidth: '300px',
@@ -121,7 +119,6 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
             background: '#cbd5e1',
             borderRadius: '4px',
           },
-          // Mobile scroll improvements
           '@media (max-width: 600px)': {
             maxHeight: '50vh',
             '-webkit-overflow-scrolling': 'touch'
@@ -134,7 +131,7 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
   );
 };
 
-const LoginModal = ({ open, onClose, onLoginClick }) => {
+const LoginModal = ({ open, onClose, onLoginClick, isLoading }) => {
   return (
     <Modal
       open={open}
@@ -157,7 +154,6 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           flexDirection: 'column',
           alignItems: 'center',
           gap: 3,
-          // Mobile adjustments
           '@media (max-width: 600px)': {
             p: 3,
             gap: 2
@@ -187,19 +183,30 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           variant="contained"
           fullWidth
           onClick={onLoginClick}
+          disabled={isLoading}
           sx={{
             backgroundColor: '#4285f4',
             color: 'white',
             py: 1.5,
             textTransform: 'none',
             fontSize: '1rem',
-            minHeight: '48px', // Touch-friendly
+            minHeight: '48px',
             '&:hover': {
               backgroundColor: '#3367d6'
+            },
+            '&:disabled': {
+              backgroundColor: '#94a3b8'
             }
           }}
         >
-          Sign in with Google
+          {isLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={20} color="inherit" />
+              <span>Signing in...</span>
+            </Box>
+          ) : (
+            'Sign in with Google'
+          )}
         </Button>
         
         <Button 
@@ -207,8 +214,9 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
           variant="text"
           color="inherit"
           size="small"
+          disabled={isLoading}
           sx={{
-            minHeight: '44px' // Touch-friendly
+            minHeight: '44px'
           }}
         >
           Continue without signing in
@@ -218,12 +226,14 @@ const LoginModal = ({ open, onClose, onLoginClick }) => {
   );
 };
 
-const UserMenu = ({ user, onSettings, onLogout }) => {
+const UserMenu = ({ user, onSettings, onLogout, isLoading }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
   const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
+    if (!isLoading) {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleClose = () => {
@@ -239,19 +249,20 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
     <>
       <Button
         onClick={handleClick}
+        disabled={isLoading}
         sx={{
           width: '44px',
           height: '44px',
           minWidth: '44px',
-          minHeight: '48px', // Mobile-friendly
+          minHeight: '48px',
           p: 0,
           borderRadius: '12px',
           backgroundColor: 'transparent',
           transition: 'all 0.2s ease',
+          opacity: isLoading ? 0.7 : 1,
           '&:hover': {
             backgroundColor: '#f8fafc'
           },
-          // Mobile touch improvements
           '@media (max-width: 600px)': {
             minHeight: '48px',
             minWidth: '48px',
@@ -262,7 +273,9 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
           }
         }}
       >
-        {user.picture ? (
+        {isLoading ? (
+          <CircularProgress size={20} color="inherit" />
+        ) : user.picture ? (
           <Avatar 
             src={user.picture}
             alt={user.name}
@@ -309,7 +322,6 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
             overflow: 'hidden',
-            // Mobile adjustments
             '@media (max-width: 600px)': {
               width: 'calc(100vw - 80px)',
               maxWidth: '280px'
@@ -375,7 +387,7 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
                 color: '#374151',
                 textTransform: 'none',
                 fontSize: '0.875rem',
-                minHeight: '44px', // Touch-friendly
+                minHeight: '44px',
                 '&:hover': {
                   backgroundColor: '#f8fafc'
                 }
@@ -398,7 +410,7 @@ const UserMenu = ({ user, onSettings, onLogout }) => {
                 color: '#dc2626',
                 textTransform: 'none',
                 fontSize: '0.875rem',
-                minHeight: '44px', // Touch-friendly
+                minHeight: '44px',
                 '&:hover': {
                   backgroundColor: '#fef2f2'
                 }
@@ -419,8 +431,10 @@ const Sidebar = ({
     onLogoReset,
     onHistoryItemSelect
 }) => {
-    const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+    const { user, isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
     
+    // FIXED: Add local loading state for sidebar operations
+    const [isLoading, setIsLoading] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -442,7 +456,6 @@ const Sidebar = ({
             
             setIsMobile(mobile);
             
-            // Add multiple classes for better targeting
             if (mobile) {
                 document.body.classList.add('is-mobile-device');
                 if (isIOS) {
@@ -476,7 +489,7 @@ const Sidebar = ({
                 const viewport = window.visualViewport;
                 const heightDiff = window.innerHeight - viewport.height;
                 
-                if (heightDiff > 150) { // Keyboard is likely open
+                if (heightDiff > 150) {
                     document.body.classList.add('keyboard-active');
                 } else {
                     document.body.classList.remove('keyboard-active');
@@ -563,29 +576,67 @@ const Sidebar = ({
     };
 
     const handleUserButtonClick = () => {
-        if (!user) {
+        if (!user && !isLoading) {
             setShowLoginModal(true);
         }
     };
 
+    // FIXED: Enhanced login with proper loading state and error handling
     const handleLoginClick = async () => {
         try {
             console.log('🔐 Starting login process...');
-            setShowLoginModal(false);
+            setShowLoginModal(false); // Close modal immediately
+            setIsLoading(true);
+            
             await login();
             console.log('✅ Login successful');
+            
+            // Don't reopen the modal on success
+            
         } catch (error) {
             console.error('❌ Login error:', error);
-            alert(`Login failed: ${error.message}`);
+            
+            // Enhanced error handling with specific error types
+            let errorMessage = 'Login failed. Please try again.';
+            
+            if (error.message.includes('popup blocker')) {
+                errorMessage = 'Please disable popup blockers and try again.';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = 'Login timed out. Please check your connection and try again.';
+            } else if (error.message.includes('cancelled')) {
+                errorMessage = 'Login was cancelled.';
+                // Don't show error for cancellation - user chose to cancel
+                return;
+            } else if (error.message.includes('Cross-Origin-Opener-Policy')) {
+                errorMessage = 'Browser security settings are blocking login. Please try refreshing the page and logging in again.';
+            }
+            
+            // Show error to user
+            alert(errorMessage);
+            
+            // Only reopen login modal for actual errors (not cancellation)
+            if (!error.message.includes('cancelled')) {
+                setShowLoginModal(true);
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
+    // FIXED: Enhanced logout with proper loading state and error handling
     const handleLogout = async () => {
         try {
             console.log('🚪 Logout requested');
+            setIsLoading(true);
+            
             await logout();
+            console.log('✅ Logout successful');
+            
         } catch (error) {
             console.error('❌ Logout error:', error);
+            console.log('ℹ️ Logout completed (with minor issues)');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -598,7 +649,8 @@ const Sidebar = ({
         };
     }, []);
 
-    if (isLoading) {
+    // Show loading state while auth is being checked
+    if (authLoading) {
         return (
             <Box
                 sx={{
@@ -615,7 +667,7 @@ const Sidebar = ({
                     zIndex: 10,
                 }}
             >
-                <Typography variant="body2">Loading...</Typography>
+                <CircularProgress size={24} />
             </Box>
         );
     }
@@ -625,7 +677,7 @@ const Sidebar = ({
             <Box
                 sx={{
                     width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
-                    height: '100dvh', // Dynamic viewport height for mobile, fallback handled in media query
+                    height: '100dvh',
                     position: 'fixed',
                     left: 0,
                     top: 0,
@@ -635,24 +687,21 @@ const Sidebar = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     py: 2,
-                    zIndex: 1000, // Increased z-index for mobile
+                    zIndex: 1000,
                     overflow: 'visible',
                     boxSizing: 'border-box',
                     
-                    // Critical mobile improvements
                     paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
                     paddingBottom: isMobile 
                         ? 'max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px))' 
                         : '16px',
                     
-                    // Mobile-specific adjustments
                     '@media (max-width: 600px)': {
-                        height: '100vh', // Fallback for older browsers
+                        height: '100vh',
                         paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom, 0px) + 80px))',
-                        justifyContent: 'space-between' // Better spacing on mobile
+                        justifyContent: 'space-between'
                     },
                     
-                    // Support for dynamic viewport height
                     '@supports (height: 100dvh)': {
                         height: '100dvh'
                     }
@@ -673,10 +722,9 @@ const Sidebar = ({
                         backgroundColor: isLogoHovered ? '#f0f4f8' : 'transparent',
                         mb: 3,
                         position: 'relative',
-                        // Mobile touch improvements
                         '@media (max-width: 600px)': {
-                            width: '48px', // Ensure consistent sizing
-                            height: '48px', // Single height declaration
+                            width: '48px',
+                            height: '48px',
                             mb: 2
                         }
                     }}
@@ -714,7 +762,7 @@ const Sidebar = ({
                     flexDirection: 'column', 
                     gap: 1,
                     '@media (max-width: 600px)': {
-                        gap: 1.5 // More space on mobile
+                        gap: 1.5
                     }
                 }}>
                     {NAV_ITEMS.map((item) => (
@@ -733,23 +781,22 @@ const Sidebar = ({
                     ))}
                 </Box>
 
-                {/* Spacer - Modified for mobile */}
+                {/* Spacer */}
                 <Box sx={{ 
                     flex: 1,
                     '@media (max-width: 600px)': {
-                        flex: 0, // Don't stretch on mobile
-                        minHeight: '20px' // Minimal spacer
+                        flex: 0,
+                        minHeight: '20px'
                     }
                 }} />
 
-                {/* Bottom buttons container - Critical for mobile positioning */}
+                {/* Bottom buttons container */}
                 <Box sx={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 2,
                     '@media (max-width: 600px)': {
-                        // Fixed positioning from bottom on mobile
                         marginTop: 'auto',
                         paddingBottom: 0,
                         gap: 3
@@ -758,21 +805,22 @@ const Sidebar = ({
                     {/* Upgrade Button */}
                     <Button
                         onClick={() => setShowPricing(true)}
+                        disabled={isLoading}
                         sx={{
                             width: '44px',
                             height: '44px',
                             minWidth: '44px',
-                            minHeight: '48px', // Mobile-friendly
+                            minHeight: '48px',
                             p: 0,
                             borderRadius: '12px',
                             backgroundColor: '#7c3aed',
                             color: 'white',
                             transition: 'all 0.2s ease',
+                            opacity: isLoading ? 0.7 : 1,
                             '&:hover': {
                                 backgroundColor: '#6d28d9',
                                 transform: 'scale(1.05)'
                             },
-                            // Mobile improvements
                             '@media (max-width: 600px)': {
                                 minHeight: '48px',
                                 minWidth: '48px',
@@ -786,35 +834,36 @@ const Sidebar = ({
                         <Crown size={20} />
                     </Button>
 
-                    {/* User Section - Critical mobile positioning */}
+                    {/* User Section */}
                     {isAuthenticated && user ? (
                         <UserMenu 
                             user={user}
                             onSettings={() => setShowSettings(true)}
                             onLogout={handleLogout}
+                            isLoading={isLoading}
                         />
                     ) : (
                         <Button
                             onClick={handleUserButtonClick}
+                            disabled={isLoading}
                             sx={{
                                 width: '44px',
                                 height: '44px',
                                 minWidth: '44px',
-                                minHeight: '48px', // Mobile-friendly
+                                minHeight: '48px',
                                 p: 0,
                                 borderRadius: '12px',
                                 backgroundColor: 'transparent',
                                 color: '#64748b',
                                 transition: 'all 0.2s ease',
+                                opacity: isLoading ? 0.7 : 1,
                                 '&:hover': {
                                     backgroundColor: '#f8fafc',
                                     color: '#374151'
                                 },
-                                // Mobile improvements
                                 '@media (max-width: 600px)': {
                                     minHeight: '48px',
                                     minWidth: '48px',
-                                    // Ensure this button is always visible
                                     position: 'relative',
                                     '&:active': {
                                         transform: 'scale(0.95)',
@@ -823,7 +872,7 @@ const Sidebar = ({
                                 }
                             }}
                         >
-                            <User size={20} />
+                            {isLoading ? <CircularProgress size={20} color="inherit" /> : <User size={20} />}
                         </Button>
                     )}
                 </Box>
@@ -847,6 +896,7 @@ const Sidebar = ({
                 open={showLoginModal}
                 onClose={() => setShowLoginModal(false)}
                 onLoginClick={handleLoginClick}
+                isLoading={isLoading}
             />
 
             {/* Settings Modal */}
@@ -869,15 +919,6 @@ const Sidebar = ({
                 @keyframes twinkle {
                     from { opacity: 0.6; transform: scale(0.8); }
                     to { opacity: 1; transform: scale(1); }
-                }
-                
-                /* Debug helper - remove in production */
-                .debug-mobile .sidebar {
-                    background-color: rgba(255, 0, 0, 0.1) !important;
-                }
-                
-                .debug-mobile .sidebar > *:last-child {
-                    background-color: rgba(0, 255, 0, 0.3) !important;
                 }
             `}</style>
         </>
