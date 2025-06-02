@@ -190,6 +190,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   }, [showInitialState]);
 
   // Handle history item selection
+// Handle history item selection
   const handleHistoryItemSelect = (item) => {
     if (!item || !item.lessonData) {
       console.error('❌ Invalid history item selected:', item);
@@ -201,14 +202,23 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     try {
       const { lessonData } = item;
       
+      // FIXED: Properly handle resourceType conversion to array format
       if (lessonData.resourceType) {
-        const resourceType = Array.isArray(lessonData.resourceType) 
-          ? lessonData.resourceType 
-          : (typeof lessonData.resourceType === 'string' ? [lessonData.resourceType] : []);
-          
-        handleFormChange('resourceType', resourceType, true);
+        let resourceType;
+        if (Array.isArray(lessonData.resourceType)) {
+          resourceType = lessonData.resourceType;
+        } else if (typeof lessonData.resourceType === 'string') {
+          resourceType = [lessonData.resourceType];
+        } else {
+          console.warn('⚠️ Unexpected resourceType format:', lessonData.resourceType);
+          resourceType = ['Presentation']; // Default fallback
+        }
+        
+        console.log('🔧 Setting resourceType to:', resourceType);
+        handleFormChange('resourceType', resourceType);
       }
       
+      // Set other form fields
       if (lessonData.gradeLevel) handleFormChange('gradeLevel', lessonData.gradeLevel);
       if (lessonData.subjectFocus) handleFormChange('subjectFocus', lessonData.subjectFocus);
       if (lessonData.language) handleFormChange('language', lessonData.language);
@@ -220,11 +230,13 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         handleFormChange('selectedStandards', lessonData.selectedStandards);
       }
       
+      // Prepare content update
       const contentUpdate = {
         title: lessonData.generatedTitle || item.title || 'Loaded Lesson',
         finalOutline: lessonData.finalOutline || ''
       };
       
+      // Handle generated resources
       if (lessonData.generatedResources && typeof lessonData.generatedResources === 'object') {
         contentUpdate.generatedResources = lessonData.generatedResources;
         
@@ -234,20 +246,27 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         }
       } else if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
         contentUpdate.structuredContent = lessonData.structuredContent;
-        const resourceType = Array.isArray(lessonData.resourceType) 
-          ? lessonData.resourceType[0] 
-          : (lessonData.resourceType || 'Presentation');
-          
+        
+        // FIXED: Get resource type for backwards compatibility
+        let resourceTypeForContent = 'Presentation'; // Default
+        if (Array.isArray(lessonData.resourceType)) {
+          resourceTypeForContent = lessonData.resourceType[0];
+        } else if (typeof lessonData.resourceType === 'string') {
+          resourceTypeForContent = lessonData.resourceType;
+        }
+        
         contentUpdate.generatedResources = {
-          [resourceType]: lessonData.structuredContent
+          [resourceTypeForContent]: lessonData.structuredContent
         };
       }
       
+      // Update content state
       setContentState(prev => ({
         ...prev,
         ...contentUpdate
       }));
       
+      // Update UI state
       setUiState(prev => ({
         ...prev,
         outlineConfirmed: true,
@@ -285,10 +304,47 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         isLoading: true
       }));
       
-      const resourcesToGenerate = specificResourceTypes 
-        ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
-        : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
+      // FIXED: Better handling of resource types from different sources
+      let resourcesToGenerate;
       
+      if (specificResourceTypes) {
+        // Handle specificResourceTypes parameter
+        if (Array.isArray(specificResourceTypes)) {
+          resourcesToGenerate = specificResourceTypes;
+        } else if (typeof specificResourceTypes === 'string') {
+          resourcesToGenerate = [specificResourceTypes];
+        } else {
+          console.warn('⚠️ Unexpected specificResourceTypes format:', specificResourceTypes);
+          resourcesToGenerate = ['Presentation'];
+        }
+      } else {
+        // Get from form state
+        if (Array.isArray(formState.resourceType)) {
+          resourcesToGenerate = formState.resourceType;
+        } else if (typeof formState.resourceType === 'string') {
+          resourcesToGenerate = [formState.resourceType];
+        } else {
+          console.warn('⚠️ Unexpected formState.resourceType format:', formState.resourceType);
+          resourcesToGenerate = ['Presentation'];
+        }
+      }
+      
+      console.log('🔧 handleGenerateResource processing:', {
+        specificResourceTypes,
+        'formState.resourceType': formState.resourceType,
+        'final resourcesToGenerate': resourcesToGenerate
+      });
+      
+      // Validate all resource types are strings
+      resourcesToGenerate = resourcesToGenerate.map(type => {
+        if (typeof type !== 'string') {
+          console.warn('⚠️ Converting non-string resource type:', type);
+          return String(type);
+        }
+        return type;
+      });
+      
+      // Filter out resources that are already successfully generated
       const pendingResources = resourcesToGenerate.filter(type => 
         resourceStatus[type]?.status !== 'success'
       );
@@ -299,14 +355,17 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         return;
       }
       
+      // Update status to 'generating' for pending resources
       const newStatus = { ...resourceStatus };
       pendingResources.forEach(type => {
         newStatus[type] = { status: 'generating' };
       });
       setResourceStatus(newStatus);
       
+      // Generate the resources
       const results = await generateMultiResource(formState, contentState, pendingResources);
       
+      // Update status based on results
       const updatedStatus = { ...newStatus };
       Object.entries(results).forEach(([type, result]) => {
         if (result.error) {
@@ -324,15 +383,17 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       });
       setResourceStatus(updatedStatus);
       
+      // Save to history after successful generation
       saveToHistory();
     } catch (error) {
       console.error('❌ Error generating resources:', error);
       
+      // Update error status for all resources we tried to generate
       const errorStatus = { ...resourceStatus };
       const resourcesToGenerate = specificResourceTypes 
         ? (Array.isArray(specificResourceTypes) ? specificResourceTypes : [specificResourceTypes])
         : (Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType]);
-        
+          
       resourcesToGenerate.forEach(type => {
         errorStatus[type] = { 
           status: 'error', 

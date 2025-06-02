@@ -8,21 +8,30 @@ import { config } from '../utils/config';
  * @return {string} - Normalized resource type
  */
 function normalizeResourceType(resourceType) {
+  console.log('🔧 normalizeResourceType input:', resourceType, 'type:', typeof resourceType);
+  
   // FIXED: Handle array inputs - take the first element if it's an array
   let typeToProcess = resourceType;
   if (Array.isArray(resourceType)) {
     typeToProcess = resourceType[0]; // Take the first element
-    console.log('Resource type was array, using first element:', typeToProcess);
+    console.log('📋 Resource type was array, using first element:', typeToProcess);
   }
   
   // FIXED: Ensure we have a string before calling toLowerCase
-  if (!typeToProcess || typeof typeToProcess !== 'string') {
-    console.warn('Invalid resource type, defaulting to presentation:', typeToProcess);
+  if (!typeToProcess) {
+    console.warn('⚠️ No resource type provided, defaulting to presentation');
     return 'presentation';
   }
   
-  // First convert to lowercase
+  // Convert to string if it's not already
+  if (typeof typeToProcess !== 'string') {
+    console.warn('⚠️ Resource type is not a string, converting:', typeToProcess);
+    typeToProcess = String(typeToProcess);
+  }
+  
+  // Now safe to call toLowerCase
   const normalized = typeToProcess.toLowerCase();
+  console.log('✅ Normalized resource type:', normalized);
   
   // Handle special cases
   if (normalized.includes('quiz') || normalized.includes('test')) {
@@ -46,12 +55,46 @@ export const presentationService = {
       // FIXED: Handle array resource types properly
       let resourceTypes;
       if (specificResources) {
-        resourceTypes = Array.isArray(specificResources) ? specificResources : [specificResources];
+        // Handle specificResources being a string or array
+        if (Array.isArray(specificResources)) {
+          resourceTypes = specificResources;
+        } else if (typeof specificResources === 'string') {
+          resourceTypes = [specificResources];
+        } else {
+          console.warn('⚠️ Unexpected specificResources type:', typeof specificResources, specificResources);
+          resourceTypes = ['Presentation']; // Default fallback
+        }
       } else if (formState.resourceType) {
-        resourceTypes = Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType];
+        // Handle formState.resourceType being a string or array
+        if (Array.isArray(formState.resourceType)) {
+          resourceTypes = formState.resourceType;
+        } else if (typeof formState.resourceType === 'string') {
+          resourceTypes = [formState.resourceType];
+        } else {
+          console.warn('⚠️ Unexpected formState.resourceType type:', typeof formState.resourceType, formState.resourceType);
+          resourceTypes = ['Presentation']; // Default fallback
+        }
       } else {
         resourceTypes = ['Presentation']; // Default fallback
       }
+
+      console.log('🔧 generateMultiResource processing:', {
+        specificResources,
+        'formState.resourceType': formState.resourceType,
+        'final resourceTypes': resourceTypes,
+        'types of resourceTypes': resourceTypes.map(t => typeof t)
+      });
+
+      // Validate that all resourceTypes are strings
+      resourceTypes = resourceTypes.map(type => {
+        if (typeof type !== 'string') {
+          console.warn('⚠️ Converting non-string resource type to string:', type);
+          return String(type);
+        }
+        return type;
+      });
+
+      console.log('✅ Validated resourceTypes:', resourceTypes);
       
       console.log('Generating multiple resources with:', {
         resourceTypes,
