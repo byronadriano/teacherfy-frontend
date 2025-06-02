@@ -1,12 +1,11 @@
-// COMPLETE FIX for src/components/sidebar/RecentsList.jsx
-
+// FIXED VERSION - Replace your RecentsList.jsx with this
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
 import { historyService } from '../../services/history';
 import { useAuth } from '../../contexts/AuthContext';
 
-// FIXED: Updated resource type mapping with better logic
+// Resource type mapping (keep your existing code)
 const RESOURCE_TYPES = {
   PRESENTATION: {
     icon: Presentation,
@@ -50,7 +49,7 @@ const RESOURCE_TYPES = {
   }
 };
 
-// FIXED: Completely rewritten resource type detection
+// Keep your existing getResourceTypeInfo function
 const getResourceTypeInfo = (resourceType) => {
   console.log('🔍 Analyzing resource type:', resourceType, typeof resourceType);
   
@@ -59,17 +58,14 @@ const getResourceTypeInfo = (resourceType) => {
     return RESOURCE_TYPES.PRESENTATION;
   }
   
-  // Convert to string and normalize
   const typeStr = String(resourceType).toUpperCase().trim();
   console.log('📝 Normalized type string:', typeStr);
   
-  // Direct mapping first (exact matches)
   if (RESOURCE_TYPES[typeStr]) {
     console.log('✅ Direct match found:', typeStr);
     return RESOURCE_TYPES[typeStr];
   }
   
-  // Pattern matching for variations
   if (typeStr.includes('QUIZ') || typeStr.includes('TEST')) {
     console.log('✅ Detected as QUIZ/TEST type');
     return RESOURCE_TYPES['QUIZ/TEST'];
@@ -90,39 +86,34 @@ const getResourceTypeInfo = (resourceType) => {
     return RESOURCE_TYPES.PRESENTATION;
   }
   
-  // Fallback
   console.log('❌ No pattern match, defaulting to PRESENTATION');
   return RESOURCE_TYPES.PRESENTATION;
 };
 
+// Keep your existing RecentItem component
 const RecentItem = ({ item, onClick }) => {
-  // FIXED: Better data extraction with debugging
   console.log('🏷️ Processing history item:', item);
   
   const lessonData = item.lessonData || {};
   const title = item.title || 'Untitled Lesson';
   const subject = lessonData.subjectFocus || '';
   
-  // FIXED: Handle both string and array formats for types
   let types;
   if (Array.isArray(item.types)) {
     types = item.types;
   } else if (item.types) {
     types = [item.types];
   } else if (lessonData.resourceType) {
-    // Fallback to lessonData.resourceType
     types = Array.isArray(lessonData.resourceType) 
       ? lessonData.resourceType 
       : [lessonData.resourceType];
   } else {
-    types = ['Presentation']; // Default fallback
+    types = ['Presentation'];
   }
   
   console.log('📋 Extracted types:', types);
   
   const date = item.date || 'Today';
-  
-  // Get resource info for the primary type
   const primaryType = types[0] || 'Presentation';
   console.log('🎯 Primary type for icon:', primaryType);
   
@@ -147,7 +138,6 @@ const RecentItem = ({ item, onClick }) => {
     >
       <Icon size={16} color={resourceType.color} />
       <Box sx={{ flex: 1 }}>
-        {/* Main title */}
         <Typography sx={{ 
           fontSize: '0.8rem',
           color: '#374151',
@@ -157,7 +147,6 @@ const RecentItem = ({ item, onClick }) => {
           {title}
         </Typography>
         
-        {/* Subject if available */}
         {subject && (
           <Typography sx={{ 
             fontSize: '0.7rem',
@@ -168,7 +157,6 @@ const RecentItem = ({ item, onClick }) => {
           </Typography>
         )}
         
-        {/* Type and date info */}
         <Box sx={{ 
           display: 'flex',
           alignItems: 'center',
@@ -205,7 +193,7 @@ const RecentItem = ({ item, onClick }) => {
   );
 };
 
-// Rest of the component remains the same...
+// MAIN COMPONENT - FIXED VERSION
 const RecentsList = ({ onSelectItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -226,22 +214,27 @@ const RecentsList = ({ onSelectItem }) => {
       setLoading(true);
       setError(null);
       
-      const response = await historyService.getUserHistory();
-      
-      if (!isMounted.current) return;
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      
-      // FIXED: Add debugging for fetched history
-      console.log('📦 Fetched history items:', response.history);
-      
-      if (response.history && Array.isArray(response.history)) {
-        setHistoryItems(response.history);
-      } else if (!isAuthenticated) {
+      // FIXED: Handle authenticated vs anonymous users differently
+      if (isAuthenticated) {
+        // For authenticated users, use server API
+        const response = await historyService.getUserHistory();
+        
+        if (!isMounted.current) return;
+        
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        
+        if (response.history && Array.isArray(response.history)) {
+          setHistoryItems(response.history);
+        }
+      } else {
+        // FIXED: For anonymous users, read directly from localStorage
+        console.log('📦 Loading history from localStorage for anonymous user');
         const localHistory = historyService.getLocalHistory();
-        console.log('💾 Using local history:', localHistory);
+        console.log('💾 Found local history items:', localHistory.length);
+        
+        if (!isMounted.current) return;
         setHistoryItems(localHistory);
       }
       
@@ -250,11 +243,15 @@ const RecentsList = ({ onSelectItem }) => {
       if (!isMounted.current) return;
       
       console.error('Error fetching history:', err);
-      setError('Failed to load history. Please try again later.');
       
+      // FALLBACK: Always try localStorage for anonymous users
       if (!isAuthenticated) {
+        console.log('📦 Fallback: Using localStorage for anonymous user');
         const localHistory = historyService.getLocalHistory();
         setHistoryItems(localHistory);
+        setError(null); // Clear error since we got fallback data
+      } else {
+        setError('Failed to load history. Please try again later.');
       }
     } finally {
       if (isMounted.current) {
@@ -293,7 +290,13 @@ const RecentsList = ({ onSelectItem }) => {
     try {
       setIsClearingHistory(true);
       
-      await historyService.clearHistory();
+      if (isAuthenticated) {
+        await historyService.clearHistory();
+      } else {
+        // FIXED: Clear localStorage for anonymous users
+        historyService.clearLocalHistory();
+      }
+      
       setHistoryItems([]);
       hasInitiallyFetched.current = false;
       await fetchHistory();
@@ -382,7 +385,7 @@ const RecentsList = ({ onSelectItem }) => {
             No recent activities yet.
             {!isAuthenticated && (
               <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
-                Sign in to save your history.
+                Sign in to save your history across devices.
               </Box>
             )}
           </Typography>
