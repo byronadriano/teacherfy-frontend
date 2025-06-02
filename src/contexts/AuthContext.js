@@ -176,7 +176,8 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🚪 Logging out...');
       
-      const response = await fetch(`${config.apiUrl}/logout`, {
+      // FIXED: Remove unused response variable to fix ESLint error
+      await fetch(`${config.apiUrl}/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: {
