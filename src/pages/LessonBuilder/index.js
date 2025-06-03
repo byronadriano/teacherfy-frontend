@@ -445,17 +445,22 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
 
       {/* Main Content */}
       <Box 
-        component="main"
-        sx={{ 
-          marginLeft: '60px', // Fixed width for collapsed sidebar
-          flex: 1,
-          height: '100vh',
-          display: 'flex', 
-          flexDirection: 'column',
-          position: 'relative',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
+          component="main"
+          sx={{ 
+              marginLeft: '60px', // Fixed width for collapsed sidebar
+              flex: 1,
+              height: '100vh',
+              display: 'flex', 
+              flexDirection: 'column',
+              position: 'relative',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              // Add mobile-specific padding
+              '@media (max-width: 600px)': {
+                  paddingBottom: '20px', // Less bottom padding on mobile
+                  height: 'calc(105vh - 20px)' // Account for any UI elements
+              }
+          }}
       >
         {/* Center all content vertically when no content is displayed */}
         <Box sx={{ 
@@ -481,9 +486,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
             {/* Initial State: Logo + Title + Form */}
             {showInitialState && (
               <>
-                {/* Logo - Perplexity style */}
+                {/* Logo - Responsive for mobile */}
                 <Box sx={{ 
-                  mb: 4,
+                  mb: { xs: 2, sm: 3, md: 4 }, // Smaller margin on mobile
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -492,10 +497,16 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                     src={Logo}
                     alt="Teacherfy AI Logo"
                     style={{ 
-                      width: '200px',
-                      height: '200px',
-                      borderRadius: '16px',
+                      width: '120px',  // Much smaller default size
+                      height: '120px',
+                      borderRadius: '12px',
                       objectFit: 'contain'
+                    }}
+                    sx={{
+                      // Responsive sizing
+                      width: { xs: '80px', sm: '100px', md: '120px' },
+                      height: { xs: '80px', sm: '100px', md: '120px' },
+                      borderRadius: { xs: '8px', sm: '10px', md: '12px' }
                     }}
                   />
                 </Box>

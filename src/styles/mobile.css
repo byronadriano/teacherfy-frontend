@@ -27,13 +27,12 @@
   }
 }
 
-/* Enhanced sidebar positioning for mobile */
+/* Enhanced sidebar positioning for mobile - SIMPLIFIED */
 .sidebar {
   position: fixed !important;
   top: 0;
   left: 0;
-  height: 100vh;
-  height: 100dvh; /* Dynamic viewport height */
+  height: 100vh !important;
   width: 60px;
   z-index: 1000;
   display: flex;
@@ -42,20 +41,18 @@
   border-right: 1px solid #e2e8f0;
   box-sizing: border-box;
   overflow: visible;
-  
-  /* Critical: Add padding for iOS safe areas and navigation */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
-/* Mobile-specific sidebar adjustments */
+/* Mobile-specific sidebar adjustments - SIMPLIFIED */
 @media (max-width: 600px) {
   .sidebar {
-    /* Increase bottom padding significantly for mobile browsers */
-    padding-bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px)) !important;
+    /* Simplified padding - no complex calculations */
+    padding-top: 16px !important;
+    padding-bottom: 20px !important;
     
-    /* Ensure sidebar content is properly spaced */
-    justify-content: space-between;
+    /* Keep flex layout simple */
+    justify-content: flex-start;
+    align-items: center;
   }
   
   /* Make all buttons more accessible on mobile */
@@ -67,59 +64,29 @@
     touch-action: manipulation;
   }
   
-  /* Critical: Fix for user button positioning */
+  /* FIXED: Position bottom buttons with absolute positioning */
   .sidebar > *:last-child {
-    /* Push the last element (user button) up from the bottom */
-    margin-bottom: max(50px, calc(env(safe-area-inset-bottom, 0px) + 30px)) !important;
-    margin-top: auto; /* Push to bottom but with margin */
+    position: absolute !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin-bottom: 0 !important;
   }
   
-  /* Fix for upgrade button positioning */
+  /* FIXED: Position upgrade button */
   .sidebar > *:nth-last-child(2) {
-    margin-bottom: 16px !important;
+    position: absolute !important;
+    bottom: 80px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin-bottom: 0 !important;
   }
   
-  /* Spacer should not interfere with button positioning */
+  /* Ensure spacer doesn't interfere */
   .sidebar .spacer,
   .sidebar > div[sx*="flex: 1"] {
     flex: 0 !important;
     min-height: 0 !important;
-  }
-}
-
-/* Specific iPhone device targeting */
-@media (max-width: 600px) {
-  /* iPhone with home indicator (iPhone X and newer) */
-  @supports (padding: max(0px)) {
-    .sidebar {
-      padding-bottom: max(100px, calc(env(safe-area-inset-bottom, 34px) + 60px)) !important;
-    }
-    
-    .sidebar > *:last-child {
-      margin-bottom: max(60px, calc(env(safe-area-inset-bottom, 34px) + 40px)) !important;
-    }
-  }
-  
-  /* iPhone 8 and smaller (with physical home button) */
-  @media (max-height: 667px) {
-    .sidebar {
-      padding-bottom: 90px !important;
-    }
-    
-    .sidebar > *:last-child {
-      margin-bottom: 60px !important;
-    }
-  }
-  
-  /* Modern tall iPhones */
-  @media (min-height: 800px) {
-    .sidebar {
-      padding-bottom: max(110px, calc(env(safe-area-inset-bottom, 34px) + 70px)) !important;
-    }
-    
-    .sidebar > *:last-child {
-      margin-bottom: max(70px, calc(env(safe-area-inset-bottom, 34px) + 50px)) !important;
-    }
   }
 }
 
@@ -132,9 +99,10 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     
-    /* Ensure content doesn't get hidden behind browser UI */
-    min-height: calc(100vh - 120px);
-    min-height: calc(100dvh - 120px);
+    /* FIXED: Ensure content doesn't get cut off */
+    min-height: calc(100vh - 40px) !important;
+    min-height: calc(100dvh - 40px) !important;
+    padding-bottom: 0px !important; /* Less aggressive bottom padding */
   }
   
   /* Form and content spacing */
@@ -237,11 +205,6 @@
     padding: 12px 16px !important;
   }
   
-  /* Increase spacing between interactive elements */
-  .sidebar > *:not(:last-child) {
-    margin-bottom: 12px !important;
-  }
-  
   /* Better touch feedback */
   button:active, .MuiButton-root:active {
     transform: scale(0.95);
@@ -252,11 +215,15 @@
 /* Landscape orientation adjustments */
 @media (max-width: 900px) and (orientation: landscape) {
   .sidebar {
-    padding-bottom: 60px !important;
+    padding-bottom: 20px !important;
   }
   
   .sidebar > *:last-child {
-    margin-bottom: 40px !important;
+    bottom: 15px !important;
+  }
+  
+  .sidebar > *:nth-last-child(2) {
+    bottom: 70px !important;
   }
   
   .main-content {
@@ -279,20 +246,8 @@
   }
 }
 
-/* Debug styles for development (remove in production) */
-@media (max-width: 600px) {
-  .debug-mobile .sidebar {
-    background-color: rgba(255, 0, 0, 0.1) !important;
-  }
-  
-  .debug-mobile .sidebar > *:last-child {
-    background-color: rgba(0, 255, 0, 0.3) !important;
-  }
-  
-  .debug-mobile .main-content {
-    background-color: rgba(0, 0, 255, 0.1) !important;
-  }
-}
+/* REMOVE the problematic iPhone device targeting that was causing issues */
+/* We're keeping this simpler and more reliable */
 
 /* Critical: Override any conflicting styles */
 @media (max-width: 600px) {
@@ -303,12 +258,59 @@
     overflow: visible !important;
   }
   
-  /* Ensure user button is always visible */
+  /* Ensure buttons are positioned correctly and don't interfere with content */
   .sidebar button[aria-label*="user"],
-  .sidebar button:last-child,
-  .sidebar > *:last-child button {
-    position: relative !important;
-    bottom: 0 !important;
-    margin-bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 40px)) !important;
+  .sidebar button:last-child {
+    position: absolute !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Upgrade button positioning */
+  .sidebar button:nth-last-child(2) {
+    position: absolute !important;
+    bottom: 80px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 600px) {
+  /* Prevent horizontal scrolling */
+  body, html {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure main content area doesn't get cut off */
+  .main-content {
+    width: calc(100vw - 60px) !important;
+    max-width: calc(100vw - 60px) !important;
+  }
+  
+  /* Fix for content being pushed down too much */
+  .main-content > * {
+    max-width: 100% !important;
+  }
+}
+
+/* Prevent zoom on form inputs (iOS specific) */
+@media (max-width: 600px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    appearance: none; /* Standard property */
+    -webkit-appearance: none; /* WebKit fallback for older browsers */
+    -moz-appearance: none; /* Firefox fallback */
+    border-radius: 8px;
   }
 }

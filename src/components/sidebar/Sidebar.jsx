@@ -677,7 +677,7 @@ const Sidebar = ({
             <Box
                 sx={{
                     width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
-                    height: '100dvh',
+                    height: '100vh', // Use regular viewport height
                     position: 'fixed',
                     left: 0,
                     top: 0,
@@ -691,19 +691,12 @@ const Sidebar = ({
                     overflow: 'visible',
                     boxSizing: 'border-box',
                     
-                    paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
-                    paddingBottom: isMobile 
-                        ? 'max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px))' 
-                        : '16px',
-                    
+                    // Simplified mobile padding
                     '@media (max-width: 600px)': {
                         height: '100vh',
-                        paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom, 0px) + 80px))',
-                        justifyContent: 'space-between'
-                    },
-                    
-                    '@supports (height: 100dvh)': {
-                        height: '100dvh'
+                        paddingTop: '16px',
+                        paddingBottom: '40px', // Much less bottom padding
+                        justifyContent: 'flex-start' // Change from space-between
                     }
                 }}
             >
@@ -789,17 +782,19 @@ const Sidebar = ({
                         minHeight: '20px'
                     }
                 }} />
-
                 {/* Bottom buttons container */}
                 <Box sx={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 2,
+                    position: 'absolute', // Position absolutely
+                    bottom: '20px', // Fixed distance from bottom
+                    left: '50%',
+                    transform: 'translateX(-50%)', // Center horizontally
                     '@media (max-width: 600px)': {
-                        marginTop: 'auto',
-                        paddingBottom: 0,
-                        gap: 3
+                        bottom: '45px', // Slightly more space on mobile
+                        gap: 1.5
                     }
                 }}>
                     {/* Upgrade Button */}
