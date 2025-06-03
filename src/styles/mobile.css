@@ -1,4 +1,4 @@
-/* Updated mobile.css with comprehensive iPhone fixes */
+/* Updated mobile.css with comprehensive iPhone fixes - NO CONFLICTS */
 
 /* Base mobile device detection and setup */
 .is-mobile-device {
@@ -7,32 +7,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Critical iOS Safe Area Support */
-@supports (-webkit-touch-callout: none) {
-  body {
-    /* Ensure proper safe area handling */
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 20px);
-    /* Fix iOS viewport issues */
-    -webkit-text-size-adjust: 100%;
-    height: 100vh; /* Use viewport height */
-    height: 100dvh; /* Dynamic viewport height for iOS */
-  }
-  
-  /* Main content area safe area handling */
-  .main-content {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
-    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  }
-}
-
-/* Enhanced sidebar positioning for mobile - SIMPLIFIED */
+/* Enhanced sidebar positioning for mobile - BASELINE */
 .sidebar {
   position: fixed !important;
   top: 0;
   left: 0;
   height: 100vh !important;
+  height: 100dvh !important; /* Dynamic viewport height for iOS */
   width: 60px;
   z-index: 1000;
   display: flex;
@@ -43,14 +24,11 @@
   overflow: visible;
 }
 
-/* Mobile-specific sidebar adjustments - SIMPLIFIED */
+/* Mobile-specific sidebar adjustments */
 @media (max-width: 600px) {
   .sidebar {
-    /* Simplified padding - no complex calculations */
     padding-top: 16px !important;
     padding-bottom: 20px !important;
-    
-    /* Keep flex layout simple */
     justify-content: flex-start;
     align-items: center;
   }
@@ -64,7 +42,7 @@
     touch-action: manipulation;
   }
   
-  /* FIXED: Position bottom buttons with absolute positioning */
+  /* BASELINE: Position bottom buttons */
   .sidebar > *:last-child {
     position: absolute !important;
     bottom: 20px !important;
@@ -73,7 +51,6 @@
     margin-bottom: 0 !important;
   }
   
-  /* FIXED: Position upgrade button */
   .sidebar > *:nth-last-child(2) {
     position: absolute !important;
     bottom: 80px !important;
@@ -90,6 +67,59 @@
   }
 }
 
+/* iOS-SPECIFIC OVERRIDES - This targets iOS Safari specifically */
+@supports (-webkit-touch-callout: none) {
+  /* iOS body adjustments */
+  body {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    -webkit-text-size-adjust: 100%;
+    height: 100vh;
+    height: 100dvh;
+  }
+  
+  /* iOS sidebar adjustments */
+  .sidebar {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+  
+  /* iOS mobile button positioning - OVERRIDE FOR SAFE AREA */
+  @media (max-width: 600px) {
+    .sidebar > *:last-child {
+      bottom: calc(30px + env(safe-area-inset-bottom, 20px)) !important;
+      z-index: 1001 !important;
+    }
+    
+    .sidebar > *:nth-last-child(2) {
+      bottom: calc(90px + env(safe-area-inset-bottom, 20px)) !important;
+      z-index: 1001 !important;
+    }
+    
+    /* Ensure all sidebar buttons are above iOS UI */
+    .sidebar button {
+      z-index: 1001 !important;
+    }
+  }
+  
+  /* iOS landscape adjustments */
+  @media (max-width: 900px) and (orientation: landscape) {
+    .sidebar > *:last-child {
+      bottom: calc(15px + env(safe-area-inset-bottom, 10px)) !important;
+    }
+    
+    .sidebar > *:nth-last-child(2) {
+      bottom: calc(70px + env(safe-area-inset-bottom, 10px)) !important;
+    }
+  }
+  
+  /* Main content area safe area handling */
+  .main-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Main content area adjustments for mobile */
 @media (max-width: 600px) {
   .main-content {
@@ -98,11 +128,9 @@
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    
-    /* FIXED: Ensure content doesn't get cut off */
     min-height: calc(100vh - 40px) !important;
     min-height: calc(100dvh - 40px) !important;
-    padding-bottom: 0px !important; /* Less aggressive bottom padding */
+    padding-bottom: 0px !important;
   }
   
   /* Form and content spacing */
@@ -138,6 +166,24 @@
     margin-right: 8px !important;
     margin-bottom: 8px !important;
     min-height: 44px !important;
+  }
+  
+  /* Prevent horizontal scrolling */
+  body, html {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure main content area doesn't get cut off */
+  .main-content {
+    width: calc(100vw - 60px) !important;
+    max-width: calc(100vw - 60px) !important;
+  }
+  
+  /* Fix for content being pushed down too much */
+  .main-content > * {
+    max-width: 100% !important;
   }
 }
 
@@ -182,20 +228,6 @@
   }
 }
 
-/* Sidebar toggle button positioning (if used) */
-.sidebar-toggle-button {
-  position: fixed !important;
-  z-index: 1001 !important;
-  right: -18px !important;
-  top: 70px !important;
-  width: 36px !important;
-  height: 36px !important;
-  background-color: #ffffff !important;
-  border: 2px solid #e2e8f0 !important;
-  border-radius: 50% !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-}
-
 /* Enhanced touch targets for mobile */
 @media (hover: none) and (pointer: coarse) {
   /* This targets touch devices specifically */
@@ -212,90 +244,18 @@
   }
 }
 
-/* Landscape orientation adjustments */
-@media (max-width: 900px) and (orientation: landscape) {
-  .sidebar {
-    padding-bottom: 20px !important;
-  }
-  
-  .sidebar > *:last-child {
-    bottom: 15px !important;
-  }
-  
-  .sidebar > *:nth-last-child(2) {
-    bottom: 70px !important;
-  }
-  
-  .main-content {
-    padding: 12px !important;
-  }
-}
-
 /* Fix for iOS keyboard appearing */
 @media (max-width: 600px) {
   /* When keyboard appears, adjust viewport */
   .keyboard-active body {
-    height: 100vh !important; /* Fallback */
-    height: 100dvh !important; /* Use dynamic viewport height */
+    height: 100vh !important;
+    height: 100dvh !important;
   }
   
   /* Prevent viewport jumping when keyboard appears */
   .MuiTextField-root.Mui-focused {
     position: relative;
     z-index: 1;
-  }
-}
-
-/* REMOVE the problematic iPhone device targeting that was causing issues */
-/* We're keeping this simpler and more reliable */
-
-/* Critical: Override any conflicting styles */
-@media (max-width: 600px) {
-  .sidebar {
-    height: 100vh !important;
-    height: 100dvh !important;
-    position: fixed !important;
-    overflow: visible !important;
-  }
-  
-  /* Ensure buttons are positioned correctly and don't interfere with content */
-  .sidebar button[aria-label*="user"],
-  .sidebar button:last-child {
-    position: absolute !important;
-    bottom: 20px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin-bottom: 0 !important;
-  }
-  
-  /* Upgrade button positioning */
-  .sidebar button:nth-last-child(2) {
-    position: absolute !important;
-    bottom: 80px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin-bottom: 0 !important;
-  }
-}
-
-/* Additional mobile optimizations */
-@media (max-width: 600px) {
-  /* Prevent horizontal scrolling */
-  body, html {
-    overflow-x: hidden !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  /* Ensure main content area doesn't get cut off */
-  .main-content {
-    width: calc(100vw - 60px) !important;
-    max-width: calc(100vw - 60px) !important;
-  }
-  
-  /* Fix for content being pushed down too much */
-  .main-content > * {
-    max-width: 100% !important;
   }
 }
 
@@ -308,9 +268,9 @@
   textarea,
   select {
     font-size: 16px !important; /* Prevents zoom on iOS */
-    appearance: none; /* Standard property */
-    -webkit-appearance: none; /* WebKit fallback for older browsers */
-    -moz-appearance: none; /* Firefox fallback */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     border-radius: 8px;
   }
 }

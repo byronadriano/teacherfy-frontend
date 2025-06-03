@@ -24,9 +24,12 @@ body {
   color: #1e293b;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal scrolling */
-  /* iOS safe area support */
+  /* Enhanced iOS safe area support */
   padding-top: env(safe-area-inset-top, 0);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  /* iOS-specific viewport fixes */
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for iOS */
 }
 
 /* Root container */

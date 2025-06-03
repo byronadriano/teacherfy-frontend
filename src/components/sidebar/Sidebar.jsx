@@ -809,13 +809,20 @@ const Sidebar = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 2,
-                    position: 'absolute', // Position absolutely
-                    bottom: '20px', // Fixed distance from bottom
+                    position: 'absolute',
+                    bottom: '20px',
                     left: '50%',
-                    transform: 'translateX(-50%)', // Center horizontally
+                    transform: 'translateX(-50%)',
                     '@media (max-width: 600px)': {
-                        bottom: '45px', // Slightly more space on mobile
+                        bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
                         gap: 1.5
+                    },
+                    // iOS-specific safe area support
+                    '@supports (-webkit-touch-callout: none)': {
+                        '@media (max-width: 600px)': {
+                            bottom: 'calc(30px + env(safe-area-inset-bottom, 20px))',
+                            zIndex: 1001
+                        }
                     }
                 }}>
                     {/* Upgrade Button */}
