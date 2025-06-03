@@ -447,38 +447,59 @@ const Sidebar = ({
     const historyButtonRef = useRef(null);
     const popoverTimeoutRef = useRef(null);
 
-    // Enhanced mobile detection and class management
+    // Enhanced mobile detection and class management - OPTIMIZED
     useEffect(() => {
+        let timeoutId;
+        
         const checkMobile = () => {
-            const mobile = window.innerWidth <= 600;
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isTouch = 'ontouchstart' in window;
-            
-            setIsMobile(mobile);
-            
-            if (mobile) {
-                document.body.classList.add('is-mobile-device');
-                if (isIOS) {
-                    document.body.classList.add('is-ios-device');
-                }
-                if (isTouch) {
-                    document.body.classList.add('is-touch-device');
-                }
-            } else {
-                document.body.classList.remove('is-mobile-device', 'is-ios-device', 'is-touch-device');
+            // Clear any pending timeout
+            if (timeoutId) {
+                clearTimeout(timeoutId);
             }
+            
+            // Debounce the mobile check to prevent excessive calls
+            timeoutId = setTimeout(() => {
+                const mobile = window.innerWidth <= 600;
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isTouch = 'ontouchstart' in window;
+                
+                setIsMobile(mobile);
+                
+                // Batch DOM class updates
+                const body = document.body;
+                const classesToRemove = ['is-mobile-device', 'is-ios-device', 'is-touch-device'];
+                const classesToAdd = [];
+                
+                if (mobile) {
+                    classesToAdd.push('is-mobile-device');
+                    if (isIOS) classesToAdd.push('is-ios-device');
+                    if (isTouch) classesToAdd.push('is-touch-device');
+                }
+                
+                // Remove all classes first, then add the needed ones
+                body.classList.remove(...classesToRemove);
+                if (classesToAdd.length > 0) {
+                    body.classList.add(...classesToAdd);
+                }
+            }, 100); // 100ms debounce
         };
         
+        // Initial check
         checkMobile();
-        window.addEventListener('resize', checkMobile);
-        window.addEventListener('orientationchange', checkMobile);
+        
+        // Add event listeners with passive option for better performance
+        window.addEventListener('resize', checkMobile, { passive: true });
+        window.addEventListener('orientationchange', checkMobile, { passive: true });
         
         return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
             window.removeEventListener('resize', checkMobile);
             window.removeEventListener('orientationchange', checkMobile);
             document.body.classList.remove('is-mobile-device', 'is-ios-device', 'is-touch-device');
         };
-    }, []);
+    }, []); // Keep empty dependency array
 
     // Handle viewport changes for mobile keyboards
     useEffect(() => {

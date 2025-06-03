@@ -1,5 +1,5 @@
-// src/contexts/AuthContext.js - FIXED COOP and logout issues
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+// src/contexts/AuthContext.js - CAREFULLY OPTIMIZED while preserving all logic
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { config } from '../utils/config';
 
 const AuthContext = createContext({});
@@ -12,13 +12,20 @@ export const AuthProvider = ({ children }) => {
   // Check authentication status on mount and periodically
   const checkAuthStatus = useCallback(async () => {
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
       const response = await fetch(`${config.apiUrl}/auth/check`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -35,19 +42,23 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      // Don't log aborted requests as errors
+      if (error.name !== 'AbortError') {
+        console.error('Error checking auth status:', error);
+      }
       setUser(null);
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, []); // Keep empty dependencies to prevent infinite loops
 
+  // FIXED: Properly handle the useEffect dependency
   useEffect(() => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // FIXED: Enhanced login with better popup and COOP handling
+  // PRESERVED: Enhanced login with better popup and COOP handling
   const login = useCallback(async () => {
     return new Promise((resolve, reject) => {
       console.log('🔐 Starting OAuth login...');
@@ -55,7 +66,7 @@ export const AuthProvider = ({ children }) => {
       const authUrl = `${config.apiUrl}/authorize`;
       console.log('🔗 Opening OAuth popup:', authUrl);
       
-      // FIXED: Enhanced popup options to handle COOP
+      // PRESERVED: Enhanced popup options to handle COOP
       const popup = window.open(
         authUrl,
         'oauth_popup',
@@ -72,7 +83,7 @@ export const AuthProvider = ({ children }) => {
       let popupClosed = false;
       let authCompleted = false;
 
-      // FIXED: Enhanced message listener with better error handling
+      // PRESERVED: Enhanced message listener with better error handling
       const handleMessage = (event) => {
         // Allow messages from our domain and localhost for development
         const allowedOrigins = [
@@ -137,7 +148,7 @@ export const AuthProvider = ({ children }) => {
         }
       };
 
-      // FIXED: Enhanced popup monitoring with COOP detection
+      // PRESERVED: Enhanced popup monitoring with COOP detection
       const popupChecker = setInterval(() => {
         try {
           // Check if popup is closed
@@ -155,7 +166,7 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // FIXED: Try to communicate with popup proactively
+          // PRESERVED: Try to communicate with popup proactively
           try {
             // Send a ping to the popup to help with communication
             popup.postMessage({ type: 'PARENT_PING' }, '*');
@@ -172,7 +183,7 @@ export const AuthProvider = ({ children }) => {
       window.addEventListener('message', handleMessage);
       console.log('📡 Message listener set up, waiting for popup communication...');
 
-      // FIXED: Enhanced timeout with better cleanup
+      // PRESERVED: Enhanced timeout with better cleanup
       const timeout = setTimeout(() => {
         if (!messageReceived && !popupClosed && !authCompleted) {
           console.error('❌ Authentication timeout after 2 minutes');
@@ -194,12 +205,12 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
-  // FIXED: Enhanced logout with proper error handling
+  // PRESERVED: Enhanced logout with proper error handling
   const logout = useCallback(async () => {
     try {
       console.log('🚪 Logging out...');
       
-      // FIXED: Use POST method for logout
+      // PRESERVED: Use POST method for logout
       const response = await fetch(`${config.apiUrl}/logout`, {
         method: 'POST', // Changed from GET to POST
         credentials: 'include',
@@ -247,14 +258,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const value = {
+  // OPTIMIZATION: Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     isAuthenticated,
     isLoading,
     login,
     logout,
     checkAuthStatus
-  };
+  }), [user, isAuthenticated, isLoading, login, logout, checkAuthStatus]);
 
   return (
     <AuthContext.Provider value={value}>
