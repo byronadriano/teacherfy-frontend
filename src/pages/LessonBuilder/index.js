@@ -497,8 +497,8 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                     src={Logo}
                     alt="Teacherfy AI Logo"
                     style={{ 
-                      width: '120px',  // Much smaller default size
-                      height: '120px',
+                      width: '180px',  // Much smaller default size
+                      height: '180px',
                       borderRadius: '12px',
                       objectFit: 'contain'
                     }}
