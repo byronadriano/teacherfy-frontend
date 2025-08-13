@@ -289,92 +289,148 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           ? formState.resourceType 
           : [formState.resourceType];
           
-        const generatedResources = {};
+        let generatedResources = {};
         let primaryContent = null;
         let formattedOutline = "";
         let generatedTitle = "";
         
-        // Generate outline for each resource type
-        for (const resourceType of resourceTypes) {
-          const requestData = {
-            resourceType: resourceType,
-            gradeLevel: formState.gradeLevel,
-            subjectFocus: formState.subjectFocus,
-            language: formState.language,
-            lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
-            custom_prompt: formState.customPrompt || '',
-            selectedStandards: Array.isArray(formState.selectedStandards) 
-              ? formState.selectedStandards 
-              : [],
-            numSlides: formState.numSlides || 5,
-            numSections: 5,
-            includeImages: Boolean(formState.includeImages)
-          };
-          
-          const data = await outlineService.generate(requestData);
-          
-          // Handle rate limit errors specifically
-          if (data.error === 'RATE_LIMIT_EXCEEDED') {
-            setUiState(prev => ({
-              ...prev,
-              error: 'RATE_LIMIT_EXCEEDED',
-              rateLimitInfo: data.rateLimit,
-              isLoading: false
-            }));
-            return;
-          }
-          
-          // Handle other errors
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          
-          console.log(`API request for ${resourceType} successful`);
-
-          // SAFELY Update subscription state if usage_limits are returned
-          if (data.usage_limits) {
-            if (subscriptionState) {
-              if (typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
-                subscriptionState.updateSubscriptionFromResponse(data);
-              } else if (typeof subscriptionState === 'object') {
-                Object.assign(subscriptionState, {
-                  generationsLeft: data.usage_limits.generations_left || 0,
-                  resetTime: data.usage_limits.reset_time,
-                  isPremium: data.usage_limits.is_premium || false,
-                  tier: data.usage_limits.user_tier || 'free'
-                });
-              }
-            }
-          }
-          
-          if (!data.messages || !data.structured_content) {
-            throw new Error(`Invalid response format from server for ${resourceType}`);
-          }
-
-          // Clean the structured content
-          const cleanStructuredContent = data.structured_content.map(item => ({
-            title: item.title || 'Untitled',
-            layout: item.layout || 'TITLE_AND_CONTENT',
-            content: Array.isArray(item.content) ? item.content : []
+        // Use new optimized approach for multiple resource types
+        const requestData = {
+          resourceType: resourceTypes,  // Pass all resource types
+          gradeLevel: formState.gradeLevel,
+          subjectFocus: formState.subjectFocus,
+          language: formState.language,
+          lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
+          custom_prompt: formState.customPrompt || '',
+          selectedStandards: Array.isArray(formState.selectedStandards) 
+            ? formState.selectedStandards 
+            : [],
+          numSlides: formState.numSlides || 5,
+          numSections: 5,
+          includeImages: Boolean(formState.includeImages)
+        };
+        
+        // DEBUG: Log request data
+        console.log(`📤 API Request for ${resourceTypes.length > 1 ? 'multi-resource' : 'single resource'}:`, {
+          resourceTypes,
+          isMultiResource: resourceTypes.length > 1,
+          requestData
+        });
+        
+        const data = await outlineService.generate(requestData);
+        
+        // DEBUG: Log the response
+        console.log(`📊 API Response received:`, {
+          hasError: Boolean(data.error),
+          hasStructuredContent: Boolean(data.structured_content),
+          hasResources: Boolean(data.resources),
+          generationMethod: data.generation_method,
+          resourceType: data.resource_type,
+          contentLength: data.structured_content?.length || 0,
+          resourcesKeys: data.resources ? Object.keys(data.resources) : []
+        });
+        
+        // Handle rate limit errors specifically
+        if (data.error === 'RATE_LIMIT_EXCEEDED') {
+          setUiState(prev => ({
+            ...prev,
+            error: 'RATE_LIMIT_EXCEEDED',
+            rateLimitInfo: data.rateLimit,
+            isLoading: false
           }));
+          return;
+        }
+        
+        // Handle other errors
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        console.log(`✅ API request successful with ${data.generation_method || 'standard'} method`);
 
-          if (!cleanStructuredContent || cleanStructuredContent.length === 0) {
-            throw new Error(`No valid content returned from the server for ${resourceType}`);
-          }
-
-          // Store in generatedResources
-          generatedResources[resourceType] = cleanStructuredContent;
-          
-          // Use first resource as primary
-          if (!primaryContent) {
-            primaryContent = cleanStructuredContent;
-            formattedOutline = formatOutlineForDisplay(cleanStructuredContent);
-            generatedTitle = data.title || `${resourceType} - ${formState.subjectFocus || 'Lesson'}`;
+        // SAFELY Update subscription state if usage_limits are returned
+        if (data.usage_limits) {
+          if (subscriptionState) {
+            if (typeof subscriptionState.updateSubscriptionFromResponse === 'function') {
+              subscriptionState.updateSubscriptionFromResponse(data);
+            } else if (typeof subscriptionState === 'object') {
+              Object.assign(subscriptionState, {
+                generationsLeft: data.usage_limits.generations_left || 0,
+                resetTime: data.usage_limits.reset_time,
+                isPremium: data.usage_limits.is_premium || false,
+                tier: data.usage_limits.user_tier || 'free'
+              });
+            }
           }
         }
         
+        if (!data.structured_content) {
+          throw new Error(`Invalid response format from server`);
+        }
+
+        // Clean the primary structured content
+        const cleanStructuredContent = data.structured_content.map(item => ({
+          title: item.title || 'Untitled',
+          layout: item.layout || 'TITLE_AND_CONTENT',
+          content: Array.isArray(item.content) ? item.content : []
+        }));
+
+        if (!cleanStructuredContent || cleanStructuredContent.length === 0) {
+          throw new Error(`No valid content returned from the server`);
+        }
+
+        // Handle optimized multi-resource response
+        if (data.generation_method === 'optimized_multiple_resources' && data.resources) {
+          console.log('🎯 Processing sophisticated multi-resource response');
+          
+          // The response already contains transformed resources in the expected format
+          generatedResources = data.resources;
+          
+          // Log what we received
+          for (const [resourceType, content] of Object.entries(data.resources)) {
+            console.log(`💾 Received ${resourceType} content:`, {
+              resourceType,
+              contentLength: Array.isArray(content) ? content.length : 0,
+              hasContent: Array.isArray(content) && content.length > 0,
+              firstItemSample: Array.isArray(content) && content[0] ? content[0].title : 'No items'
+            });
+          }
+          
+          primaryContent = cleanStructuredContent;
+          formattedOutline = formatOutlineForDisplay(cleanStructuredContent);
+          generatedTitle = data.title || `${formState.subjectFocus || 'Lesson'} - Multiple Resources`;
+          
+        } else {
+          // Single resource or legacy format
+          console.log('🎯 Processing single resource or legacy response');
+          
+          for (const resourceType of resourceTypes) {
+            generatedResources[resourceType] = cleanStructuredContent;
+            
+            console.log(`💾 Stored ${resourceType} content (single/legacy):`, {
+              resourceType,
+              contentLength: cleanStructuredContent?.length || 0,
+              hasContent: cleanStructuredContent?.length > 0
+            });
+          }
+          
+          primaryContent = cleanStructuredContent;
+          formattedOutline = formatOutlineForDisplay(cleanStructuredContent);
+          generatedTitle = data.title || `${resourceTypes[0]} - ${formState.subjectFocus || 'Lesson'}`;
+        }
+        
         // FIXED: Set content state with fresh data
-        console.log('✅ Setting new content state');
+        console.log('✅ Setting new content state with:', {
+          title: generatedTitle,
+          primaryContentLength: primaryContent?.length || 0,
+          generatedResourcesKeys: Object.keys(generatedResources),
+          generatedResourcesSummary: Object.entries(generatedResources).map(([type, content]) => ({
+            type,
+            contentLength: content?.length || 0,
+            hasItems: Array.isArray(content) && content.length > 0
+          }))
+        });
+        
         setContentState({
           title: generatedTitle,
           outlineToConfirm: formattedOutline,
@@ -471,7 +527,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
 
       const data = await outlineService.generate(requestData);
       
-      if (!data.messages || !data.structured_content) {
+      if (!data.structured_content) {
         throw new Error('Invalid response format from server');
       }
 

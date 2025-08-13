@@ -41,8 +41,8 @@ const ResourceCard = ({
   };
 
   const handleDownload = () => {
-    if (status === 'success' && onGenerate) {
-      onGenerate(resourceType);
+    if (onGenerate) {
+      onGenerate();  // Don't pass resourceType here as it's already bound in the parent
     }
   };
   

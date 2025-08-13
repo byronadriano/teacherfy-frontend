@@ -68,6 +68,11 @@ const ResourceManager = ({
         // Get the blob
         const blob = resourceStatus[resourceType].blob;
         
+        // Validate blob exists and has size
+        if (!blob || blob.size === 0) {
+          throw new Error('Invalid blob data');
+        }
+        
         // Create a fresh URL
         const url = window.URL.createObjectURL(blob);
         
@@ -93,22 +98,35 @@ const ResourceManager = ({
         
         // Use a longer timeout before cleanup
         setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          console.log(`Download triggered for ${resourceType}`);
-        }, 5000);
+          try {
+            window.URL.revokeObjectURL(url);
+            if (document.body.contains(a)) {
+              document.body.removeChild(a);
+            }
+          } catch (cleanupError) {
+            console.warn('Error during cleanup:', cleanupError);
+          }
+          console.log(`✅ Download completed for ${resourceType}`);
+        }, 3000);
+        
+        return; // Success - don't fall back to generation
       } catch (error) {
-        console.error('Error downloading resource:', error);
-        // Only count against limit when generating new content
-        onGenerateResource(resourceType);
+        console.error('❌ Error downloading resource:', error);
+        // Don't fall back to onGenerateResource for download errors
+        // Instead, just log the error and inform user
+        alert(`Download failed for ${resourceType}. Please try regenerating the resource.`);
+        return;
       }
-    } else {
-      // Only count against limit when generating new content
-      if (!isPremium && downloadsRemaining <= 0) {
-        return; // Don't allow new generations if limit reached
-      }
-      onGenerateResource(resourceType);
+    } 
+    
+    // For resources that haven't been generated or need regeneration
+    if (!isPremium && downloadsRemaining <= 0) {
+      console.log('⚠️ Download limit reached, cannot generate new resource');
+      return; // Don't allow new generations if limit reached
     }
+    
+    console.log(`🔄 Generating new resource: ${resourceType}`);
+    onGenerateResource([resourceType]); // Pass as array to be explicit
   };
   
   // Handle generating all resources
@@ -167,21 +185,10 @@ const ResourceManager = ({
             variant="h6"
             sx={{
               fontWeight: 600,
-              color: '#1e293b',
-              mb: 1
+              color: '#1e293b'
             }}
           >
             Your Resources
-          </Typography>
-          <Typography
-            sx={{
-              color: '#64748b',
-              fontSize: '0.875rem'
-            }}
-          >
-            {uniqueResources.length > 0 
-              ? `You've selected ${uniqueResources.length} resource${uniqueResources.length !== 1 ? 's' : ''} for your lesson`
-              : 'Select resources for your lesson'}
           </Typography>
         </Box>
         

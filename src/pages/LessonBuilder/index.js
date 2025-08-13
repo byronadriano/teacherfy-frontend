@@ -1,14 +1,10 @@
-// src/pages/LessonBuilder/index.js - FIXED to use AuthContext
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+// src/pages/LessonBuilder/index.js - OPTIMIZED with lazy loading for performance
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { Box, Typography, Button, CircularProgress } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
 import FiltersBar from '../../components/filters/FiltersBar';
 import CustomizationForm from '../../components/form/CustomizationForm';
-import ConfirmationModal from '../../components/modals/ConfirmationModal';
-import OutlineDisplay from './components/OutlineDisplay';
-import ResourceManager from './components/resources/ResourceManager';
-import DebugPanel from '../../components/debug/DebugPanel';
 
 import { useAuth } from '../../contexts/AuthContext'; // Use the context
 import useForm from './hooks/useForm';
@@ -17,9 +13,17 @@ import usePresentation from './hooks/usePresentation';
 import { historyService } from '../../services';
 import Logo from '../../assets/images/Teacherfyoai.png';
 
+// Lazy load components that aren't immediately needed
+const ConfirmationModal = lazy(() => import('../../components/modals/ConfirmationModal'));
+const OutlineDisplay = lazy(() => import('./components/OutlineDisplay'));
+const ResourceManager = lazy(() => import('./components/resources/ResourceManager'));
+const LoginModal = lazy(() => import('../../components/auth/LoginModal'));
+const DebugPanel = lazy(() => import('../../components/debug/DebugPanel'));
+
 const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
-  // REMOVED: Local auth state - now using context
+  // Auth context and login modal state
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   // States
   const [userSettings, setUserSettings] = useState({
@@ -48,7 +52,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   } = useForm({
     token: user?.token,
     user,
-    setShowSignInPrompt: () => console.log('Sign in required') // Not needed with new auth flow
+    setShowSignInPrompt: () => setShowLoginModal(true) // Show login modal when auth required
   });
 
   const { isLoading: outlineLoading } = useOutline();
@@ -63,7 +67,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     token: user?.token,
     user,
     isAuthenticated,
-    setShowSignInPrompt: () => console.log('Sign in required') // Not needed with new auth flow
+    setShowSignInPrompt: () => setShowLoginModal(true) // Show login modal when auth required
   });
 
   // Load user settings from session storage
@@ -470,8 +474,8 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           justifyContent: showInitialState ? 'center' : 'flex-start',
           minHeight: showInitialState ? '100%' : 'auto',
           width: '100%',
-          pt: showInitialState ? 0 : { xs: 3, md: 4 },
-          pb: showInitialState ? '120px' : '40px', // Extra padding for footer only in initial state
+          pt: showInitialState ? { xs: 2, sm: 0 } : { xs: 3, md: 4 }, // Add top padding on mobile for initial state
+          pb: showInitialState ? { xs: '60px', sm: '80px', md: '120px' } : '40px', // Responsive bottom padding
         }}>
           {/* Content wrapper - centers horizontally */}
           <Box sx={{ 
@@ -488,25 +492,21 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
               <>
                 {/* Logo - Responsive for mobile */}
                 <Box sx={{ 
-                  mb: { xs: 2, sm: 3, md: 4 }, // Smaller margin on mobile
+                  mb: { xs: 1.5, sm: 2, md: 3 }, // Smaller margins on mobile
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <img
+                  <Box
+                    component="img"
                     src={Logo}
                     alt="Teacherfy AI Logo"
-                    style={{ 
-                      width: '180px',  // Much smaller default size
-                      height: '180px',
-                      borderRadius: '12px',
-                      objectFit: 'contain'
-                    }}
                     sx={{
-                      // Responsive sizing
-                      width: { xs: '80px', sm: '100px', md: '120px' },
-                      height: { xs: '80px', sm: '100px', md: '120px' },
-                      borderRadius: { xs: '8px', sm: '10px', md: '12px' }
+                      // Responsive sizing using sx instead of style
+                      width: { xs: '60px', sm: '80px', md: '120px' },
+                      height: { xs: '60px', sm: '80px', md: '120px' },
+                      borderRadius: { xs: '6px', sm: '8px', md: '12px' },
+                      objectFit: 'contain'
                     }}
                   />
                 </Box>
@@ -516,10 +516,12 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                   variant="h1" 
                   sx={{ 
                     color: '#1e3a8a',
-                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                    fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.25rem' },
                     fontWeight: '300',
                     textAlign: 'center',
-                    mb: { xs: 3, sm: 4, md: 6 },
+                    mb: { xs: 2, sm: 3, md: 4 },
+                    px: { xs: 1, sm: 0 }, // Add horizontal padding on mobile
+                    lineHeight: { xs: 1.3, sm: 1.4 } // Better line height on mobile
                   }}
                 >
                   What would you like to create?
@@ -591,75 +593,93 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                 </Box>
 
                 {/* Show either ResourceManager or OutlineDisplay based on state */}
-                {showResourceManager ? (
-                  <ResourceManager
-                    formState={formState}
-                    contentState={contentState}
-                    resourceStatus={resourceStatus}
-                    isLoading={presentationLoading}
-                    onGenerateResource={handleGenerateResource}
-                    isPremium={true}
-                    downloadsRemaining={999}
-                  />
-                ) : (
-                  <OutlineDisplay
-                    contentState={contentState}
-                    uiState={{
-                      ...uiState,
-                      isLoading: presentationLoading
-                    }}
-                    subscriptionState={{
-                      isPremium: subscriptionState.isPremium,
-                      generationsLeft: subscriptionState.generationsLeft,
-                      resetTime: subscriptionState.resetTime
-                    }}
-                    isAuthenticated={isAuthenticated}
-                    googleSlidesState={googleSlidesState}
-                    resourceStatus={resourceStatus}
-                    onGeneratePresentation={() => handleGenerateResource()}
-                    onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
-                    onRegenerateOutline={() => setUiState(prev => ({ 
-                      ...prev, 
-                      outlineModalOpen: true,
-                      regenerationCount: prev.regenerationCount
-                    }))}
-                  />
-                )}
+                <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>}>
+                  {showResourceManager ? (
+                    <ResourceManager
+                      formState={formState}
+                      contentState={contentState}
+                      resourceStatus={resourceStatus}
+                      isLoading={presentationLoading}
+                      onGenerateResource={handleGenerateResource}
+                      isPremium={true}
+                      downloadsRemaining={999}
+                    />
+                  ) : (
+                    <OutlineDisplay
+                      contentState={contentState}
+                      uiState={{
+                        ...uiState,
+                        isLoading: presentationLoading
+                      }}
+                      subscriptionState={{
+                        isPremium: subscriptionState.isPremium,
+                        generationsLeft: subscriptionState.generationsLeft,
+                        resetTime: subscriptionState.resetTime
+                      }}
+                      isAuthenticated={isAuthenticated}
+                      googleSlidesState={googleSlidesState}
+                      resourceStatus={resourceStatus}
+                      onGeneratePresentation={() => handleGenerateResource()}
+                      onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
+                      onRegenerateOutline={() => setUiState(prev => ({ 
+                        ...prev, 
+                        outlineModalOpen: true,
+                        regenerationCount: prev.regenerationCount
+                      }))}
+                    />
+                  )}
+                </Suspense>
               </>
             )}
           </Box>
         </Box>
 
-        {/* Modals */}
-        <ConfirmationModal 
-          uiState={{
-            ...uiState,
-            isLoading: outlineLoading
-          }}
-          contentState={{
-            outlineToConfirm: contentState.outlineToConfirm,
-            structuredContent: contentState.structuredContent
-          }}
-          subscriptionState={{
-            isPremium: subscriptionState.isPremium,
-            generationsLeft: subscriptionState.generationsLeft,
-            resetTime: subscriptionState.resetTime
-          }}
-          setUiState={setUiState}
-          setContentState={setContentState}
-          handleRegenerateOutline={handleRegenerateOutline}
-          handleDownload={handleGenerateResource}
-          onFinalize={trackLessonInHistory}
-        />
-
-        {process.env.NODE_ENV === 'development' && (
-          <DebugPanel 
-            contentState={contentState}
-            uiState={{
-              ...uiState,
-              isLoading: outlineLoading || presentationLoading
+        {/* Auth Modal */}
+        <Suspense fallback={null}>
+          <LoginModal
+            open={showLoginModal}
+            onClose={() => setShowLoginModal(false)}
+            onSuccess={() => {
+              setShowLoginModal(false);
+              // Auth context will automatically update after successful login
             }}
           />
+        </Suspense>
+        
+        {/* Modals */}
+        <Suspense fallback={null}>
+          <ConfirmationModal 
+            uiState={{
+              ...uiState,
+              isLoading: outlineLoading
+            }}
+            contentState={{
+              outlineToConfirm: contentState.outlineToConfirm,
+              structuredContent: contentState.structuredContent
+            }}
+            subscriptionState={{
+              isPremium: subscriptionState.isPremium,
+              generationsLeft: subscriptionState.generationsLeft,
+              resetTime: subscriptionState.resetTime
+            }}
+            setUiState={setUiState}
+            setContentState={setContentState}
+            handleRegenerateOutline={handleRegenerateOutline}
+            handleDownload={handleGenerateResource}
+            onFinalize={trackLessonInHistory}
+          />
+        </Suspense>
+
+        {process.env.NODE_ENV === 'development' && (
+          <Suspense fallback={null}>
+            <DebugPanel 
+              contentState={contentState}
+              uiState={{
+                ...uiState,
+                isLoading: outlineLoading || presentationLoading
+              }}
+            />
+          </Suspense>
         )}
       </Box>
     </Box>

@@ -24,3 +24,9 @@ yarn-error.log*
 # Environment variables
 .env.development
 .env.production
+CLAUDE.md
+.gitignore
+.claude/settings.json
+
+# Archive folder for old files
+/archive

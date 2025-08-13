@@ -147,7 +147,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
   };
 
   // Generate multiple resources - NO LIMITS CHECKED HERE (limits checked on outline generation)
-  const generateMultiResource = async (formState, contentState) => {
+  const generateMultiResource = async (formState, contentState, specificResourceTypes = null) => {
     try {
       setIsLoading(true);
       
@@ -157,8 +157,9 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       }
       
       // Log generation details
-      console.log('Generating multiple resources with:', {
-        resourceTypes: formState.resourceType,
+      console.log('Generating resources with:', {
+        originalResourceTypes: formState.resourceType,
+        specificResourceTypes,
         contentState: {
           hasStructuredContent: Boolean(contentState.structuredContent),
           structuredContentLength: contentState.structuredContent?.length || 0,
@@ -166,8 +167,8 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
         }
       });
       
-      // Call the service to generate resources - NO LIMIT CHECKS
-      const results = await presentationService.generateMultiResource(formState, contentState);
+      // Call the service to generate resources - pass specific types if provided
+      const results = await presentationService.generateMultiResource(formState, contentState, specificResourceTypes);
       
       return results;
     } catch (error) {

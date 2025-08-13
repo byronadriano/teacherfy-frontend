@@ -58,151 +58,39 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // PRESERVED: Enhanced login with better popup and COOP handling
-  const login = useCallback(async () => {
-    return new Promise((resolve, reject) => {
-      console.log('🔐 Starting OAuth login...');
+  // Direct redirect-based login (no popups)
+  const login = useCallback(async (provider = 'google') => {
+    try {
+      console.log(`🔐 Starting ${provider} login redirect...`);
       
-      const authUrl = `${config.apiUrl}/authorize`;
-      console.log('🔗 Opening OAuth popup:', authUrl);
+      // Call backend to get OAuth URL
+      const response = await fetch(`${config.apiUrl}/api/auth/login/${provider}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       
-      // PRESERVED: Enhanced popup options to handle COOP
-      const popup = window.open(
-        authUrl,
-        'oauth_popup',
-        'width=500,height=600,scrollbars=yes,resizable=yes,status=yes,location=yes,toolbar=no,menubar=no'
-      );
-
-      if (!popup) {
-        console.error('❌ Failed to open popup - popup blocker?');
-        reject(new Error('Failed to open authentication popup. Please disable popup blockers and try again.'));
-        return;
+      if (!response.ok) {
+        throw new Error(`Failed to initiate ${provider} login: ${response.status}`);
       }
-
-      let messageReceived = false;
-      let popupClosed = false;
-      let authCompleted = false;
-
-      // PRESERVED: Enhanced message listener with better error handling
-      const handleMessage = (event) => {
-        // Allow messages from our domain and localhost for development
-        const allowedOrigins = [
-          config.apiUrl,
-          'https://teacherfy.ai',
-          'https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net',
-          'http://localhost:3000',
-          'http://localhost:5000'
-        ];
-
-        // For development, be more permissive with origin checking
-        const isDev = config.environment === 'development';
-        const isAllowedOrigin = isDev ? true : allowedOrigins.some(origin => event.origin === origin);
-
-        if (!isAllowedOrigin) {
-          console.warn('🔒 Ignoring message from unauthorized origin:', event.origin);
-          return;
-        }
-
-        console.log('📨 Received message:', event.data, 'from origin:', event.origin);
-
-        if (event.data?.type === 'AUTH_SUCCESS' && !authCompleted) {
-          authCompleted = true;
-          messageReceived = true;
-          console.log('✅ Authentication successful!');
-          
-          // Close popup
-          try {
-            popup.close();
-          } catch (e) {
-            console.log('Popup already closed');
-          }
-          
-          // Update auth state
-          setUser(event.data.user);
-          setIsAuthenticated(true);
-          
-          // Cleanup
-          window.removeEventListener('message', handleMessage);
-          clearInterval(popupChecker);
-          clearTimeout(timeout);
-          
-          resolve(event.data.user);
-        } else if (event.data?.type === 'AUTH_ERROR' && !authCompleted) {
-          authCompleted = true;
-          messageReceived = true;
-          console.error('❌ Authentication error:', event.data.error);
-          
-          // Close popup
-          try {
-            popup.close();
-          } catch (e) {
-            console.log('Popup already closed');
-          }
-          
-          // Cleanup
-          window.removeEventListener('message', handleMessage);
-          clearInterval(popupChecker);
-          clearTimeout(timeout);
-          
-          reject(new Error(event.data.error || 'Authentication failed'));
-        }
-      };
-
-      // PRESERVED: Enhanced popup monitoring with COOP detection
-      const popupChecker = setInterval(() => {
-        try {
-          // Check if popup is closed
-          if (popup.closed) {
-            popupClosed = true;
-            clearInterval(popupChecker);
-            
-            if (!messageReceived && !authCompleted) {
-              console.log('❌ OAuth popup was closed before receiving success message');
-              window.removeEventListener('message', handleMessage);
-              clearTimeout(timeout);
-              authCompleted = true;
-              reject(new Error('Authentication was cancelled'));
-            }
-            return;
-          }
-
-          // PRESERVED: Try to communicate with popup proactively
-          try {
-            // Send a ping to the popup to help with communication
-            popup.postMessage({ type: 'PARENT_PING' }, '*');
-          } catch (e) {
-            // This is expected with COOP restrictions
-          }
-
-        } catch (error) {
-          console.error('Error checking popup status:', error);
-        }
-      }, 1000);
-
-      // Set up message listener BEFORE popup loads
-      window.addEventListener('message', handleMessage);
-      console.log('📡 Message listener set up, waiting for popup communication...');
-
-      // PRESERVED: Enhanced timeout with better cleanup
-      const timeout = setTimeout(() => {
-        if (!messageReceived && !popupClosed && !authCompleted) {
-          console.error('❌ Authentication timeout after 2 minutes');
-          authCompleted = true;
-          
-          try {
-            popup.close();
-          } catch (e) {
-            console.log('Error closing popup:', e);
-          }
-          
-          clearInterval(popupChecker);
-          window.removeEventListener('message', handleMessage);
-          
-          reject(new Error('Authentication timeout. Please try again.'));
-        }
-      }, 120000); // 2 minute timeout
-
-    });
+      
+      const data = await response.json();
+      console.log(`📋 Backend response:`, data);
+      
+      if (data.success && data.auth_url) {
+        console.log(`🔗 Redirecting to OAuth URL: ${data.auth_url}`);
+        // Direct redirect to OAuth provider
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error(data.error || 'No auth URL received from server');
+      }
+      
+    } catch (error) {
+      console.error('❌ OAuth login error:', error);
+      throw new Error(`Failed to initiate ${provider} login`);
+    }
   }, []);
 
   // PRESERVED: Enhanced logout with proper error handling

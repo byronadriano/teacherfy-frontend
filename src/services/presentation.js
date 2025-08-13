@@ -95,16 +95,74 @@ export const presentationService = {
         try {
           const normalizedResourceType = normalizeResourceType(resourceType);
           
-          // Build request data
+          // Build request data - preserve all fields for different resource types
           const requestData = {
             resource_type: normalizedResourceType,
             lesson_outline: contentState.finalOutline || '',
-            structured_content: structuredContent.map((slide, index) => ({
-              title: slide.title || `Item ${index + 1}`,
-              layout: slide.layout || 'TITLE_AND_CONTENT',
-              content: Array.isArray(slide.content) ? slide.content : []
-            }))
+            structured_content: structuredContent.map((item, index) => {
+              // Base structure
+              const mappedItem = {
+                title: item.title || `Item ${index + 1}`,
+                layout: item.layout || 'TITLE_AND_CONTENT'
+              };
+              
+              // Preserve resource-specific fields based on type
+              if (normalizedResourceType === 'quiz' && item.structured_questions) {
+                // Quiz/Test specific fields
+                mappedItem.structured_questions = item.structured_questions;
+                mappedItem.teacher_notes = item.teacher_notes || [];
+                mappedItem.differentiation_tips = item.differentiation_tips || [];
+              } else if (normalizedResourceType === 'worksheet') {
+                // Worksheet specific fields - preserve all possible worksheet fields
+                if (item.structured_activities) mappedItem.structured_activities = item.structured_activities;
+                if (item.worksheet_sections) mappedItem.worksheet_sections = item.worksheet_sections;
+                if (item.exercises) mappedItem.exercises = item.exercises;
+                if (item.problems) mappedItem.problems = item.problems;
+                if (item.instructions) mappedItem.instructions = item.instructions;
+                if (item.teacher_notes) mappedItem.teacher_notes = item.teacher_notes;
+                // Also include standard content if present
+                if (item.content) mappedItem.content = Array.isArray(item.content) ? item.content : [];
+              } else if (normalizedResourceType === 'lesson_plan') {
+                // Lesson Plan specific fields
+                if (item.objectives) mappedItem.objectives = item.objectives;
+                if (item.materials) mappedItem.materials = item.materials;
+                if (item.procedures) mappedItem.procedures = item.procedures;
+                if (item.activities) mappedItem.activities = item.activities;
+                if (item.assessment) mappedItem.assessment = item.assessment;
+                if (item.homework) mappedItem.homework = item.homework;
+                if (item.standards) mappedItem.standards = item.standards;
+                if (item.teacher_notes) mappedItem.teacher_notes = item.teacher_notes;
+                // Also include standard content if present
+                if (item.content) mappedItem.content = Array.isArray(item.content) ? item.content : [];
+              } else {
+                // For presentations and other resources, use standard content field
+                mappedItem.content = Array.isArray(item.content) ? item.content : [];
+              }
+              
+              // Preserve any additional fields that might be present
+              Object.keys(item).forEach(key => {
+                if (!mappedItem.hasOwnProperty(key) && key !== 'title' && key !== 'layout') {
+                  mappedItem[key] = item[key];
+                }
+              });
+              
+              return mappedItem;
+            })
           };
+          
+          console.log(`📤 Download request for ${resourceType} (${normalizedResourceType}):`, {
+            resourceType,
+            normalizedResourceType,
+            contentItems: requestData.structured_content.length,
+            firstItemSample: requestData.structured_content[0],
+            contentTypes: {
+              hasQuizQuestions: requestData.structured_content.some(item => item.structured_questions),
+              hasWorksheetActivities: requestData.structured_content.some(item => item.structured_activities || item.exercises),
+              hasLessonObjectives: requestData.structured_content.some(item => item.objectives || item.procedures),
+              hasStandardContent: requestData.structured_content.some(item => item.content)
+            },
+            requestDataPreview: requestData
+          });
           
           const response = await fetch(`${config.apiUrl}/generate`, {
             method: 'POST',
@@ -189,11 +247,53 @@ export const presentationService = {
     const requestData = {
       resource_type: 'presentation',
       lesson_outline: contentState.finalOutline || '',
-      structured_content: contentState.structuredContent.map((slide, index) => ({
-        title: slide.title || `Slide ${index + 1}`,
-        layout: slide.layout || 'TITLE_AND_CONTENT',
-        content: Array.isArray(slide.content) ? slide.content : []
-      }))
+      structured_content: contentState.structuredContent.map((item, index) => {
+        // Base structure
+        const mappedItem = {
+          title: item.title || `Slide ${index + 1}`,
+          layout: item.layout || 'TITLE_AND_CONTENT'
+        };
+        
+        // Preserve resource-specific fields based on content structure
+        if (item.structured_questions) {
+          // Quiz/Test content
+          mappedItem.structured_questions = item.structured_questions;
+          mappedItem.teacher_notes = item.teacher_notes || [];
+          mappedItem.differentiation_tips = item.differentiation_tips || [];
+        } else if (item.structured_activities || item.exercises || item.problems) {
+          // Worksheet content
+          if (item.structured_activities) mappedItem.structured_activities = item.structured_activities;
+          if (item.worksheet_sections) mappedItem.worksheet_sections = item.worksheet_sections;
+          if (item.exercises) mappedItem.exercises = item.exercises;
+          if (item.problems) mappedItem.problems = item.problems;
+          if (item.instructions) mappedItem.instructions = item.instructions;
+          if (item.teacher_notes) mappedItem.teacher_notes = item.teacher_notes;
+          if (item.content) mappedItem.content = Array.isArray(item.content) ? item.content : [];
+        } else if (item.objectives || item.procedures || item.activities) {
+          // Lesson Plan content
+          if (item.objectives) mappedItem.objectives = item.objectives;
+          if (item.materials) mappedItem.materials = item.materials;
+          if (item.procedures) mappedItem.procedures = item.procedures;
+          if (item.activities) mappedItem.activities = item.activities;
+          if (item.assessment) mappedItem.assessment = item.assessment;
+          if (item.homework) mappedItem.homework = item.homework;
+          if (item.standards) mappedItem.standards = item.standards;
+          if (item.teacher_notes) mappedItem.teacher_notes = item.teacher_notes;
+          if (item.content) mappedItem.content = Array.isArray(item.content) ? item.content : [];
+        } else {
+          // Standard presentation content
+          mappedItem.content = Array.isArray(item.content) ? item.content : [];
+        }
+        
+        // Preserve any additional fields
+        Object.keys(item).forEach(key => {
+          if (!mappedItem.hasOwnProperty(key) && key !== 'title' && key !== 'layout') {
+            mappedItem[key] = item[key];
+          }
+        });
+        
+        return mappedItem;
+      })
     };
     
     const response = await fetch(`${config.apiUrl}/generate`, {

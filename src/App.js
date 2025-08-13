@@ -1,12 +1,14 @@
-// src/App.js - FIXED VERSION without conflicting Google OAuth Provider
+// src/App.js - ENHANCED with AuthContext and integrated LoginPage
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { Box, useMediaQuery } from '@mui/material';
+import { Box, useMediaQuery, Typography } from '@mui/material';
 import LessonBuilder from './pages/LessonBuilder';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import AuthCallback from './pages/AuthCallback';
 import AppFooter from './components/common/AppFooter';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import theme from './styles/theme';
 
 // Import CSS files
@@ -20,7 +22,9 @@ try {
   console.log('Mobile CSS not found, skipping import');
 }
 
-function App() {
+// Main App Content Component
+const AppContent = () => {
+  const { isLoading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFooter, setShowFooter] = useState(true);
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -67,66 +71,91 @@ function App() {
     localStorage.setItem('sidebarCollapsed', collapsed.toString());
   };
 
-  return (
-    <Router>
-      <ThemeProvider theme={theme}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          minHeight: '100vh',
-          position: 'relative',
-          overflow: 'hidden',
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)'
-        }}>
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <Typography>Loading...</Typography>
+      </Box>
+    );
+  }
 
-          <Box sx={{ 
-            flex: 1,
-            // Only add bottom padding when footer is shown
-            pb: showFooter ? (isMobile ? '70px' : '60px') : 0,
-            position: 'relative'
-          }}>
-            <Routes>
-              <Route 
-                path="/" 
-                element={
-                  <LessonBuilder 
-                    onSidebarToggle={handleSidebarToggle} 
-                    sidebarCollapsed={sidebarCollapsed} 
-                  />
-                } 
+  // Users can use the site anonymously - show main app for everyone
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100vh',
+      position: 'relative',
+      overflow: 'hidden',
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }}>
+
+      <Box sx={{ 
+        flex: 1,
+        // Only add bottom padding when footer is shown
+        pb: showFooter ? (isMobile ? '70px' : '60px') : 0,
+        position: 'relative'
+      }}>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <LessonBuilder 
+                onSidebarToggle={handleSidebarToggle} 
+                sidebarCollapsed={sidebarCollapsed} 
               />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-            </Routes>
-          </Box>
-          
-          {/* Footer only on home page when showFooter is true */}
-          {window.location.pathname === '/' && showFooter && !isMobile && (
-            <Box
-              component="footer"
-              sx={{
-                position: 'fixed',
-                bottom: 0,
-                left: '60px',
-                right: 0,
-                py: 2,
-                px: 4,
-                backgroundColor: '#ffffff',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: 3,
-                flexWrap: 'wrap',
-                zIndex: 5
-              }}
-            >
-              <AppFooter />
-            </Box>
-          )}
+            } 
+          />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+        </Routes>
+      </Box>
+      
+      {/* Footer only on home page when showFooter is true */}
+      {window.location.pathname === '/' && showFooter && !isMobile && (
+        <Box
+          component="footer"
+          sx={{
+            position: 'fixed',
+            bottom: 0,
+            left: '60px',
+            right: 0,
+            py: 2,
+            px: 4,
+            backgroundColor: '#ffffff',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 3,
+            flexWrap: 'wrap',
+            zIndex: 5
+          }}
+        >
+          <AppFooter />
         </Box>
-      </ThemeProvider>
-    </Router>
+      )}
+    </Box>
+  );
+};
+
+// Main App Component with AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <ThemeProvider theme={theme}>
+          <AppContent />
+        </ThemeProvider>
+      </Router>
+    </AuthProvider>
   );
 }
 

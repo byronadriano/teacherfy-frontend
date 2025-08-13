@@ -212,14 +212,11 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     };
 
     const handleOptionHover = (event, option) => {
-    // Remove this code that shows submenu on hover
-    // if (option.hasSubmenu && option.type === 'presentation') {
-    //   setSubmenuAnchorEl(event.currentTarget);
-    //   setActiveSubmenu(option.type);
-    // }
-    
-    // Either leave it empty, or just track which item is being hovered
-    // without showing the submenu
+        // Show submenu on hover for any option that has a submenu
+        if (option.hasSubmenu && option.type === 'presentation') {
+            setSubmenuAnchorEl(event.currentTarget);
+            setActiveSubmenu(option.type);
+        }
     };
 
     const handleClose = () => {
@@ -229,23 +226,21 @@ const FiltersBar = ({ formState, handleFormChange }) => {
         setActiveSubmenu(null);
     };
 
-    const handleOptionSelect = (option, event,field = activeFilter) => {
-    if (field === 'resourceType') {
-        // Toggle the option in the array
-        handleFormChange(field, option, true);
-        
-        // Only show submenu for Presentation if it's selected
-        if (option === 'Presentation' && 
-            (Array.isArray(formState.resourceType) && 
-            formState.resourceType.includes('Presentation'))) {
-            // Use document.activeElement instead of event
-            setSubmenuAnchorEl(document.activeElement);
-            setActiveSubmenu('presentation');
+    const handleOptionSelect = (option, event, field = activeFilter) => {
+        if (field === 'resourceType') {
+            // Toggle the option in the array
+            handleFormChange(field, option, true);
+            
+            // Show submenu immediately when clicking on Presentation
+            if (option === 'Presentation') {
+                // Use the event target for positioning
+                setSubmenuAnchorEl(event.currentTarget);
+                setActiveSubmenu('presentation');
+            }
+        } else {
+            handleFormChange(field, option);
+            handleClose();
         }
-    } else {
-        handleFormChange(field, option);
-        handleClose();
-    }
     };
 
     // Count selected resource types

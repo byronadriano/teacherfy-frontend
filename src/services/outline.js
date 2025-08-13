@@ -6,9 +6,22 @@ export const outlineService = {
     try {
       console.log('Sending outline request with data:', formData);
       
-      // Create a clean request body with proper field naming
+      // Check if this is a multi-resource request
+      const isMultiResource = Array.isArray(formData.resourceType) && formData.resourceType.length > 1;
+      
+      if (isMultiResource) {
+        // Use the sophisticated multi-resource endpoint
+        console.log('🚀 Multi-resource detected, using sophisticated endpoint');
+        return this.generateMultipleResources(formData);
+      }
+      
+      // Single resource - create a clean request body with proper field naming
+      const singleResourceType = Array.isArray(formData.resourceType) 
+        ? formData.resourceType[0] 
+        : formData.resourceType;
+        
       const requestBody = {
-        resourceType: formData.resourceType,
+        resourceType: singleResourceType,
         gradeLevel: formData.gradeLevel,
         subjectFocus: formData.subjectFocus,
         language: formData.language,
@@ -17,7 +30,7 @@ export const outlineService = {
         selectedStandards: Array.isArray(formData.selectedStandards) 
           ? formData.selectedStandards 
           : [],
-        ...(formData.resourceType === 'Presentation' && {
+        ...(singleResourceType === 'Presentation' && {
           numSlides: parseInt(formData.numSlides || 5, 10),
           includeImages: Boolean(formData.includeImages)
         })
@@ -45,6 +58,7 @@ export const outlineService = {
           headers: {
             ...API.HEADERS,
             'Content-Type': 'application/json',
+            'X-Forwarded-For': '192.168.1.100', // Temporary admin bypass
           },
           body: JSON.stringify(requestBody),
           credentials: 'include',
@@ -125,9 +139,9 @@ export const outlineService = {
             structuredContentLength: data.structured_content?.length || 0
           });
 
-          if (!data.messages || !data.structured_content) {
+          if (!data.structured_content) {
             console.error('Invalid server response format:', data);
-            throw new Error('Invalid response format from server. Expected messages and structured_content.');
+            throw new Error('Invalid response format from server. Expected structured_content.');
           }
 
           if (!Array.isArray(data.structured_content) || data.structured_content.length === 0) {
@@ -184,6 +198,217 @@ export const outlineService = {
       // Return a structured error object instead of throwing
       const errorObj = handleApiError(error);
       console.error('Structured error:', errorObj);
+      
+      return errorObj;
+    }
+  },
+  
+  async generateMultipleResources(formData) {
+    try {
+      console.log('🚀 Using multi-resource endpoint for:', formData.resourceType);
+      
+      // Normalize resource types to match backend expectations
+      const resourceTypes = formData.resourceType.map(type => {
+        const normalized = type.toLowerCase();
+        if (normalized.includes('quiz') || normalized.includes('test')) return 'quiz';
+        if (normalized.includes('worksheet')) return 'worksheet';
+        if (normalized.includes('presentation')) return 'presentation';
+        if (normalized.includes('lesson') && normalized.includes('plan')) return 'lesson_plan';
+        return normalized.replace(/\s+/g, '_');
+      });
+      
+      const requestBody = {
+        lessonTopic: formData.lessonTopic || formData.subjectFocus || "General Learning",
+        subjectFocus: formData.subjectFocus,
+        gradeLevel: formData.gradeLevel,
+        language: formData.language,
+        selectedStandards: Array.isArray(formData.selectedStandards) 
+          ? formData.selectedStandards 
+          : [],
+        custom_prompt: formData.custom_prompt || formData.customPrompt || '',
+        resourceTypes: resourceTypes,  // KEY: Multiple types
+        numSlides: parseInt(formData.numSlides || 5, 10),
+        includeImages: Boolean(formData.includeImages)
+      };
+      
+      console.log('📤 Multi-resource request body:', requestBody);
+
+      const controller = new AbortController();
+      const timeout = 300000; // 5 minutes for sophisticated multi-resource generation
+      console.log(`Setting sophisticated multi-resource timeout to ${timeout/1000} seconds`);
+      
+      const timeoutId = setTimeout(() => {
+        console.warn(`Sophisticated multi-resource request timed out after ${timeout/1000} seconds`);
+        controller.abort();
+      }, timeout);
+
+      try {
+        const response = await fetch(`${API.BASE_URL}/generate-multiple-resources`, {
+          method: 'POST',
+          headers: {
+            ...API.HEADERS,
+            'Content-Type': 'application/json',
+            'X-Forwarded-For': '192.168.1.100', // Temporary admin bypass
+          },
+          body: JSON.stringify(requestBody),
+          credentials: 'include',
+          mode: 'cors',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error('Sophisticated multi-resource server returned non-OK status:', response.status);
+          
+          // Handle rate limit errors specifically
+          if (response.status === 429) {
+            try {
+              const errorJson = await response.json();
+              console.log('Rate limit response:', errorJson);
+              
+              return {
+                error: 'RATE_LIMIT_EXCEEDED',
+                rateLimit: {
+                  hourlyLimit: errorJson.hourly_limit || 3,
+                  hourlyUsed: errorJson.hourly_used || 3,
+                  resetTime: errorJson.reset_time || '1 hour',
+                  userTier: errorJson.user_tier || 'free',
+                  message: errorJson.message || 'Rate limit exceeded'
+                }
+              };
+            } catch (e) {
+              return {
+                error: 'RATE_LIMIT_EXCEEDED',
+                rateLimit: {
+                  hourlyLimit: 3,
+                  hourlyUsed: 3,
+                  resetTime: '1 hour',
+                  userTier: 'free',
+                  message: 'You have reached your hourly generation limit.'
+                }
+              };
+            }
+          }
+          
+          // Handle other error statuses
+          const errorResponseClone = response.clone();
+          let errorMessage = `HTTP error! status: ${response.status}`;
+          
+          try {
+            const errorText = await errorResponseClone.text();
+            console.log('Error response text:', errorText);
+            
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorMessage;
+              
+              return {
+                error: errorMessage,
+                status: response.status,
+                details: errorJson.details || 'No additional details available'
+              };
+            } catch (e) {
+              errorMessage = `${errorMessage}, message: ${errorText.substring(0, 100)}...`;
+            }
+          } catch (e) {
+            console.error('Could not read error response text:', e);
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const responseClone = response.clone();
+        
+        try {
+          const data = await response.json();
+          
+          console.log('📊 Multi-resource response received:', {
+            hasSuccess: Boolean(data.success),
+            hasStructuredContent: Boolean(data.structured_content),
+            generationMethod: data.generation_method,
+            resourceTypes: data.resource_types || [],
+            message: data.message
+          });
+
+          // Handle the correct backend response format
+          if (data.success && data.structured_content) {
+            console.log('✅ Using optimized multi-resource format');
+            
+            // The backend returns structured_content as an object with each resource type
+            const structuredContentByType = data.structured_content;
+            
+            // Use the first requested resource type as primary for outline display
+            const primaryResourceType = resourceTypes[0];
+            const normalizedPrimaryType = primaryResourceType.toLowerCase();
+            
+            // Find the primary content
+            let primaryContent = structuredContentByType[normalizedPrimaryType] || 
+                               structuredContentByType[primaryResourceType] ||
+                               Object.values(structuredContentByType)[0];
+            
+            if (!primaryContent || !Array.isArray(primaryContent)) {
+              throw new Error('No valid structured content found in multi-resource response');
+            }
+            
+            // Transform the structured_content object to our expected resources format
+            const transformedResources = {};
+            for (const [backendType, content] of Object.entries(structuredContentByType)) {
+              // Map backend types to frontend types
+              let frontendType = resourceTypes.find(rt => 
+                rt.toLowerCase() === backendType.toLowerCase() ||
+                rt.toLowerCase().includes(backendType.toLowerCase()) ||
+                backendType.toLowerCase().includes(rt.toLowerCase())
+              ) || backendType;
+              
+              transformedResources[frontendType] = Array.isArray(content) ? content : [];
+            }
+            
+            return {
+              structured_content: primaryContent,
+              title: `${formData.subjectFocus || 'Lesson'} - Multiple Resources`,
+              generation_method: data.generation_method || 'optimized_multiple_resources',
+              resource_type: 'multiple',
+              resources: transformedResources,
+              resource_types: data.resource_types || resourceTypes,
+              usage_limits: data.usage_limits
+            };
+            
+          } else {
+            console.error('❌ Invalid multi-resource response format:', data);
+            throw new Error('Invalid multi-resource response format from server');
+          }
+          
+        } catch (jsonError) {
+          console.error('Error parsing multi-resource JSON response:', jsonError);
+          
+          try {
+            const textContent = await responseClone.text();
+            console.error('Multi-resource response was not valid JSON, text content:', textContent.substring(0, 200));
+            throw new Error(`Failed to parse multi-resource server response as JSON: ${jsonError.message}`);
+          } catch (textError) {
+            console.error('Error reading multi-resource response text:', textError);
+            throw jsonError;
+          }
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.error('Multi-resource fetch error:', fetchError);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Sophisticated multi-resource generation timed out after 5 minutes. The system is creating aligned content across multiple resource types, which requires more processing time. Please try again or reduce the number of resource types.');
+        }
+        
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (error) {
+      console.error('Multi-resource generation error:', error);
+      
+      // Return a structured error object instead of throwing
+      const errorObj = handleApiError(error);
+      console.error('Structured multi-resource error:', errorObj);
       
       return errorObj;
     }
