@@ -313,9 +313,26 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
     }));
 
     // Start enhanced loading with progress tracking and context
-    enhancedLoading.startLoading('outline_generation', 25, {
+    const resourceTypes = Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'];
+    const isMultiResource = resourceTypes.length > 1;
+    
+    // Calculate proper estimated time based on resource complexity
+    let estimatedTime;
+    if (isMultiResource) {
+      // Multiple resources: Research (~30s) + Resources (~80s each)
+      const researchTime = 30;
+      const perResourceTime = 80;
+      estimatedTime = researchTime + (resourceTypes.length * perResourceTime);
+    } else {
+      // Single resource: ~60 seconds average
+      estimatedTime = 60;
+    }
+    
+    console.log(`🕒 Estimated generation time: ${estimatedTime}s for ${resourceTypes.length} resource(s): ${resourceTypes.join(', ')}`);
+    
+    enhancedLoading.startLoading('outline_generation', estimatedTime, {
       // supply minimal payload the background endpoint may require
-      resource_types: Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'],
+      resource_types: resourceTypes,
       structured_content: [],
       form_state: {
         gradeLevel: formState.gradeLevel,
@@ -411,6 +428,17 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
             ...prev,
             error: 'RATE_LIMIT_EXCEEDED',
             rateLimitInfo: data.rateLimit,
+            isLoading: false
+          }));
+          return;
+        }
+        
+        // Handle monthly limit errors specifically
+        if (data.error === 'MONTHLY_LIMIT_REACHED') {
+          setUiState(prev => ({
+            ...prev,
+            error: 'MONTHLY_LIMIT_REACHED',
+            monthlyLimitInfo: data.monthlyLimit,
             isLoading: false
           }));
           return;

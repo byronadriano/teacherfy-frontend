@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress, Fade, Alert } from '@mui/material';
 import SleekProgress from '../loading/SleekProgress';
 import { useTheme } from '@mui/material/styles';
-import { Rocket, Sparkles, AlertCircle, Clock } from 'lucide-react';
+import { Rocket, Sparkles, AlertCircle, Clock, Calendar, TrendingUp } from 'lucide-react';
 // Removed old ProgressIndicator to avoid duplicate progress UIs; SleekProgress is the single source of truth now.
 
 const LimitReachedPopup = ({ show, resetTime }) => {
@@ -89,6 +89,146 @@ const LimitReachedPopup = ({ show, resetTime }) => {
   );
 };
 
+const MonthlyLimitReachedPopup = ({ show, monthlyLimitInfo }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!show || !monthlyLimitInfo?.resetTime) return;
+
+    const updateTimeLeft = () => {
+      const now = new Date();
+      const reset = new Date(monthlyLimitInfo.resetTime);
+      const diff = reset - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Available now');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      
+      if (days > 0) {
+        setTimeLeft(`${days} day${days > 1 ? 's' : ''} ${hours}h`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours} hour${hours > 1 ? 's' : ''}`);
+      } else {
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        setTimeLeft(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+      }
+    };
+
+    updateTimeLeft();
+    const interval = setInterval(updateTimeLeft, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [show, monthlyLimitInfo?.resetTime]);
+
+  if (!show) return null;
+
+  const formatResetDate = (resetTime) => {
+    try {
+      const date = new Date(resetTime);
+      return date.toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    } catch (e) {
+      return 'Next month';
+    }
+  };
+
+  return (
+    <Fade in={show}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: -140,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          px: 3,
+          py: 2.5,
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1.5,
+          minWidth: '320px',
+          maxWidth: '400px',
+          fontSize: '0.875rem',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderStyle: 'solid',
+            borderWidth: '12px 12px 0 12px',
+            borderColor: '#667eea transparent transparent transparent'
+          }
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <Calendar size={20} />
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>
+            Monthly Limit Reached
+          </Typography>
+        </Box>
+
+        {/* Status */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5,
+          bgcolor: 'rgba(255, 255, 255, 0.15)',
+          borderRadius: '8px',
+          px: 2,
+          py: 1.5
+        }}>
+          <TrendingUp size={16} />
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, mb: 0.5 }}>
+              {monthlyLimitInfo?.generationsUsed || 10} of {monthlyLimitInfo?.monthlyLimit || 10} generations used
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', opacity: 0.9 }}>
+              Resets {timeLeft ? `in ${timeLeft}` : `on ${formatResetDate(monthlyLimitInfo?.resetTime)}`}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Upgrade CTA */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5,
+          bgcolor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '8px',
+          px: 2,
+          py: 1.5
+        }}>
+          <Sparkles size={16} />
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, mb: 0.5 }}>
+              Upgrade for unlimited access
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', opacity: 0.9 }}>
+              Premium • Priority processing • Advanced features
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Fade>
+  );
+};
+
 const CustomizationForm = ({ 
   value,
   onChange,
@@ -98,16 +238,28 @@ const CustomizationForm = ({
   isLoading,
   error,
   rateLimitInfo = null,
+  monthlyLimitInfo = null,
   subscriptionState = { isPremium: false, generationsLeft: 5 },
   resetTime = null,
+  formState = {},
   enhancedLoading = null
 }) => {
   const [showLimitPopup, setShowLimitPopup] = useState(false);
+  const [showMonthlyLimitPopup, setShowMonthlyLimitPopup] = useState(false);
   const [bgLoading, setBgLoading] = useState(false);
   const [bgError, setBgError] = useState('');
   const [bgSuccess, setBgSuccess] = useState('');
   const isLimitReached = !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0;
   const theme = useTheme();
+
+  // Show monthly limit popup when error changes to MONTHLY_LIMIT_REACHED
+  useEffect(() => {
+    if (error === 'MONTHLY_LIMIT_REACHED') {
+      setShowMonthlyLimitPopup(true);
+      const timer = setTimeout(() => setShowMonthlyLimitPopup(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -166,6 +318,12 @@ const CustomizationForm = ({
       <LimitReachedPopup 
         show={showLimitPopup} 
         resetTime={getResetTime()}
+      />
+
+      {/* Monthly Limit Reached Popup */}
+      <MonthlyLimitReachedPopup 
+        show={showMonthlyLimitPopup} 
+        monthlyLimitInfo={monthlyLimitInfo}
       />
 
       <Box sx={{ p: 0 }}>
@@ -302,8 +460,110 @@ const CustomizationForm = ({
         </Box>
       )}
 
+      {/* Display monthly limit message if monthly limit exceeded */}
+      {error === 'MONTHLY_LIMIT_REACHED' && (
+        <Box sx={{ 
+          px: 3, 
+          py: 2.5, 
+          backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderTop: '1px solid #e2e8f0',
+          borderLeft: '4px solid #667eea'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ 
+                color: '#475569',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                mb: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Calendar size={16} />
+                Monthly Generation Limit Reached
+              </Typography>
+              
+              <Typography sx={{ 
+                color: '#64748b',
+                fontSize: '0.8rem',
+                lineHeight: 1.5,
+                mb: 1.5
+              }}>
+                You've used all <strong>{monthlyLimitInfo?.generationsUsed || 10}</strong> of your monthly generations.
+                {monthlyLimitInfo?.resetTime && (
+                  <> Your limit resets on <strong>{new Date(monthlyLimitInfo.resetTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</strong>.</>
+                )}
+              </Typography>
+
+              <Box sx={{ 
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                p: 2,
+                mb: 2
+              }}>
+                <Typography sx={{ 
+                  fontSize: '0.8rem',
+                  color: '#374151',
+                  fontWeight: 500,
+                  mb: 1
+                }}>
+                  Free Plan Limits:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    • {monthlyLimitInfo?.monthlyLimit || 10} generations per month
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    • Resets on the 1st of each month
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                borderRadius: '8px',
+                p: 2
+              }}>
+                <Typography sx={{ 
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  mb: 1
+                }}>
+                  ✨ Upgrade to Premium
+                </Typography>
+                <Typography sx={{ fontSize: '0.75rem', opacity: 0.9, mb: 1.5 }}>
+                  Unlimited generations • Priority support • Advanced features
+                </Typography>
+                
+                <Button 
+                  variant="contained" 
+                  size="small"
+                  sx={{ 
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontSize: '0.75rem',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                    }
+                  }}
+                  onClick={() => window.open('/pricing', '_blank')}
+                >
+                  View Pricing
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
       {/* Display other errors normally */}
-      {error && error !== 'RATE_LIMIT_EXCEEDED' && (
+      {error && error !== 'RATE_LIMIT_EXCEEDED' && error !== 'MONTHLY_LIMIT_REACHED' && (
         <Box sx={{ 
           px: 3, 
           py: 2, 
@@ -354,6 +614,7 @@ const CustomizationForm = ({
             stage={enhancedLoading.stage}
             estimatedTime={enhancedLoading.loadingState?.estimatedTime}
             elapsed={enhancedLoading.loadingState?.startTime ? Math.max(0, Math.floor((Date.now() - enhancedLoading.loadingState.startTime) / 1000)) : 0}
+            resourceTypes={formState.resourceType} // Pass resource types for dynamic messaging
             onRunInBackground={async () => {
               const email = (enhancedLoading.userEmail || '').trim();
               if (!email) return;

@@ -52,8 +52,31 @@ export default function SleekProgress({
     return `${secs}s left`;
   };
 
-  // Never show 100% until the operation actually completes; cap at 99%
-  const safeProgress = Math.min(99, Math.max(0, Math.round(progress || 0)));
+  // Calculate progress based on elapsed time vs estimated time for better alignment
+  const safeProgress = useMemo(() => {
+    // If we don't have good time estimates, fall back to backend progress
+    if (!estimatedTime || estimatedTime <= 0 || elapsed < 0) {
+      return Math.min(99, Math.max(0, Math.round(progress || 0)));
+    }
+    
+    // Calculate progress based on time elapsed vs estimated time
+    const timeProgress = Math.min(elapsed / estimatedTime, 0.99); // Cap at 99%
+    const timeBasedPercentage = Math.round(timeProgress * 100);
+    
+    // For multi-resource scenarios with good time estimates, prioritize time-based progress
+    // This gives users a more intuitive experience where progress bar matches time remaining
+    if (estimatedTime > 60) {
+      // Multi-resource: Use time-based progress as it's more accurate
+      console.log(`📊 Using time-based progress: ${timeBasedPercentage}% (${elapsed}s / ${estimatedTime}s)`);
+      return timeBasedPercentage;
+    } else {
+      // Single resource: Use backend progress but ensure it doesn't exceed time-based progress
+      const backendProgress = Math.min(99, Math.max(0, Math.round(progress || 0)));
+      const finalProgress = Math.min(backendProgress, timeBasedPercentage);
+      console.log(`📊 Using constrained backend progress: ${finalProgress}% (backend: ${backendProgress}%, time: ${timeBasedPercentage}%)`);
+      return finalProgress;
+    }
+  }, [progress, estimatedTime, elapsed]);
   // If backend reports completed but we haven't emitted final completion yet, keep stage as Finalizing
   const stageKey = stage === 'completed' ? 'finalizing' : stage;
   const currentStage = stageLabelMap[stageKey] || 'Working';

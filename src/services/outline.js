@@ -101,6 +101,42 @@ export const outlineService = {
             }
           }
           
+          // IMPROVED: Handle monthly generation limit errors (403)
+          if (response.status === 403) {
+            try {
+              const errorJson = await response.json();
+              console.log('Monthly limit response:', errorJson);
+              
+              return {
+                error: 'MONTHLY_LIMIT_REACHED',
+                monthlyLimit: {
+                  monthlyLimit: errorJson.monthly_limit || 10,
+                  generationsUsed: errorJson.generations_used || 10,
+                  generationsLeft: errorJson.generations_left || 0,
+                  resetTime: errorJson.reset_time || '2025-02-01T00:00:00',
+                  userTier: errorJson.user_tier || 'free',
+                  requireUpgrade: errorJson.require_upgrade || true,
+                  trackingMethod: errorJson.tracking_method || 'ip_address',
+                  message: errorJson.message || 'Monthly generation limit reached'
+                }
+              };
+            } catch (e) {
+              return {
+                error: 'MONTHLY_LIMIT_REACHED',
+                monthlyLimit: {
+                  monthlyLimit: 10,
+                  generationsUsed: 10,
+                  generationsLeft: 0,
+                  resetTime: '2025-02-01T00:00:00',
+                  userTier: 'free',
+                  requireUpgrade: true,
+                  trackingMethod: 'ip_address',
+                  message: 'You have used all of your free monthly generations. Upgrade to premium for unlimited access.'
+                }
+              };
+            }
+          }
+          
           // Handle other error statuses
           const errorResponseClone = response.clone();
           let errorMessage = `HTTP error! status: ${response.status}`;
@@ -295,6 +331,42 @@ export const outlineService = {
                   resetTime: '1 hour',
                   userTier: 'free',
                   message: 'You have reached your hourly generation limit.'
+                }
+              };
+            }
+          }
+          
+          // IMPROVED: Handle monthly generation limit errors (403)
+          if (response.status === 403) {
+            try {
+              const errorJson = await response.json();
+              console.log('Monthly limit response:', errorJson);
+              
+              return {
+                error: 'MONTHLY_LIMIT_REACHED',
+                monthlyLimit: {
+                  monthlyLimit: errorJson.monthly_limit || 10,
+                  generationsUsed: errorJson.generations_used || 10,
+                  generationsLeft: errorJson.generations_left || 0,
+                  resetTime: errorJson.reset_time || '2025-02-01T00:00:00',
+                  userTier: errorJson.user_tier || 'free',
+                  requireUpgrade: errorJson.require_upgrade || true,
+                  trackingMethod: errorJson.tracking_method || 'ip_address',
+                  message: errorJson.message || 'Monthly generation limit reached'
+                }
+              };
+            } catch (e) {
+              return {
+                error: 'MONTHLY_LIMIT_REACHED',
+                monthlyLimit: {
+                  monthlyLimit: 10,
+                  generationsUsed: 10,
+                  generationsLeft: 0,
+                  resetTime: '2025-02-01T00:00:00',
+                  userTier: 'free',
+                  requireUpgrade: true,
+                  trackingMethod: 'ip_address',
+                  message: 'You have used all of your free monthly generations. Upgrade to premium for unlimited access.'
                 }
               };
             }

@@ -622,12 +622,14 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                 onSubmit={handleGenerateOutline}
                 isLoading={uiState.isLoading || outlineLoading}
                 error={uiState.error}
-                rateLimitInfo={uiState.rateLimitInfo} // Add this line
+                rateLimitInfo={uiState.rateLimitInfo}
+                monthlyLimitInfo={uiState.monthlyLimitInfo} // Add monthly limit info
                 subscriptionState={{
                   isPremium: subscriptionState.isPremium,
                   generationsLeft: subscriptionState.generationsLeft,
                   resetTime: subscriptionState.resetTime
                 }}
+                formState={formState} // Pass formState for resource type information
                 enhancedLoading={enhancedLoading}
               />
             </Box>

@@ -126,14 +126,27 @@ class BackgroundProcessor {
    * Estimate duration based on job complexity
    */
   estimateDuration(jobData) {
-    const baseTime = 30; // 30 seconds base
     const resourceCount = Array.isArray(jobData.resource_types) ? jobData.resource_types.length : 1;
     const contentLength = jobData.structured_content?.length || 5;
     
-    // More resources and longer content = longer processing time
-    const estimatedSeconds = baseTime + (resourceCount * 15) + (contentLength * 2);
-    
-    return Math.min(estimatedSeconds, 300); // Cap at 5 minutes
+    if (resourceCount === 1) {
+      // Single resource: 45-90 seconds depending on complexity
+      const baseTime = 45;
+      const complexityFactor = Math.min(contentLength * 3, 45); // 3s per content item, max 45s
+      return baseTime + complexityFactor;
+    } else {
+      // Multiple resources: Sequential processing model
+      // Research phase: ~30 seconds
+      // Each resource: ~80 seconds (based on actual backend logs)
+      const researchTime = 30;
+      const perResourceTime = 80;
+      const complexityMultiplier = Math.max(1, contentLength / 10); // Slight increase for complex content
+      
+      const totalTime = researchTime + (resourceCount * perResourceTime * complexityMultiplier);
+      
+      // Cap at 8 minutes for multiple resources (was too restrictive at 5 minutes)
+      return Math.min(totalTime, 480);
+    }
   }
 
   /**
