@@ -136,6 +136,15 @@ export const presentationService = {
           const requestData = {
             resource_type: normalizedResourceType,
             lesson_outline: contentState.finalOutline || '',
+            // Include form data fields
+            grade_level: formState.gradeLevel || '',
+            subject: formState.subject || '',
+            topic: formState.lessonTopic || formState.subjectFocus || '',
+            language: formState.language || 'English',
+            custom_prompt: formState.customPrompt || '',
+            num_slides: parseInt(formState.numSlides || 5, 10),
+            include_images: Boolean(formState.includeImages),
+            selected_standards: Array.isArray(formState.selectedStandards) ? formState.selectedStandards : [],
             structured_content: structuredContent.map((item, index) => {
               // Base structure
               const mappedItem = {
@@ -194,7 +203,11 @@ export const presentationService = {
               normalizedResourceType,
               contentItems: contentState.structuredContent?.length || 0,
               firstItemSample: contentState.structuredContent?.[0] || null,
-              contentTypes: Object.keys(requestData.structured_content?.[0] || {})
+              contentTypes: Object.keys(requestData.structured_content?.[0] || {}),
+              includeImages: requestData.include_images,
+              numSlides: requestData.num_slides,
+              gradeLevel: requestData.grade_level,
+              fullRequestData: requestData
             });
           }          // 🔍 CRITICAL VALIDATION - Verify data integrity before sending
           const validation = validateQuizWorksheetFlow.validateGeneratePayload(requestData, normalizedResourceType);
@@ -288,6 +301,15 @@ export const presentationService = {
     const requestData = {
       resource_type: 'presentation',
       lesson_outline: contentState.finalOutline || '',
+      // Include form data fields
+      grade_level: formState.gradeLevel || '',
+      subject: formState.subject || '',
+      topic: formState.lessonTopic || formState.subjectFocus || '',
+      language: formState.language || 'English',
+      custom_prompt: formState.customPrompt || '',
+      num_slides: parseInt(formState.numSlides || 5, 10),
+      include_images: Boolean(formState.includeImages),
+      selected_standards: Array.isArray(formState.selectedStandards) ? formState.selectedStandards : [],
       structured_content: contentState.structuredContent.map((item, index) => {
         // Base structure
         const mappedItem = {
@@ -337,6 +359,15 @@ export const presentationService = {
         return convertContentForResource(mappedItem, 'presentation');
       })
     };
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📤 generatePptx request data:', {
+        includeImages: requestData.include_images,
+        numSlides: requestData.num_slides,
+        gradeLevel: requestData.grade_level,
+        fullRequestData: requestData
+      });
+    }
     
     const response = await fetch(`${config.apiUrl}/generate`, {
       method: 'POST',
