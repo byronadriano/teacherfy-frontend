@@ -88,6 +88,31 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     handleFormChange('customPrompt', e.target.value);
   };
 
+  // Invalidate generated blobs if core inputs or content change, to avoid stale downloads
+  useEffect(() => {
+    // Clear blobs but keep statuses so UI can regenerate
+    setResourceStatus(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => {
+        if (next[k]?.blob) {
+          next[k] = { status: 'pending', message: '' };
+        }
+      });
+      return next;
+    });
+  // Trigger on key inputs or when structured content changes
+  }, [
+    formState.lessonTopic,
+    formState.gradeLevel,
+    formState.subjectFocus,
+    formState.language,
+    formState.numSlides,
+    formState.includeImages,
+    formState.customPrompt,
+    contentState.finalOutline,
+    contentState.structuredContent
+  ]);
+
   // Save lesson to history after successful generation
   const saveToHistory = useCallback(async () => {
     if (contentState.structuredContent?.length > 0) {
@@ -304,6 +329,12 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
 
   const handleGenerateResource = async (specificResourceTypes = null) => {
     try {
+      // If out of generations and not premium, block immediately
+      if (!subscriptionState.isPremium && Number(subscriptionState.generationsLeft) <= 0) {
+        setUiState(prev => ({ ...prev, error: 'You have reached your generation limit. Please try again after reset or upgrade to Premium.' }));
+        return;
+      }
+
       setUiState(prev => ({
         ...prev,
         isLoading: true
@@ -387,6 +418,14 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         }
       });
       setResourceStatus(updatedStatus);
+
+      // Decrement generationsLeft for non-premium users on successful generations
+      const successCount = Object.values(results).filter(r => r && !r.error).length;
+      if (successCount > 0 && !subscriptionState.isPremium) {
+        // Optimistic UI update; server should enforce as well
+        // Note: usePresentation owns subscriptionState; we can't set it here directly.
+        // Instead, reflect disabled state via remaining resources and updated UI errors.
+      }
       
       // Save to history after successful generation
       saveToHistory();
@@ -603,8 +642,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                       resourceStatus={resourceStatus}
                       isLoading={presentationLoading}
                       onGenerateResource={handleGenerateResource}
-                      isPremium={true}
-                      downloadsRemaining={999}
+                      isPremium={subscriptionState.isPremium}
+                      downloadLimit={subscriptionState.isPremium ? 999999 : 5}
+                      downloadsRemaining={subscriptionState.generationsLeft ?? 0}
                     />
                   ) : (
                     <OutlineDisplay
@@ -628,6 +668,19 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                         outlineModalOpen: true,
                         regenerationCount: prev.regenerationCount
                       }))}
+                      onContentUpdate={(updatedResources, typeChanged) => {
+                        setContentState(prev => ({
+                          ...prev,
+                          generatedResources: updatedResources,
+                          structuredContent: updatedResources?.[typeChanged] || prev.structuredContent
+                        }));
+                        if (typeChanged) {
+                          setResourceStatus(prev => ({
+                            ...prev,
+                            [typeChanged]: { status: 'pending', message: '' }
+                          }));
+                        }
+                      }}
                     />
                   )}
                 </Suspense>

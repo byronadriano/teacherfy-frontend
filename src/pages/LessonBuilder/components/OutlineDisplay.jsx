@@ -174,7 +174,7 @@ const ResourceIcon = ({ resourceType, size = 18 }) => {
 const OutlineDisplay = ({ 
   contentState,
   uiState,
-  subscriptionState = { isPremium: false, downloadCount: 0 },
+  subscriptionState = { isPremium: false, generationsLeft: 0 },
   isAuthenticated = false,
   googleSlidesState = { isGenerating: false },
   resourceStatus = {},
@@ -255,7 +255,7 @@ const OutlineDisplay = ({
       [activeResourceType]: updatedContent
     };
     
-    onContentUpdate(updatedResources);
+  onContentUpdate(updatedResources, activeResourceType);
   };
 
   return (
@@ -543,6 +543,24 @@ const OutlineDisplay = ({
             bgcolor: '#f8fafc'
           }}
         >
+          {/* Limit banner when disabled */}
+          {!subscriptionState?.isPremium && Number(subscriptionState?.generationsLeft) <= 0 && (
+            <Box sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              p: 1.5,
+              border: '1px dashed #e2e8f0',
+              borderRadius: '8px',
+              bgcolor: '#fff',
+              mb: { xs: 1, sm: 0 }
+            }}>
+              <Typography sx={{ fontSize: '0.85rem', color: '#475569' }}>
+                You’ve reached your generation limit. Please wait for your limit to reset or upgrade for unlimited generations.
+              </Typography>
+            </Box>
+          )}
+
           <Button
             variant="outlined"
             onClick={onRegenerateOutline}
@@ -563,7 +581,11 @@ const OutlineDisplay = ({
           <Button
             variant="contained"
             onClick={handleGenerateResource}
-            disabled={uiState.isLoading || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5) || (resourceStatus[activeResourceType]?.status === 'generating')}
+            disabled={
+              uiState.isLoading ||
+              (!subscriptionState?.isPremium && Number(subscriptionState?.generationsLeft) <= 0) ||
+              (resourceStatus[activeResourceType]?.status === 'generating')
+            }
             startIcon={uiState.isLoading || resourceStatus[activeResourceType]?.status === 'generating' ? <CircularProgress size={20} /> : <Download size={18} />}
             sx={{
               bgcolor: '#2563eb',

@@ -393,7 +393,12 @@ const ConfirmationModal = ({
         {uiState.regenerationCount < 3 && (
           <Button 
             onClick={handleRegenerateClick}
-            disabled={!localModifiedPrompt.trim() || isRegenerating || isFinalizing || (!subscriptionState.isPremium && subscriptionState.downloadCount >= 5)}
+            disabled={
+              !localModifiedPrompt.trim() ||
+              isRegenerating ||
+              isFinalizing ||
+              (!subscriptionState?.isPremium && Number(subscriptionState?.generationsLeft) <= 0)
+            }
           >
             {isRegenerating ? <CircularProgress size={24} /> : "Regenerate Outline"}
           </Button>

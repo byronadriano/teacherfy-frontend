@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { Download, RefreshCw } from 'lucide-react';
 import ResourceCard from './ResourceCard';
+import { analyticsService } from '../../../../services';
 
 const ResourceManager = ({ 
   formState,
@@ -21,6 +22,8 @@ const ResourceManager = ({
   downloadsRemaining = 5
 }) => {
   const [resourcesWithStatus, setResourcesWithStatus] = useState([]);
+  // Cooldown registry to dedupe rapid clicks per resource
+  const [cooldowns, setCooldowns] = useState({});
   
   // Determine all resource types (from form state and generated resources)
   useEffect(() => {
@@ -41,15 +44,19 @@ const ResourceManager = ({
     const uniqueResourceTypes = [...new Set(resourceTypes)]; // Remove duplicates
     
     const statusObjects = uniqueResourceTypes.map(type => {
-      const hasContent = contentState.generatedResources && 
-                        contentState.generatedResources[type] && 
-                        contentState.generatedResources[type].length > 0;
-                        
+      const hasContent = Boolean(
+        contentState.generatedResources &&
+        contentState.generatedResources[type] &&
+        contentState.generatedResources[type].length > 0
+      );
+
       const currentStatus = resourceStatus[type] || {};
+      // Don't auto-mark success just because content exists; success means we actually have a blob to download.
+      const status = currentStatus.status || 'pending';
       
       return {
         resourceType: type,
-        status: currentStatus.status || (hasContent ? 'success' : 'pending'),
+        status,
         message: currentStatus.message || '',
         hasContent
       };
@@ -60,19 +67,35 @@ const ResourceManager = ({
 
   // Handle generating a specific resource
   const handleGenerateResource = (resourceType) => {
-    // For already generated resources, trigger download directly if possible
-    if (resourceStatus[resourceType]?.status === 'success' && resourceStatus[resourceType]?.blob) {
+    const now = Date.now();
+    const last = cooldowns[resourceType] || 0;
+    if (now - last < 1200) { // 1.2s cooldown
+      return;
+    }
+    setCooldowns(prev => ({ ...prev, [resourceType]: now }));
+
+    const status = resourceStatus[resourceType]?.status;
+    const blob = resourceStatus[resourceType]?.blob;
+    const contentType = resourceStatus[resourceType]?.contentType || '';
+
+    // Block if at limit
+    if (!isPremium && Number(downloadsRemaining) <= 0) {
+      console.log('⚠️ Download limit reached, cannot generate new resource');
+  analyticsService.trackActivity('generation_blocked_limit', { resourceType });
+  return;
+    }
+
+    // If a generation is in progress for this type, ignore clicks
+    if (status === 'generating') {
+  return;
+    }
+
+    // If we have a finished blob, trigger download
+    if (status === 'success' && blob && blob.size > 0) {
       console.log(`Resource ${resourceType} already generated, triggering download`);
+      analyticsService.trackActivity('resource_download', { resourceType });
       
       try {
-        // Get the blob
-        const blob = resourceStatus[resourceType].blob;
-        
-        // Validate blob exists and has size
-        if (!blob || blob.size === 0) {
-          throw new Error('Invalid blob data');
-        }
-        
         // Create a fresh URL
         const url = window.URL.createObjectURL(blob);
         
@@ -85,10 +108,13 @@ const ResourceManager = ({
         const topicSlug = formState?.lessonTopic 
           ? formState.lessonTopic.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30)
           : 'lesson';
-          
-        let fileExt = '.bin';
-        if (resourceType === 'Presentation') fileExt = '.pptx';
-        else fileExt = '.docx';
+        
+        let fileExt = '.docx';
+        const ct = (contentType || '').toLowerCase();
+        if (ct.includes('presentation')) fileExt = '.pptx';
+        else if (ct.includes('wordprocessingml')) fileExt = '.docx';
+        else if (ct.includes('pdf')) fileExt = '.pdf';
+        else if (resourceType === 'Presentation') fileExt = '.pptx';
         
         a.download = `${topicSlug}_${resourceType.toLowerCase()}${fileExt}`;
         
@@ -111,37 +137,42 @@ const ResourceManager = ({
         
         return; // Success - don't fall back to generation
       } catch (error) {
-        console.error('❌ Error downloading resource:', error);
-        // Don't fall back to onGenerateResource for download errors
-        // Instead, just log the error and inform user
-        alert(`Download failed for ${resourceType}. Please try regenerating the resource.`);
-        return;
+    console.error('❌ Error downloading resource:', error);
+    // Fall back to regeneration if possible
+    if (!isPremium && Number(downloadsRemaining) <= 0) return;
+    analyticsService.trackActivity('resource_regenerate_after_download_error', { resourceType, error: String(error) });
+    onGenerateResource([resourceType]);
+    return;
       }
     } 
     
-    // For resources that haven't been generated or need regeneration
-    if (!isPremium && downloadsRemaining <= 0) {
-      console.log('⚠️ Download limit reached, cannot generate new resource');
-      return; // Don't allow new generations if limit reached
-    }
-    
-    console.log(`🔄 Generating new resource: ${resourceType}`);
-    onGenerateResource([resourceType]); // Pass as array to be explicit
+  // For resources that haven't been generated or blob is missing, trigger generation
+  console.log(`🔄 Generating resource: ${resourceType}`);
+  analyticsService.trackActivity('resource_generate', { resourceType });
+  onGenerateResource([resourceType]);
   };
   
   // Handle generating all resources
   const handleGenerateAll = () => {
+    // Extra safety: prevent generation when at limit, even if button state wasn't respected
+    if (!isPremium && Number(downloadsRemaining) <= 0) {
+      console.log('⚠️ Download limit reached, cannot generate all resources');
+      analyticsService.trackActivity('generation_all_blocked_limit', {});
+      return;
+    }
     // Only generate resources that haven't been generated yet
     const pendingResources = resourcesWithStatus
       .filter(r => r.status !== 'success')
       .map(r => r.resourceType);
     
     if (pendingResources.length > 0) {
+      analyticsService.trackActivity('resource_generate_all', { count: pendingResources.length, types: pendingResources });
       onGenerateResource(pendingResources);
     } else {
       // If all are already generated, just prompt to download them
       // No API calls needed
       console.log('All resources already generated, no API calls needed');
+      analyticsService.trackActivity('resource_generate_all_nop', {});
     }
   };
   
@@ -159,7 +190,13 @@ const ResourceManager = ({
   const isGenerating = isLoading || resourcesWithStatus.some(r => r.status === 'generating');
   
   // Check if we've reached the download limit
-  const reachedLimit = !isPremium && downloadsRemaining <= 0;
+  const reachedLimit = !isPremium && Number(downloadsRemaining) <= 0;
+  
+  const ResetHint = () => (
+    <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mt: 0.5 }}>
+      You can try again when your daily limit resets. Upgrade for unlimited generations.
+    </Typography>
+  );
 
   // Create a unique resources array to prevent duplicates
   const uniqueResources = resourcesWithStatus.filter((item, index, self) => 
@@ -210,7 +247,12 @@ const ResourceManager = ({
               </AlertTitle>
               {downloadsRemaining > 0
                 ? `Free accounts are limited to ${downloadLimit} downloads per day. Upgrade to Premium for unlimited downloads.`
-                : 'You have reached your daily download limit. Upgrade to Premium for unlimited downloads.'}
+                : (
+                  <>
+                    You have reached your daily download limit. Upgrade to Premium for unlimited downloads.
+                    <ResetHint />
+                  </>
+                )}
             </Alert>
           </Box>
         )}
