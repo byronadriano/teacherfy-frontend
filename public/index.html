@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Preconnect to API host for faster auth/first call -->
+  <link rel="preconnect" href="https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net" crossorigin>
+  <link rel="dns-prefetch" href="https://teacherfy-gma6hncme7cpghda.westus-01.azurewebsites.net">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
@@ -61,35 +64,4 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
   </body>
-</html>
-
-<!-- Add this to your public/index.html file in the <head> section -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-
-<!-- Also add this for iOS status bar styling -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-
-<!-- Complete example of what your head section should include: -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    
-    <!-- CRITICAL: This viewport meta tag is essential for mobile -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    
-    <!-- iOS-specific meta tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Teacherfy AI" />
-    
-    <!-- Your other meta tags -->
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="AI-powered lesson planning tool" />
-    
-    <title>Teacherfy AI</title>
-</head>
-<!-- rest of your HTML -->
 </html>

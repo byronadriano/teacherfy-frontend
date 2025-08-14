@@ -84,7 +84,30 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
       PaperProps={{
         sx: {
           borderRadius: '16px',
-          overflow: 'visible'
+          overflow: 'visible',
+          // Mobile safe area adjustments
+          '@media (max-width: 600px)': {
+            margin: '16px',
+            marginTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+            marginBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+            maxHeight: 'calc(100vh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+            width: 'calc(100vw - 32px)',
+            maxWidth: 'calc(100vw - 32px)'
+          },
+          // iOS-specific safe area handling
+          '@supports (-webkit-touch-callout: none)': {
+            '@media (max-width: 600px)': {
+              marginTop: 'calc(24px + env(safe-area-inset-top, 20px))',
+              marginBottom: 'calc(24px + env(safe-area-inset-bottom, 20px))'
+            }
+          }
+        }
+      }}
+      sx={{
+        // Ensure modal is above all mobile navigation bars
+        zIndex: 9999,
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(0, 0, 0, 0.6)'
         }
       }}
     >
@@ -112,14 +135,18 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
               justifyContent: 'center', 
               mb: 2 
             }}>
-              <School sx={{ fontSize: 48, color: '#6366f1' }} />
+              <School sx={{ 
+                fontSize: { xs: 56, sm: 48 }, // Larger on mobile for better visibility
+                color: '#6366f1' 
+              }} />
             </Box>
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 700,
                 color: '#1e293b',
-                mb: 1
+                mb: 1,
+                fontSize: { xs: '1.5rem', sm: '2rem' } // Responsive font size
               }}
             >
               Welcome to Teacherfy
@@ -127,7 +154,7 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
             <Typography
               sx={{
                 color: '#64748b',
-                fontSize: '1rem',
+                fontSize: { xs: '0.9rem', sm: '1rem' }, // Responsive description
                 maxWidth: '320px',
                 mx: 'auto',
                 lineHeight: 1.6

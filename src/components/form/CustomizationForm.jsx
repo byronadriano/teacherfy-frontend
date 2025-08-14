@@ -1,9 +1,10 @@
 // src/components/form/CustomizationForm.jsx
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress, Fade, Alert } from '@mui/material';
+import SleekProgress from '../loading/SleekProgress';
 import { useTheme } from '@mui/material/styles';
 import { Rocket, Sparkles, AlertCircle, Clock } from 'lucide-react';
-import ProgressIndicator from '../loading/ProgressIndicator';
+// Removed old ProgressIndicator to avoid duplicate progress UIs; SleekProgress is the single source of truth now.
 
 const LimitReachedPopup = ({ show, resetTime }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -347,69 +348,34 @@ const CustomizationForm = ({
       {/* Enhanced Progress Indicator */}
       {enhancedLoading?.isLoading && (
         <Box sx={{ p: 2, borderTop: '1px solid #E2E8F0' }}>
-          {/* Offer email + background option when threshold passed */}
-          {enhancedLoading.showBackgroundOption && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-              <TextField
-                size="small"
-                placeholder="Email to notify when ready (optional)"
-                value={enhancedLoading.userEmail || ''}
-                onChange={(e) => enhancedLoading.setUserEmail?.(e.target.value)}
-                sx={{ minWidth: 280, backgroundColor: 'background.paper' }}
-                inputProps={{ autoComplete: 'email' }}
-              />
-
-              <Button
-                size="small"
-                variant="contained"
-                onClick={async () => {
-                  setBgError('');
-                  setBgSuccess('');
-                  const email = (enhancedLoading.userEmail || '').trim();
-                  if (!email) {
-                    setBgError('Please enter an email address to continue in background.');
-                    return;
-                  }
-                  setBgLoading(true);
-                  try {
-                    await enhancedLoading.handleRunInBackground?.(email);
-                    setBgSuccess('Background job started. We will email you when it is ready.');
-                  } catch (err) {
-                    setBgError(err?.message || 'Failed to start background job.');
-                  } finally {
-                    setBgLoading(false);
-                  }
-                }}
-                sx={(theme) => ({
-                  textTransform: 'none',
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#FFFFFF',
-                  '&:hover': { backgroundColor: theme.palette.primary.light }
-                })}
-                disabled={bgLoading}
-              >
-                {bgLoading ? <CircularProgress size={16} color="inherit" /> : 'Continue in Background'}
-              </Button>
-
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={async () => {
-                  setBgError('');
-                  setBgSuccess('');
-                  try {
-                    await enhancedLoading.handleCancel?.();
-                    setBgSuccess('Operation cancelled.');
-                  } catch (err) {
-                    setBgError(err?.message || 'Failed to cancel operation.');
-                  }
-                }}
-                sx={{ textTransform: 'none' }}
-              >
-                Cancel
-              </Button>
-            </Box>
-          )}
+          <SleekProgress
+            isLoading={enhancedLoading.isLoading}
+            progress={enhancedLoading.progress}
+            stage={enhancedLoading.stage}
+            estimatedTime={enhancedLoading.loadingState?.estimatedTime}
+            elapsed={enhancedLoading.loadingState?.startTime ? Math.max(0, Math.floor((Date.now() - enhancedLoading.loadingState.startTime) / 1000)) : 0}
+            onRunInBackground={async () => {
+              const email = (enhancedLoading.userEmail || '').trim();
+              if (!email) return;
+              setBgError('');
+              setBgSuccess('');
+              setBgLoading(true);
+              try {
+                await enhancedLoading.handleRunInBackground?.(email);
+                setBgSuccess('Background job started. We will email you when it is ready.');
+              } catch (err) {
+                setBgError(err?.message || 'Failed to start background job.');
+              } finally {
+                setBgLoading(false);
+              }
+            }}
+            userEmail={enhancedLoading.userEmail}
+            setUserEmail={enhancedLoading.setUserEmail}
+            bgError={bgError}
+            bgLoading={bgLoading}
+            accentColor={theme.palette.primary.main}
+          />
+          {/* Legacy background handoff block removed; use SleekProgress Notify me collapse instead. */}
 
           {/* Feedback messages for background actions */}
           {bgError && (
@@ -424,36 +390,7 @@ const CustomizationForm = ({
             </Alert>
           )}
 
-          <ProgressIndicator
-            isLoading={enhancedLoading.isLoading}
-            progress={enhancedLoading.progress}
-            stage={enhancedLoading.stage}
-            estimatedTime={enhancedLoading.loadingState?.estimatedTime}
-            canCancel={enhancedLoading.loadingState?.canCancel}
-            canRunInBackground={enhancedLoading.loadingState?.canRunInBackground}
-            onCancel={() => {
-              enhancedLoading.handleCancel?.().catch(err => {
-                setBgError(err?.message || 'Failed to cancel operation');
-              });
-            }}
-            onRunInBackground={() => {
-              // If backend requires email, ensure user has entered one first
-              const email = enhancedLoading.userEmail?.trim();
-              if (!email) {
-                setBgError('Please enter an email address to continue in background.');
-                return;
-              }
-
-              setBgError('');
-              setBgSuccess('');
-              enhancedLoading.handleRunInBackground?.(email)
-                .then(() => setBgSuccess('Background job started. We will email you when it is ready.'))
-                .catch(err => setBgError(err?.message || 'Failed to start background job'));
-            }}
-            jobs={enhancedLoading.backgroundJobs}
-            compact={false}
-            accentColor={theme.palette.primary.main}
-          />
+          {/* Old ProgressIndicator removed; SleekProgress above is the single progress UI. */}
         </Box>
       )}
 

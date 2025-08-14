@@ -79,6 +79,16 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     }
   }, []);
 
+  // Idle prefetch near-future chunks for faster interactions
+  useEffect(() => {
+    const idle = (cb) => (window.requestIdleCallback ? window.requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 500));
+    idle(() => {
+      import(/* webpackPrefetch: true */ './components/OutlineDisplay');
+      import(/* webpackPrefetch: true */ './components/resources/ResourceManager');
+      import(/* webpackPrefetch: true */ '../../components/modals/ConfirmationModal');
+    });
+  }, []);
+
   const handleSettingsChange = (newSettings) => {
     setUserSettings(newSettings);
     sessionStorage.setItem('userSettings', JSON.stringify(newSettings));
@@ -214,9 +224,12 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   // Check if we should show the initial state (logo, title, form)
   const showInitialState = !uiState.outlineConfirmed || contentState.structuredContent.length === 0;
 
-  // Communicate footer visibility to parent (App.js)
+  // Communicate footer visibility to parent (App.js) via event
   useEffect(() => {
-    sessionStorage.setItem('hideFooter', (!showInitialState).toString());
+    const hideFooter = !showInitialState;
+    window.dispatchEvent(new CustomEvent('footer-visibility', { detail: { hideFooter } }));
+    // Keep sessionStorage as fallback for first paint
+    sessionStorage.setItem('hideFooter', hideFooter.toString());
   }, [showInitialState]);
 
   // Handle history item selection
@@ -514,7 +527,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           justifyContent: showInitialState ? 'center' : 'flex-start',
           minHeight: showInitialState ? '100%' : 'auto',
           width: '100%',
-          pt: showInitialState ? { xs: 2, sm: 0 } : { xs: 3, md: 4 }, // Add top padding on mobile for initial state
+          pt: showInitialState ? { xs: 4, sm: 2, md: 0 } : { xs: 3, md: 4 }, // Increased mobile top padding to prevent logo cutoff
           pb: showInitialState ? { xs: '60px', sm: '80px', md: '120px' } : '40px', // Responsive bottom padding
         }}>
           {/* Content wrapper - centers horizontally */}
@@ -527,30 +540,47 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
             mx: 'auto',
             px: { xs: 2, sm: 4, md: 6 },
           }}>
-            {/* Initial State: Logo + Title + Form */}
+            {/* Logo - Always visible but responsive to state */}
+            <Box sx={{ 
+              mb: showInitialState ? { xs: 3, sm: 3, md: 4 } : { xs: 2, sm: 2, md: 3 },
+              mt: showInitialState ? { xs: 2, sm: 1, md: 0 } : { xs: 1, sm: 0, md: 0 }, // Extra top margin on mobile to prevent cutoff
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: { xs: 1, sm: 0 }
+            }}>
+              <Box
+                component="img"
+                src={Logo}
+                alt="Teacherfy AI Logo"
+                sx={{
+                  // Larger sizes for better prominence and visibility
+                  width: showInitialState 
+                    ? { xs: '140px', sm: '160px', md: '180px' }
+                    : { xs: '80px', sm: '90px', md: '100px' },
+                  height: showInitialState 
+                    ? { xs: '140px', sm: '160px', md: '180px' }
+                    : { xs: '80px', sm: '90px', md: '100px' },
+                  // Remove border radius to eliminate white box appearance
+                  borderRadius: 0,
+                  objectFit: 'contain',
+                  maxWidth: '100%',
+                  // Remove all shadows and backgrounds for clean blend
+                  boxShadow: 'none',
+                  backgroundColor: 'transparent',
+                  transition: 'all 0.3s ease',
+                  // Subtle hover effect without shadows
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                    opacity: 0.9
+                  }
+                }}
+              />
+            </Box>
+
+            {/* Initial State: Title + Form */}
             {showInitialState && (
               <>
-                {/* Logo - Responsive for mobile */}
-                <Box sx={{ 
-                  mb: { xs: 1.5, sm: 2, md: 3 }, // Smaller margins on mobile
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Box
-                    component="img"
-                    src={Logo}
-                    alt="Teacherfy AI Logo"
-                    sx={{
-                      // Responsive sizing using sx instead of style
-                      width: { xs: '60px', sm: '80px', md: '120px' },
-                      height: { xs: '60px', sm: '80px', md: '120px' },
-                      borderRadius: { xs: '6px', sm: '8px', md: '12px' },
-                      objectFit: 'contain'
-                    }}
-                  />
-                </Box>
-
                 {/* Title */}
                 <Typography 
                   variant="h1" 

@@ -33,16 +33,16 @@ const useEnhancedLoading = (options = {}) => {
   // Stage progression mapping (stable via ref to avoid triggering hook deps)
   const stageProgressionsRef = useRef({
     outline_generation: [
-      { stage: 'analyzing', progress: 20, duration: 5000 },
-      { stage: 'generating_outline', progress: 60, duration: 15000 },
-      { stage: 'finalizing', progress: 90, duration: 3000 },
+      { stage: 'analyzing', progress: 15, duration: 4000 },
+      { stage: 'generating_outline', progress: 45, duration: 12000 },
+      { stage: 'finalizing', progress: 75, duration: 3000 },
       { stage: 'completed', progress: 100, duration: 1000 }
     ],
     resource_generation: [
       { stage: 'analyzing', progress: 10, duration: 3000 },
-      { stage: 'creating_content', progress: 40, duration: 20000 },
-      { stage: 'formatting_resources', progress: 80, duration: 15000 },
-      { stage: 'finalizing', progress: 95, duration: 5000 },
+      { stage: 'creating_content', progress: 35, duration: 18000 },
+      { stage: 'formatting_resources', progress: 65, duration: 12000 },
+      { stage: 'finalizing', progress: 85, duration: 4000 },
       { stage: 'completed', progress: 100, duration: 1000 }
     ]
   });
@@ -74,7 +74,7 @@ const useEnhancedLoading = (options = {}) => {
   }, []);
 
   // Start loading with enhanced progress tracking
-  const startLoading = useCallback((operationType = 'resource_generation', estimatedDuration = null) => {
+  const startLoading = useCallback((operationType = 'resource_generation', estimatedDuration = null, context = {}) => {
     const startTime = Date.now();
     
     setLoadingState({
@@ -94,7 +94,8 @@ const useEnhancedLoading = (options = {}) => {
     currentOperationRef.current = {
       type: operationType,
       startTime,
-      estimatedDuration
+      estimatedDuration,
+      context
     };
 
     // Start progress simulation if enabled
@@ -155,7 +156,8 @@ const useEnhancedLoading = (options = {}) => {
       // Move current operation to background
       const jobResult = await backgroundProcessor.startBackgroundJob({
         operation_type: currentOperationRef.current.type,
-        started_at: currentOperationRef.current.startTime
+        started_at: currentOperationRef.current.startTime,
+        ...currentOperationRef.current.context
       }, {
         email: emailToUse,
         enablePolling: true
@@ -164,10 +166,10 @@ const useEnhancedLoading = (options = {}) => {
       // Update current operation with job ID
       currentOperationRef.current.backgroundJobId = jobResult.jobId;
 
-      // Update loading state
+      // Update loading state but keep card visible by staying in loading=true with a 'background' stage
       setLoadingState(prev => ({
         ...prev,
-        isLoading: false,
+        isLoading: true,
         stage: 'background',
         canCancel: false,
         backgroundJobs: [...prev.backgroundJobs, {

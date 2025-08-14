@@ -312,8 +312,20 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
       generateOutlineClicked: true
     }));
 
-    // Start enhanced loading with progress tracking
-    enhancedLoading.startLoading('outline_generation', 25);
+    // Start enhanced loading with progress tracking and context
+    enhancedLoading.startLoading('outline_generation', 25, {
+      // supply minimal payload the background endpoint may require
+      resource_types: Array.isArray(formState.resourceType) ? formState.resourceType : [formState.resourceType || 'Presentation'],
+      structured_content: [],
+      form_state: {
+        gradeLevel: formState.gradeLevel,
+        subjectFocus: formState.subjectFocus,
+        language: formState.language,
+        lessonTopic: formState.lessonTopic || formState.subjectFocus || 'General Learning',
+        numSlides: formState.numSlides || 5,
+        includeImages: Boolean(formState.includeImages)
+      }
+    });
 
     try {
       if (uiState.isExample) {

@@ -17,7 +17,9 @@ class BackgroundProcessor {
     
     try {
       // Check if backend supports background processing
-      const backgroundEndpoint = `${config.apiUrl}/generate/background`;
+      const backgroundEndpoint = jobData?.operation_type === 'outline_generation'
+        ? `${config.apiUrl}/outline/background`
+        : `${config.apiUrl}/generate/background`;
       
       const response = await fetch(backgroundEndpoint, {
         method: 'POST',
@@ -42,7 +44,11 @@ class BackgroundProcessor {
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to start background job: ${response.status} ${response.statusText}`);
+        let details = '';
+        try {
+          details = await response.text();
+        } catch {}
+        throw new Error(`Failed to start background job: ${response.status} ${response.statusText}${details ? ` - ${details}` : ''}`);
       }
 
       const result = await response.json();

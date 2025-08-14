@@ -750,8 +750,8 @@ const Sidebar = ({
                         src={Logo}
                         alt="Teacherfy Logo"
                         style={{ 
-                            width: '32px',
-                            height: '32px',
+                            width: '36px', // Slightly larger for better mobile visibility
+                            height: '36px',
                             borderRadius: '8px',
                             objectFit: 'contain'
                         }}

@@ -2,29 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { Box, useMediaQuery, Typography } from '@mui/material';
+import { Box, useMediaQuery } from '@mui/material';
 import LessonBuilder from './pages/LessonBuilder';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import AuthCallback from './pages/AuthCallback';
 import AppFooter from './components/common/AppFooter';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 import theme from './styles/theme';
 
 // Import CSS files
 import './styles/app.css';
 import './styles/global.css';
 
-// Note: Mobile CSS is imported conditionally if it exists
-try {
-  require('./styles/mobile.css');
-} catch (e) {
-  console.log('Mobile CSS not found, skipping import');
+// Defer mobile-specific CSS to avoid blocking initial render
+if (typeof window !== 'undefined') {
+  import('./styles/mobile.css').catch(() => {
+    // optional file, ignore if missing
+  });
 }
 
 // Main App Content Component
 const AppContent = () => {
-  const { isLoading } = useAuth();
+  // Auth context available if needed; not blocking initial render
+  // const { isLoading, isAuthenticated, user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFooter, setShowFooter] = useState(true);
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -48,22 +48,18 @@ const AppContent = () => {
     }
   }, [isMobile]);
 
-  // Check footer visibility based on sessionStorage
+  // Event-driven footer visibility (avoids tight polling)
   useEffect(() => {
-    const checkFooterVisibility = () => {
-      const hideFooter = sessionStorage.getItem('hideFooter') === 'true';
+    const onFooterVisibility = (e) => {
+      const hideFooter = !!(e?.detail?.hideFooter);
       setShowFooter(!hideFooter);
     };
-    
-    // Initial check
-    checkFooterVisibility();
-    
-    // Check periodically since sessionStorage changes don't trigger storage event on same tab
-    const interval = setInterval(checkFooterVisibility, 100);
-    
-    return () => {
-      clearInterval(interval);
-    };
+    // Initial read (fallback)
+    const initialHide = sessionStorage.getItem('hideFooter') === 'true';
+    setShowFooter(!initialHide);
+
+    window.addEventListener('footer-visibility', onFooterVisibility);
+    return () => window.removeEventListener('footer-visibility', onFooterVisibility);
   }, []);
 
   const handleSidebarToggle = (collapsed) => {
@@ -71,19 +67,7 @@ const AppContent = () => {
     localStorage.setItem('sidebarCollapsed', collapsed.toString());
   };
 
-  // Show loading state while checking auth
-  if (isLoading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        <Typography>Loading...</Typography>
-      </Box>
-    );
-  }
+  // Do not block initial paint on auth; render shell immediately.
 
   // Users can use the site anonymously - show main app for everyone
   return (
@@ -149,13 +133,11 @@ const AppContent = () => {
 // Main App Component with AuthProvider
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <ThemeProvider theme={theme}>
-          <AppContent />
-        </ThemeProvider>
-      </Router>
-    </AuthProvider>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <AppContent />
+      </ThemeProvider>
+    </Router>
   );
 }
 

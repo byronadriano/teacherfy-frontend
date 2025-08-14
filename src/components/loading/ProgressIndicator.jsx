@@ -99,7 +99,7 @@ const ProgressIndicator = ({
         </Typography>
         {progress > 0 && (
           <Typography variant="body2" color="text.secondary">
-            {Math.round(progress)}%
+            {Math.min(99, Math.round(progress))}%
           </Typography>
         )}
       </Box>
@@ -149,12 +149,12 @@ const ProgressIndicator = ({
       </Box>
 
       <Collapse in={!minimized}>
-        {/* Progress Bar */}
+        {/* Progress Bar with playful accent */}
         {isLoading && (
           <Box sx={{ mb: 2 }}>
             <LinearProgress 
               variant={progress > 0 ? "determinate" : "indeterminate"}
-              value={progress}
+              value={Math.min(99, progress)}
               sx={{ 
                 height: 8, 
                 borderRadius: 4,
@@ -163,9 +163,13 @@ const ProgressIndicator = ({
             />
             {progress > 0 && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {Math.round(progress)}% complete
+                {Math.min(99, Math.round(progress))}% complete
               </Typography>
             )}
+            {/* Fun educational accent - rocket/book emoji */}
+            <Typography variant="caption" sx={{ color: borderColor }}>
+              {stage === 'generating_outline' || stage === 'creating_content' ? '🚀 Launching ideas' : stage === 'formatting_resources' ? '📚 Organizing your lesson' : stage === 'finalizing' ? '✨ Polishing' : ''}
+            </Typography>
           </Box>
         )}
 
