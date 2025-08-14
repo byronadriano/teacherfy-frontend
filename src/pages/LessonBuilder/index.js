@@ -645,6 +645,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                       isPremium={subscriptionState.isPremium}
                       downloadLimit={subscriptionState.isPremium ? 999999 : 5}
                       downloadsRemaining={subscriptionState.generationsLeft ?? 0}
+                      resetTime={subscriptionState.resetTime}
                     />
                   ) : (
                     <OutlineDisplay

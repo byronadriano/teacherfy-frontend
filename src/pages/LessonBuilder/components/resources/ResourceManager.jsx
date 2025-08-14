@@ -19,11 +19,13 @@ const ResourceManager = ({
   onGenerateResource,
   downloadLimit = 5,
   isPremium = false,
-  downloadsRemaining = 5
+  downloadsRemaining = 5,
+  resetTime
 }) => {
   const [resourcesWithStatus, setResourcesWithStatus] = useState([]);
   // Cooldown registry to dedupe rapid clicks per resource
   const [cooldowns, setCooldowns] = useState({});
+  const [resetCountdown, setResetCountdown] = useState('');
   
   // Determine all resource types (from form state and generated resources)
   useEffect(() => {
@@ -64,6 +66,35 @@ const ResourceManager = ({
     
     setResourcesWithStatus(statusObjects);
   }, [formState.resourceType, contentState.generatedResources, resourceStatus]);
+
+  // Live countdown until resetTime (if provided)
+  useEffect(() => {
+    if (!resetTime) {
+      setResetCountdown('');
+      return;
+    }
+    const target = new Date(resetTime).getTime();
+    if (isNaN(target)) {
+      setResetCountdown('');
+      return;
+    }
+    const tick = () => {
+      const now = Date.now();
+      const diff = Math.max(0, target - now);
+      if (diff <= 0) {
+        setResetCountdown('00:00:00');
+        return;
+      }
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      const pad = (n) => n.toString().padStart(2, '0');
+      setResetCountdown(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [resetTime]);
 
   // Handle generating a specific resource
   const handleGenerateResource = (resourceType) => {
@@ -194,7 +225,10 @@ const ResourceManager = ({
   
   const ResetHint = () => (
     <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mt: 0.5 }}>
-      You can try again when your daily limit resets. Upgrade for unlimited generations.
+      {resetCountdown
+        ? `Resets in ${resetCountdown}. `
+        : 'You can try again when your daily limit resets. '}
+      Upgrade for unlimited generations.
     </Typography>
   );
 
