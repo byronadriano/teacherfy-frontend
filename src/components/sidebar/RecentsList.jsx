@@ -317,26 +317,16 @@ const RecentsList = ({ onSelectItem }) => {
   };
 
   return (
-    <Box sx={{ mt: 2, px: 1 }}>
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        px: 1.5,
-        mb: 1
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#4b5563',
-            fontSize: '0.875rem',
-            fontWeight: '600'
-          }}
-        >
-          Recent Resources
-        </Typography>
-        
-        {historyItems.length > 0 && (
+    <Box sx={{ px: 1 }}>
+      {/* Clear button positioned at top right */}
+      {historyItems.length > 0 && (
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          px: 1.5,
+          py: 1
+        }}>
           <Button
             size="small"
             variant="text"
@@ -352,8 +342,8 @@ const RecentsList = ({ onSelectItem }) => {
           >
             {isClearingHistory ? 'Clearing...' : 'Clear'}
           </Button>
-        )}
-      </Box>
+        </Box>
+      )}
       
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

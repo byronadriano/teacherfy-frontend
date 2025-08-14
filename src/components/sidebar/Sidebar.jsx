@@ -14,7 +14,7 @@ import PricingModal from '../modals/PricingModal';
 import Logo from '../../assets/images/Teacherfyoai.png';
 import { useAuth } from '../../contexts/AuthContext';
 
-const SIDEBAR_WIDTH_COLLAPSED = 60;
+const SIDEBAR_WIDTH_COLLAPSED = 68; // Slightly wider for better icon visibility
 
 // Navigation items
 const NAV_ITEMS = [
@@ -31,11 +31,13 @@ const NavButton = ({ item, isActive, onClick, onMouseEnter, onMouseLeave }) => {
       onClick={() => onClick(item.action)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      aria-label={item.label}
+      title={item.label}
       sx={{
         width: '44px',
         height: '44px',
         minWidth: '44px',
-        minHeight: '48px',
+        minHeight: '44px',
         p: 0,
         borderRadius: '12px',
         backgroundColor: isActive ? '#f0f4f8' : 'transparent',
@@ -95,7 +97,6 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
       <Paper elevation={0} sx={{ p: 0 }}>
         <Box sx={{ 
           p: 2, 
-          borderBottom: '1px solid #e2e8f0',
           backgroundColor: '#f8fafc'
         }}>
           <Typography sx={{ 
@@ -251,21 +252,32 @@ const UserMenu = ({ user, onSettings, onLogout, isLoading }) => {
         onClick={handleClick}
         disabled={isLoading}
         sx={{
-          width: '44px',
-          height: '44px',
-          minWidth: '44px',
+          width: '48px',
+          height: '48px',
+          minWidth: '48px',
           minHeight: '48px',
           p: 0,
-          borderRadius: '12px',
+          borderRadius: '16px',
           backgroundColor: 'transparent',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           opacity: isLoading ? 0.7 : 1,
+          position: 'relative',
           '&:hover': {
-            backgroundColor: '#f8fafc'
+            backgroundColor: '#f8fafc',
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+          },
+          '&:active': {
+            transform: 'translateY(0) scale(0.95)',
           },
           '@media (max-width: 600px)': {
-            minHeight: '48px',
-            minWidth: '48px',
+            width: '52px',
+            height: '52px',
+            minHeight: '52px',
+            minWidth: '52px',
+            '&:hover': {
+              transform: 'none',
+            },
             '&:active': {
               transform: 'scale(0.95)',
               transition: 'transform 0.1s ease'
@@ -275,7 +287,7 @@ const UserMenu = ({ user, onSettings, onLogout, isLoading }) => {
       >
         {isLoading ? (
           <CircularProgress size={20} color="inherit" />
-        ) : user.picture ? (
+        ) : user ? (
           <Avatar 
             src={user.picture}
             alt={user.name}
@@ -285,20 +297,11 @@ const UserMenu = ({ user, onSettings, onLogout, isLoading }) => {
               fontSize: '0.875rem',
               fontWeight: 600
             }}
-          />
-        ) : (
-          <Avatar 
-            sx={{ 
-              width: 36, 
-              height: 36,
-              backgroundColor: '#2563eb',
-              color: 'white',
-              fontSize: '0.875rem',
-              fontWeight: 600
-            }}
           >
-            {getUserInitials(user.name)}
+            {!user.picture && getUserInitials(user.name)}
           </Avatar>
+        ) : (
+          <User size={20} color="#64748b" />
         )}
       </Button>
 
@@ -712,45 +715,56 @@ const Sidebar = ({
                     overflow: 'visible',
                     boxSizing: 'border-box',
                     
-                    // Simplified mobile padding
+                    // Enhanced mobile layout with safe area support
                     '@media (max-width: 600px)': {
                         height: '100vh',
-                        paddingTop: '16px',
-                        paddingBottom: '40px', // Much less bottom padding
-                        justifyContent: 'flex-start' // Change from space-between
+                        paddingTop: 'max(env(safe-area-inset-top, 0px), 24px)', // Ensure minimum 24px padding
+                        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)',
+                        justifyContent: 'flex-start'
+                    },
+                    
+                    // iOS-specific safe area adjustments
+                    '@supports (-webkit-touch-callout: none)': {
+                        '@media (max-width: 600px)': {
+                            paddingTop: 'max(env(safe-area-inset-top, 0px), 32px)', // More padding for iOS
+                            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 32px)'
+                        }
                     }
                 }}
             >
-                {/* Logo Section */}
+                {/* Clean Logo Section */}
                 <Box 
                     sx={{ 
-                        width: '40px',
-                        height: '40px',
+                        width: '44px',
+                        height: '44px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
                         borderRadius: '12px',
                         transition: 'all 0.3s ease',
-                        transform: isLogoHovered ? 'scale(1.1)' : 'scale(1)',
+                        transform: isLogoHovered ? 'scale(1.05)' : 'scale(1)',
                         backgroundColor: isLogoHovered ? '#f0f4f8' : 'transparent',
                         mb: 3,
                         position: 'relative',
                         '@media (max-width: 600px)': {
                             width: '48px',
                             height: '48px',
-                            mb: 2
+                            mb: 2.5
                         }
                     }}
                     onClick={handleLogoClick}
                     onMouseEnter={() => setIsLogoHovered(true)}
                     onMouseLeave={() => setIsLogoHovered(false)}
+                    role="button"
+                    aria-label="Teacherfy Home"
+                    tabIndex={0}
                 >
                     <img
                         src={Logo}
-                        alt="Teacherfy Logo"
+                        alt="Teacherfy AI"
                         style={{ 
-                            width: '36px', // Slightly larger for better mobile visibility
+                            width: '36px',
                             height: '36px',
                             borderRadius: '8px',
                             objectFit: 'contain'
@@ -758,7 +772,7 @@ const Sidebar = ({
                     />
                     {isLogoHovered && (
                         <Stars 
-                            size={16} 
+                            size={14} 
                             color="#2563eb" 
                             style={{
                                 position: 'absolute',

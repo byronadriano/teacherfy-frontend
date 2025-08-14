@@ -1,4 +1,17 @@
-/* Updated global.css with mobile fixes - NO EMPTY RULES */
+/* Updated global.css with clean sidebar animations */
+
+/* Clean animations for sidebar */
+@keyframes twinkle {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+/* Focus indicators for accessibility */
+.sidebar button:focus-visible {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px;
+}
 
 /* Base reset and defaults */
 html {
