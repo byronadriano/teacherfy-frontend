@@ -5,7 +5,7 @@ import { API } from '../utils/constants/api';
 let historyCache = {
   data: null,
   timestamp: 0,
-  expiresIn: 30000 // 30 seconds
+  expiresIn: 5000 // 5 seconds - shorter for development debugging
 };
 
 export const historyService = {
@@ -112,14 +112,31 @@ export const historyService = {
           subjectFocus: data.subjectFocus,
           gradeLevel: data.gradeLevel,
           language: data.language,
-          numSections: data.numSections,
+          numSections: data.numSections || data.numSlides,
           resourceType: data.resourceType,
+          generatedTitle: data.title || data.generatedTitle,
           // Include structured content length for section count display
-          sectionsCount: data.structuredContent?.length || data.structured_content?.length || 0
+          sectionsCount: data.structuredContent?.length || data.structured_content?.length || 0,
+          // Include the full form data for restoration
+          includeImages: data.includeImages,
+          customPrompt: data.customPrompt,
+          selectedStandards: data.selectedStandards,
+          finalOutline: data.finalOutline,
+          structuredContent: data.structuredContent,
+          generatedResources: data.generatedResources
         },
         // Include a preview of the content for better identification
         preview: this.generateContentPreview(data)
       };
+
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Saving history item:', {
+          title: historyItem.title,
+          types: historyItem.types,
+          lessonData: historyItem.lessonData
+        });
+      }
       
       // Save to local storage as backup
       this.saveLocalHistory(historyItem);
@@ -151,10 +168,13 @@ export const historyService = {
       // Ensure local storage backup
       this.saveLocalHistory({
         id: Date.now(),
-        title: data.title,
-        types: [data.resourceType],
+        title: data.title || data.lessonTopic || 'Untitled Lesson',
+        types: Array.isArray(data.resourceType) ? data.resourceType : [data.resourceType || 'Presentation'],
         date: 'Today',
-        lessonData: data.lessonData
+        lessonData: {
+          ...data,
+          sectionsCount: data.structuredContent?.length || data.structured_content?.length || 0
+        }
       });
       
       return { success: false, error: error.message };
@@ -215,31 +235,39 @@ export const historyService = {
       
       // Save each resource type separately
       const historyPromises = resourceTypes.map(async (resourceType) => {
-        const historyItem = {
+        // Create the data structure that saveHistoryItem expects
+        const historyItemData = {
           title: lessonTitle,
+          lessonTopic: formState.lessonTopic || lessonTitle,
           resourceType: resourceType,
-          lessonData: {
-            ...formState,
-            generatedTitle: contentState.title,
-            resourceType: resourceType,
-            structuredContent: contentState.structuredContent?.map(slide => ({
-              title: slide.title || '',
-              layout: slide.layout || 'TITLE_AND_CONTENT',
-              content: Array.isArray(slide.content) ? [...slide.content] : [],
-              teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
-              visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
-              left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
-              right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-            })) || [],
-            finalOutline: contentState.finalOutline || '',
-            generatedResources: contentState.generatedResources || {}
-          }
+          subjectFocus: formState.subjectFocus,
+          gradeLevel: formState.gradeLevel,
+          language: formState.language,
+          numSections: formState.numSlides || formState.numSections,
+          includeImages: formState.includeImages,
+          customPrompt: formState.customPrompt,
+          selectedStandards: formState.selectedStandards,
+          // Include structured content for preview generation
+          structuredContent: contentState.structuredContent || [],
+          structured_content: contentState.structuredContent || [], // alternate format
+          finalOutline: contentState.finalOutline || '',
+          generatedResources: contentState.generatedResources || {},
+          generatedTitle: contentState.title
         };
         
-        return await this.saveHistoryItem(historyItem);
+        return await this.saveHistoryItem(historyItemData);
       });
       
       const results = await Promise.allSettled(historyPromises);
+      
+      // Force invalidate cache after all saves
+      this.invalidateCache();
+      
+      // Dispatch custom event to notify components to refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('historyUpdated'));
+      }
+      
       return { success: true, results };
     } catch (error) {
       console.error('Error tracking lesson generation:', error);
@@ -268,6 +296,15 @@ export const historyService = {
         historyItem.id = Date.now();
       }
       
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Saving local history item:', {
+          original: historyItem,
+          title: historyItem.title,
+          lessonData: historyItem.lessonData
+        });
+      }
+      
       // Ensure good title
       if (!historyItem.title || historyItem.title === 'Untitled Lesson') {
         if (historyItem.lessonData) {
@@ -293,6 +330,10 @@ export const historyService = {
       // Limit to 10 items
       if (history.length > 10) {
         history = history.slice(0, 10);
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Updated local history:', history);
       }
       
       localStorage.setItem('anonymous_history', JSON.stringify(history));

@@ -82,12 +82,24 @@ const getResourceTypeInfo = (resourceType) => {
 };
 
 const RecentItem = ({ item, onClick }) => {
+  // Debug logging to see what data we're getting
+  if (process.env.NODE_ENV === 'development') {
+    console.log('RecentItem data:', {
+      item,
+      title: item.title,
+      lessonData: item.lessonData,
+      lessonTopic: item.lessonData?.lessonTopic,
+      subjectFocus: item.lessonData?.subjectFocus,
+      gradeLevel: item.lessonData?.gradeLevel
+    });
+  }
+
   const lessonData = item.lessonData || {};
-  const title = item.title || lessonData.lessonTopic || 'Untitled Lesson';
+  const title = item.title || lessonData.generatedTitle || lessonData.lessonTopic || 'Untitled Lesson';
   const subject = lessonData.subjectFocus || '';
   const gradeLevel = lessonData.gradeLevel || '';
   const language = lessonData.language || '';
-  const numSections = lessonData.numSections || item.sections?.length || 0;
+  const numSections = lessonData.numSections || lessonData.numSlides || lessonData.sectionsCount || item.sections?.length || 0;
   
   // Handle both string and array formats for types
   let types;
@@ -224,6 +236,18 @@ const RecentsList = ({ onSelectItem }) => {
       }
       
       if (response.history && Array.isArray(response.history)) {
+        // Debug logging to see what history items we're getting
+        if (process.env.NODE_ENV === 'development') {
+          console.log('History items received:', response.history);
+          response.history.forEach((item, index) => {
+            console.log(`History item ${index}:`, {
+              title: item.title,
+              lessonData: item.lessonData,
+              types: item.types,
+              preview: item.preview
+            });
+          });
+        }
         setHistoryItems(response.history);
       } else if (!isAuthenticated) {
         const localHistory = historyService.getLocalHistory();
@@ -255,8 +279,17 @@ const RecentsList = ({ onSelectItem }) => {
       fetchHistory();
     }
     
+    // Listen for history updates
+    const handleHistoryUpdate = () => {
+      hasInitiallyFetched.current = false;
+      fetchHistory();
+    };
+    
+    window.addEventListener('historyUpdated', handleHistoryUpdate);
+    
     return () => {
       isMounted.current = false;
+      window.removeEventListener('historyUpdated', handleHistoryUpdate);
     };
   }, [isAuthenticated, fetchHistory, loading]);
 
