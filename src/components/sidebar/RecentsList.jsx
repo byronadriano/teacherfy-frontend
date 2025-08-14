@@ -83,8 +83,11 @@ const getResourceTypeInfo = (resourceType) => {
 
 const RecentItem = ({ item, onClick }) => {
   const lessonData = item.lessonData || {};
-  const title = item.title || 'Untitled Lesson';
+  const title = item.title || lessonData.lessonTopic || 'Untitled Lesson';
   const subject = lessonData.subjectFocus || '';
+  const gradeLevel = lessonData.gradeLevel || '';
+  const language = lessonData.language || '';
+  const numSections = lessonData.numSections || item.sections?.length || 0;
   
   // Handle both string and array formats for types
   let types;
@@ -104,6 +107,18 @@ const RecentItem = ({ item, onClick }) => {
   const primaryType = types[0] || 'Presentation';
   const resourceType = getResourceTypeInfo(primaryType);
   const Icon = resourceType.icon;
+
+  // Generate a more descriptive subtitle with lesson details
+  const getSubtitle = () => {
+    const parts = [];
+    if (gradeLevel) parts.push(gradeLevel);
+    if (subject) parts.push(subject);
+    if (numSections > 0) parts.push(`${numSections} sections`);
+    if (language && language !== 'English') parts.push(language);
+    return parts.join(' • ');
+  };
+
+  const subtitle = getSubtitle();
 
   return (
     <Box
@@ -127,18 +142,20 @@ const RecentItem = ({ item, onClick }) => {
           fontSize: '0.8rem',
           color: '#374151',
           fontWeight: '600',
-          mb: 0.5
+          mb: 0.3,
+          lineHeight: 1.2
         }}>
           {title}
         </Typography>
         
-        {subject && (
+        {subtitle && (
           <Typography sx={{ 
             fontSize: '0.7rem',
             color: '#6b7280',
-            mb: 0.5
+            mb: 0.5,
+            lineHeight: 1.2
           }}>
-            {subject}
+            {subtitle}
           </Typography>
         )}
         
@@ -146,7 +163,8 @@ const RecentItem = ({ item, onClick }) => {
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          mt: 0.5
+          mt: 0.5,
+          flexWrap: 'wrap'
         }}>
           {types.map((type, index) => {
             const typeInfo = getResourceTypeInfo(type);
@@ -177,7 +195,6 @@ const RecentItem = ({ item, onClick }) => {
     </Box>
   );
 };
-
 const RecentsList = ({ onSelectItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -16,7 +16,10 @@ class BackgroundProcessor {
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
-      const response = await fetch(`${config.apiUrl}/generate/background`, {
+      // Check if backend supports background processing
+      const backgroundEndpoint = `${config.apiUrl}/generate/background`;
+      
+      const response = await fetch(backgroundEndpoint, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -27,24 +30,32 @@ class BackgroundProcessor {
           job_id: jobId,
           notification_email: options.email,
           estimated_duration: this.estimateDuration(jobData),
-          client_callback_url: options.callbackUrl
+          client_callback_url: options.callbackUrl,
+          background_mode: true
         })
       });
 
+      if (response.status === 404) {
+        // Background endpoint not available, fall back to regular processing
+        console.warn('Background processing endpoint not available, falling back to regular processing');
+        throw new Error('FALLBACK_TO_REGULAR');
+      }
+
       if (!response.ok) {
-        throw new Error(`Failed to start background job: ${response.status}`);
+        throw new Error(`Failed to start background job: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
       
       const job = {
         id: jobId,
-        status: 'queued',
-        progress: 0,
+        status: result.status || 'queued',
+        progress: result.progress || 0,
         startTime: Date.now(),
         estimatedDuration: this.estimateDuration(jobData),
         resourceTypes: jobData.resource_types || ['Presentation'],
         email: options.email,
+        message: result.message || 'Job queued successfully',
         ...result
       };
 
@@ -58,10 +69,49 @@ class BackgroundProcessor {
       return {
         jobId,
         estimatedDuration: job.estimatedDuration,
-        canRunInBackground: true
+        canRunInBackground: true,
+        status: job.status,
+        message: job.message
       };
     } catch (error) {
       console.error('Error starting background job:', error);
+      
+      if (error.message === 'FALLBACK_TO_REGULAR') {
+        // Return indication that background processing is not available
+        return {
+          canRunInBackground: false,
+          fallbackReason: 'Background processing not supported by server',
+          shouldUseFallback: true
+        };
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Fallback to regular generation when background processing is unavailable
+   */
+  async fallbackToRegularGeneration(jobData, options = {}) {
+    try {
+      console.log('Using fallback regular generation method');
+      
+      // Use the regular presentation service for generation
+      const result = await presentationService.generateMultiResource(
+        jobData,
+        { structuredContent: jobData.structured_content },
+        jobData.resource_types || ['Presentation']
+      );
+      
+      return {
+        canRunInBackground: false,
+        result,
+        completed: true,
+        fallbackUsed: true,
+        message: 'Generated using standard processing (background mode not available)'
+      };
+    } catch (error) {
+      console.error('Fallback generation failed:', error);
       throw error;
     }
   }

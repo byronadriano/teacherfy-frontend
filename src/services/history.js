@@ -56,6 +56,38 @@ export const historyService = {
   },
 
   /**
+   * Generate a content preview for better identification
+   */
+  generateContentPreview(data) {
+    const structuredContent = data.structuredContent || data.structured_content || [];
+    
+    if (structuredContent.length > 0) {
+      const firstSection = structuredContent[0];
+      const sectionTitle = firstSection.title || 'Introduction';
+      const hasQuestions = firstSection.structured_questions?.length > 0;
+      const hasExercises = firstSection.exercises?.length > 0 || firstSection.structured_activities?.length > 0;
+      
+      const contentTypes = [];
+      if (hasQuestions) contentTypes.push('questions');
+      if (hasExercises) contentTypes.push('exercises');
+      
+      return {
+        firstSectionTitle: sectionTitle,
+        totalSections: structuredContent.length,
+        contentTypes,
+        summary: `${structuredContent.length} sections starting with "${sectionTitle}"${contentTypes.length > 0 ? ` (includes ${contentTypes.join(', ')})` : ''}`
+      };
+    }
+    
+    return {
+      firstSectionTitle: 'Content',
+      totalSections: 0,
+      contentTypes: [],
+      summary: 'No structured content available'
+    };
+  },
+
+  /**
    * Invalidates the history cache
    */
   invalidateCache() {
@@ -64,18 +96,33 @@ export const historyService = {
   },
 
   /**
-   * Saves a history item to the server
+   * Saves a history item to the server with enhanced details
    */
   async saveHistoryItem(data) {
     try {
-      // Save to local storage as backup
-      this.saveLocalHistory({
+      // Create enhanced history item with more details
+      const historyItem = {
         id: Date.now(),
-        title: data.title,
-        types: [data.resourceType],
-        date: 'Today',
-        lessonData: data.lessonData
-      });
+        title: data.title || data.lessonTopic || 'Untitled Resource',
+        types: Array.isArray(data.resourceType) ? data.resourceType : [data.resourceType || 'Presentation'],
+        date: new Date().toLocaleDateString(),
+        timestamp: Date.now(),
+        lessonData: {
+          lessonTopic: data.lessonTopic,
+          subjectFocus: data.subjectFocus,
+          gradeLevel: data.gradeLevel,
+          language: data.language,
+          numSections: data.numSections,
+          resourceType: data.resourceType,
+          // Include structured content length for section count display
+          sectionsCount: data.structuredContent?.length || data.structured_content?.length || 0
+        },
+        // Include a preview of the content for better identification
+        preview: this.generateContentPreview(data)
+      };
+      
+      // Save to local storage as backup
+      this.saveLocalHistory(historyItem);
       
       // Try to save to server
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`, {
@@ -85,7 +132,7 @@ export const historyService = {
           ...API.HEADERS,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(historyItem)
       });
       
       if (!response.ok) {
