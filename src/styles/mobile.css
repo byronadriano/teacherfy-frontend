@@ -1,4 +1,6 @@
-/* Updated mobile.css with comprehen  /* Logo sizing optimization for mobile */
+/* Updated mobile.css with comprehensive iPhone fixes and logo optimization */
+
+/* Logo sizing optimization for mobile */
   .sidebar > div:first-child img {
     width: 42px !important;
     height: 42px !important;
@@ -7,7 +9,7 @@
   .sidebar > div:first-child {
     margin-top: 8px !important;
     margin-bottom: 12px !important;
-  } iPhone fixes and logo optimization */
+  }
 
 /* Base mobile device detection and setup */
 .is-mobile-device {
