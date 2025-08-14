@@ -16,10 +16,17 @@ class BackgroundProcessor {
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
-      // Check if backend supports background processing
-      const backgroundEndpoint = jobData?.operation_type === 'outline_generation'
-        ? `${config.apiUrl}/outline/background`
-        : `${config.apiUrl}/generate/background`;
+      // Use the new background generation endpoint
+      const backgroundEndpoint = `${config.apiUrl}/generate/background`;
+      
+      console.log('🔄 Starting background job:', {
+        jobId,
+        operation_type: jobData.operation_type,
+        resource_types: jobData.resource_types,
+        email: options.email,
+        include_images: Boolean(jobData.form_state?.includeImages || jobData.include_images),
+        form_state: jobData.form_state
+      });
       
       const response = await fetch(backgroundEndpoint, {
         method: 'POST',
@@ -28,11 +35,21 @@ class BackgroundProcessor {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...jobData,
           job_id: jobId,
+          operation_type: jobData.operation_type || 'resource_generation',
           notification_email: options.email,
+          resource_types: jobData.resource_types || ['Presentation'],
+          structured_content: jobData.structured_content || [],
+          // Include form data from the context
+          grade_level: jobData.form_state?.gradeLevel || jobData.grade_level || '',
+          subject: jobData.form_state?.subjectFocus || jobData.subject || '',
+          topic: jobData.form_state?.lessonTopic || jobData.topic || '',
+          language: jobData.form_state?.language || jobData.language || 'English',
+          custom_prompt: jobData.form_state?.customPrompt || jobData.custom_prompt || '',
+          num_slides: parseInt(jobData.form_state?.numSlides || jobData.num_slides || 5, 10),
+          include_images: Boolean(jobData.form_state?.includeImages || jobData.include_images),
+          selected_standards: jobData.form_state?.selectedStandards || jobData.selected_standards || [],
           estimated_duration: this.estimateDuration(jobData),
-          client_callback_url: options.callbackUrl,
           background_mode: true
         })
       });
@@ -100,7 +117,9 @@ class BackgroundProcessor {
    */
   async fallbackToRegularGeneration(jobData, options = {}) {
     try {
-      console.log('Using fallback regular generation method');
+      console.log('Using fallback regular generation method', {
+        hasOptions: Object.keys(options).length > 0
+      });
       
       // Use the regular presentation service for generation
       const result = await presentationService.generateMultiResource(

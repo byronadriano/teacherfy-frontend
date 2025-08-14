@@ -72,7 +72,7 @@ function convertContentForResource(mappedItem, normalizedResourceType) {
   if (normalizedResourceType === 'quiz') {
     if (!mappedItem.structured_questions || mappedItem.structured_questions.length === 0) {
       if (Array.isArray(mappedItem.content) && mappedItem.content.length > 0) {
-        mappedItem.structured_questions = mappedItem.content.map((c, idx) => ({
+        mappedItem.structured_questions = mappedItem.content.map((c) => ({
           question: typeof c === 'string' ? c : String(c),
           type: 'short_answer',
           options: [],
@@ -89,7 +89,7 @@ function convertContentForResource(mappedItem, normalizedResourceType) {
   if (normalizedResourceType === 'worksheet') {
     if ((!mappedItem.exercises || mappedItem.exercises.length === 0) && (!mappedItem.structured_activities || mappedItem.structured_activities.length === 0)) {
       if (Array.isArray(mappedItem.content) && mappedItem.content.length > 0) {
-        mappedItem.exercises = mappedItem.content.map((c, idx) => ({
+        mappedItem.exercises = mappedItem.content.map((c) => ({
           prompt: typeof c === 'string' ? c : String(c),
           answer: null,
           hints: []
@@ -418,8 +418,13 @@ export const presentationService = {
   async generateGoogleSlides(formState, contentState, token) {
     // Google Slides generation implementation
     if (process.env.NODE_ENV === 'development') {
-      console.log("Google Slides generation requested");
+      console.log("Google Slides generation requested", {
+        formState: formState?.lessonTopic,
+        contentItems: contentState?.structuredContent?.length,
+        hasToken: !!token
+      });
     }
-    // Implementation here
+    // TODO: Implementation here
+    throw new Error('Google Slides generation not yet implemented');
   }
 };

@@ -108,7 +108,8 @@ export default function SleekProgress({
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {!isBackground && (
+          {/* TEMPORARILY DISABLED: Notify me functionality needs backend work */}
+          {false && !isBackground && (
             <Button
               size="small"
               variant="outlined"
@@ -153,8 +154,8 @@ export default function SleekProgress({
         )}
       </Typography>
 
-      {/* Background notify entry (only when not yet backgrounded) */}
-      {!isBackground && (
+      {/* Background notify entry (only when not yet backgrounded) - TEMPORARILY DISABLED */}
+      {false && !isBackground && (
         <Collapse in={notifyOpen}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2, flexWrap: 'wrap' }}>
             <TextField
