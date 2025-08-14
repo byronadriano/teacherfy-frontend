@@ -42,10 +42,10 @@
     touch-action: manipulation;
   }
   
-  /* BASELINE: Position bottom buttons */
+  /* BASELINE: Position bottom buttons with increased clearance */
   .sidebar > *:last-child {
     position: absolute !important;
-    bottom: 20px !important;
+    bottom: 40px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     margin-bottom: 0 !important;
@@ -53,7 +53,7 @@
   
   .sidebar > *:nth-last-child(2) {
     position: absolute !important;
-    bottom: 80px !important;
+    bottom: 100px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     margin-bottom: 0 !important;
@@ -83,16 +83,27 @@
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
   }
   
-  /* iOS mobile button positioning - OVERRIDE FOR SAFE AREA */
+  /* iOS mobile button positioning - OVERRIDE FOR SAFE AREA with increased clearance */
   @media (max-width: 600px) {
     .sidebar > *:last-child {
-      bottom: calc(30px + env(safe-area-inset-bottom, 20px)) !important;
+      bottom: calc(50px + env(safe-area-inset-bottom, 30px)) !important;
       z-index: 1001 !important;
     }
     
     .sidebar > *:nth-last-child(2) {
-      bottom: calc(90px + env(safe-area-inset-bottom, 20px)) !important;
+      bottom: calc(110px + env(safe-area-inset-bottom, 30px)) !important;
       z-index: 1001 !important;
+    }
+    
+    /* Additional clearance for newer iPhones with larger screens */
+    @media (min-height: 800px) {
+      .sidebar > *:last-child {
+        bottom: calc(70px + env(safe-area-inset-bottom, 40px)) !important;
+      }
+      
+      .sidebar > *:nth-last-child(2) {
+        bottom: calc(130px + env(safe-area-inset-bottom, 40px)) !important;
+      }
     }
     
     /* Ensure all sidebar buttons are above iOS UI */
@@ -101,14 +112,14 @@
     }
   }
   
-  /* iOS landscape adjustments */
+  /* iOS landscape adjustments with increased clearance */
   @media (max-width: 900px) and (orientation: landscape) {
     .sidebar > *:last-child {
-      bottom: calc(15px + env(safe-area-inset-bottom, 10px)) !important;
+      bottom: calc(25px + env(safe-area-inset-bottom, 20px)) !important;
     }
     
     .sidebar > *:nth-last-child(2) {
-      bottom: calc(70px + env(safe-area-inset-bottom, 10px)) !important;
+      bottom: calc(85px + env(safe-area-inset-bottom, 20px)) !important;
     }
   }
   

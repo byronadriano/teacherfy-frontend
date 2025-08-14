@@ -814,13 +814,21 @@ const Sidebar = ({
                     left: '50%',
                     transform: 'translateX(-50%)',
                     '@media (max-width: 600px)': {
-                        bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+                        bottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
                         gap: 1.5
                     },
-                    // iOS-specific safe area support
+                    // Additional safety for newer iPhones with larger home indicators
+                    '@media (max-width: 600px) and (min-height: 800px)': {
+                        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))'
+                    },
+                    // iOS-specific safe area support - increased clearance for home indicator
                     '@supports (-webkit-touch-callout: none)': {
                         '@media (max-width: 600px)': {
-                            bottom: 'calc(30px + env(safe-area-inset-bottom, 20px))',
+                            bottom: 'calc(50px + env(safe-area-inset-bottom, 30px))',
+                            zIndex: 1001
+                        },
+                        '@media (max-width: 600px) and (min-height: 800px)': {
+                            bottom: 'calc(70px + env(safe-area-inset-bottom, 40px))',
                             zIndex: 1001
                         }
                     }
