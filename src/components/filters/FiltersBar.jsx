@@ -11,12 +11,14 @@ const MenuOption = ({
     hasSubmenu = false,
     onClick,
     onMouseEnter,
+    onMouseLeave,
     disabled = false,
     style = {}
 }) => (
     <Box
         onClick={disabled ? undefined : onClick}
         onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         sx={{
             display: 'flex',
             alignItems: 'center',
@@ -131,19 +133,18 @@ const PresentationOptions = ({
         anchorEl={anchorEl}
         onClose={onClose}
         anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right'
+            vertical: 'bottom',
+            horizontal: 'center'
         }}
         transformOrigin={{
             vertical: 'top',
-            horizontal: 'left'
+            horizontal: 'center'
         }}
         PaperProps={{
             sx: {
-                mt: 0,
-                ml: -0.5,
+                mt: 0.5,
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
-                border: '1px solidrgb(240, 226, 239)',
+                border: '1px solid rgb(240, 226, 239)',
                 borderRadius: '8px',
                 minWidth: '200px'
             }
@@ -212,11 +213,8 @@ const FiltersBar = ({ formState, handleFormChange }) => {
     };
 
     const handleOptionHover = (event, option) => {
-        // Show submenu on hover for any option that has a submenu
-        if (option.hasSubmenu && option.type === 'presentation') {
-            setSubmenuAnchorEl(event.currentTarget);
-            setActiveSubmenu(option.type);
-        }
+        // Removed hover behavior completely to prevent blocking other options
+        // Users must click on Presentation to access slide count options
     };
 
     const handleClose = () => {
@@ -228,14 +226,23 @@ const FiltersBar = ({ formState, handleFormChange }) => {
 
     const handleOptionSelect = (option, event, field = activeFilter) => {
         if (field === 'resourceType') {
-            // Toggle the option in the array
+            // Toggle the option in the array (normal behavior for all resource types)
             handleFormChange(field, option, true);
             
-            // Show submenu immediately when clicking on Presentation
+            // For Presentation, show submenu immediately after selection
             if (option === 'Presentation') {
-                // Use the event target for positioning
-                setSubmenuAnchorEl(event.currentTarget);
-                setActiveSubmenu('presentation');
+                // Check if it was just selected (will be in the array after toggle)
+                const willBeSelected = Array.isArray(formState.resourceType) 
+                    ? !formState.resourceType.includes('Presentation')
+                    : formState.resourceType !== 'Presentation';
+                
+                if (willBeSelected) {
+                    // Use setTimeout to ensure state update completes first
+                    setTimeout(() => {
+                        setSubmenuAnchorEl(event.currentTarget);
+                        setActiveSubmenu('presentation');
+                    }, 0);
+                }
             }
         } else {
             handleFormChange(field, option);
@@ -319,7 +326,15 @@ return (
                 {formState.resourceType.map(type => (
                     <Chip
                         key={type}
-                        label={type}
+                        label={type === 'Presentation' && formState.numSlides 
+                            ? `${type} (${formState.numSlides} slide${formState.numSlides === 1 ? '' : 's'})`
+                            : type
+                        }
+                        onClick={type === 'Presentation' ? (e) => {
+                            // Open presentation settings when clicking on the chip
+                            setSubmenuAnchorEl(e.currentTarget);
+                            setActiveSubmenu('presentation');
+                        } : undefined}
                         onDelete={() => {
                             const newTypes = formState.resourceType.filter(t => t !== type);
                             handleFormChange('resourceType', newTypes.length ? newTypes : '');
@@ -330,6 +345,7 @@ return (
                             color: '#7c3aed', // Purple text
                             fontWeight: '500',
                             border: '1px solid rgba(147, 51, 234, 0.2)',
+                            cursor: type === 'Presentation' ? 'pointer' : 'default',
                             '& .MuiChip-deleteIcon': {
                                 color: '#7c3aed',
                                 '&:hover': {

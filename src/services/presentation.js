@@ -1,5 +1,6 @@
 // src/services/presentation.js - CLEANED VERSION
 import { config } from '../utils/config';
+import { validateQuizWorksheetFlow } from '../utils/validationHelper';
 
 /**
  * Normalize resource type to match backend expectations
@@ -63,6 +64,42 @@ function getFileExtension(contentType, resourceType) {
   
   // Fallback based on resource type
   return resourceType === 'Presentation' ? '.pptx' : '.docx';
+}
+
+// Convert simple content arrays into resource-specific structured fields
+function convertContentForResource(mappedItem, normalizedResourceType) {
+  // If it's a quiz and structured_questions is missing, convert content strings into question objects
+  if (normalizedResourceType === 'quiz') {
+    if (!mappedItem.structured_questions || mappedItem.structured_questions.length === 0) {
+      if (Array.isArray(mappedItem.content) && mappedItem.content.length > 0) {
+        mappedItem.structured_questions = mappedItem.content.map((c, idx) => ({
+          question: typeof c === 'string' ? c : String(c),
+          type: 'short_answer',
+          options: [],
+          answer: null,
+          explanation: ''
+        }));
+        // remove generic content to avoid duplication
+        delete mappedItem.content;
+      }
+    }
+  }
+
+  // If it's a worksheet and exercises/structured_activities missing, convert content strings into exercises
+  if (normalizedResourceType === 'worksheet') {
+    if ((!mappedItem.exercises || mappedItem.exercises.length === 0) && (!mappedItem.structured_activities || mappedItem.structured_activities.length === 0)) {
+      if (Array.isArray(mappedItem.content) && mappedItem.content.length > 0) {
+        mappedItem.exercises = mappedItem.content.map((c, idx) => ({
+          prompt: typeof c === 'string' ? c : String(c),
+          answer: null,
+          hints: []
+        }));
+        delete mappedItem.content;
+      }
+    }
+  }
+
+  return mappedItem;
 }
 
 export const presentationService = {
@@ -145,24 +182,28 @@ export const presentationService = {
                   mappedItem[key] = item[key];
                 }
               });
-              
-              return mappedItem;
+
+              // Convert generic content into resource-specific fields if necessary
+              return convertContentForResource(mappedItem, normalizedResourceType);
             })
           };
           
-          console.log(`📤 Download request for ${resourceType} (${normalizedResourceType}):`, {
-            resourceType,
-            normalizedResourceType,
-            contentItems: requestData.structured_content.length,
-            firstItemSample: requestData.structured_content[0],
-            contentTypes: {
-              hasQuizQuestions: requestData.structured_content.some(item => item.structured_questions),
-              hasWorksheetActivities: requestData.structured_content.some(item => item.structured_activities || item.exercises),
-              hasLessonObjectives: requestData.structured_content.some(item => item.objectives || item.procedures),
-              hasStandardContent: requestData.structured_content.some(item => item.content)
-            },
-            requestDataPreview: requestData
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`📤 Download request for ${resourceType} (${normalizedResourceType}):`, {
+              resourceType,
+              normalizedResourceType,
+              contentItems: contentState.structuredContent?.length || 0,
+              firstItemSample: contentState.structuredContent?.[0] || null,
+              contentTypes: Object.keys(requestData.structured_content?.[0] || {})
+            });
+          }          // 🔍 CRITICAL VALIDATION - Verify data integrity before sending
+          const validation = validateQuizWorksheetFlow.validateGeneratePayload(requestData, normalizedResourceType);
+          validateQuizWorksheetFlow.logValidation('Step 2: Generate Payload', resourceType, requestData, validation);
+          
+          if (!validation.willSucceed && process.env.NODE_ENV === 'development') {
+            console.error('🚨 PAYLOAD VALIDATION FAILED - This will likely cause "no structured questions found" error');
+            console.error('Backend will skip sections because required fields are missing');
+          }
           
           const response = await fetch(`${config.apiUrl}/generate`, {
             method: 'POST',
@@ -291,8 +332,9 @@ export const presentationService = {
             mappedItem[key] = item[key];
           }
         });
-        
-        return mappedItem;
+
+        // Convert generic content into resource-specific fields if necessary
+        return convertContentForResource(mappedItem, 'presentation');
       })
     };
     
@@ -344,7 +386,9 @@ export const presentationService = {
   
   async generateGoogleSlides(formState, contentState, token) {
     // Google Slides generation implementation
-    console.log("Google Slides generation requested");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Google Slides generation requested");
+    }
     // Implementation here
   }
 };

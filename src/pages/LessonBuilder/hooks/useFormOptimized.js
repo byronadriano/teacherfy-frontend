@@ -1,6 +1,6 @@
 // src/pages/LessonBuilder/hooks/useFormOptimized.js - Modern, streamlined hook
 import { useState, useCallback } from "react";
-import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
+import { formatOutlineForDisplay, normalizeStructuredItem } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
 import { outlineService } from "../../../services";
 
@@ -141,12 +141,12 @@ export default function useFormOptimized({ setShowSignInPrompt, subscriptionStat
   const processApiResponse = useCallback((data) => {
     let primaryContent, title, resources;
 
-    if (data.isMultiResource && data.resources) {
+  if (data.isMultiResource && data.resources) {
       // Multi-resource response
       const resourceEntries = Object.entries(data.resources);
       const [, firstResource] = resourceEntries[0];
       
-      primaryContent = firstResource.structured_content;
+  primaryContent = (firstResource.structured_content || []).map(normalizeStructuredItem);
       title = data.title || `Multi-Resource Package`;
       
       // Map all resources with proper key conversion
@@ -157,12 +157,12 @@ export default function useFormOptimized({ setShowSignInPrompt, subscriptionStat
                            backendKey === 'worksheet' ? 'Worksheet' :
                            backendKey === 'quiz' ? 'Quiz/Test' : backendKey;
         
-        resources[frontendKey] = resourceData.structured_content;
+        resources[frontendKey] = (resourceData.structured_content || []).map(normalizeStructuredItem);
       });
       
     } else if (data.structured_content) {
       // Single resource response
-      primaryContent = data.structured_content;
+      primaryContent = (data.structured_content || []).map(normalizeStructuredItem);
       title = data.title || `${formState.resourceType[0] || 'Resource'} - ${formState.subjectFocus}`;
       resources = { [formState.resourceType[0] || 'Presentation']: primaryContent };
       
@@ -251,12 +251,13 @@ export default function useFormOptimized({ setShowSignInPrompt, subscriptionStat
         }
       }
 
-      // Set content and show modal
+      // Set content and auto-confirm outline (modal optional)
       setContentState(result);
       setUiState(prev => ({ 
         ...prev, 
         isLoading: false, 
-        outlineModalOpen: true,
+        outlineConfirmed: true,
+        outlineModalOpen: false,
         generateOutlineClicked: true
       }));
 

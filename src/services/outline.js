@@ -1,5 +1,6 @@
 // src/services/outline.js - IMPROVED with better error handling
 import { API, handleApiError } from '../utils/constants/api';
+import { validateQuizWorksheetFlow } from '../utils/validationHelper';
 
 export const outlineService = {
   async generate(formData) {
@@ -57,8 +58,7 @@ export const outlineService = {
           method: 'POST',
           headers: {
             ...API.HEADERS,
-            'Content-Type': 'application/json',
-            'X-Forwarded-For': '192.168.1.100', // Temporary admin bypass
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestBody),
           credentials: 'include',
@@ -147,6 +147,16 @@ export const outlineService = {
           if (!Array.isArray(data.structured_content) || data.structured_content.length === 0) {
             console.error('Empty or invalid structured_content:', data.structured_content);
             throw new Error('Server returned empty or invalid structured content.');
+          }
+
+          // 🔍 STEP 1 VALIDATION - Critical for quiz/worksheet success
+          const resourceType = Array.isArray(formData.resourceType) ? formData.resourceType[0] : formData.resourceType;
+          const validation = validateQuizWorksheetFlow.validateOutlineResponse(data, resourceType);
+          validateQuizWorksheetFlow.logValidation('Step 1: Outline Response', resourceType, data, validation);
+          
+          if (!validation.isReadyForGeneration) {
+            console.warn('🚨 OUTLINE VALIDATION WARNING:', validation.readinessReason);
+            console.warn('This may cause issues in Step 2 (file generation)');
           }
 
           // Validate that each slide has minimum required fields
@@ -247,8 +257,7 @@ export const outlineService = {
           method: 'POST',
           headers: {
             ...API.HEADERS,
-            'Content-Type': 'application/json',
-            'X-Forwarded-For': '192.168.1.100', // Temporary admin bypass
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestBody),
           credentials: 'include',

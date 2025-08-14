@@ -150,3 +150,74 @@ export const formatOutlineForDisplay = (structuredContent) => {
 
   return output.trim();
 };
+
+// Normalize different backend item shapes into a consistent frontend shape
+export const normalizeStructuredItem = (item) => {
+  if (!item || typeof item !== 'object') return { title: 'Untitled', layout: 'TITLE_AND_CONTENT', content: [] };
+
+  const title = item.title || item.heading || item.name || 'Untitled';
+  const layout = item.layout || 'TITLE_AND_CONTENT';
+
+  // Prefer `content` but fall back to common alternative fields used for quizzes/worksheets
+  const candidates = [
+    item.content,
+    item.structured_questions,
+    item.structured_activities,
+    item.exercises,
+    item.questions,
+    item.items
+  ];
+
+  const content = [];
+
+  candidates.forEach(src => {
+    if (!src) return;
+    if (Array.isArray(src)) {
+      src.forEach(entry => {
+        if (!entry) return;
+        if (typeof entry === 'string') {
+          content.push(entry);
+        } else if (typeof entry === 'object') {
+          // Try common fields for question-like objects
+          if (entry.question) content.push(entry.question);
+          else if (entry.prompt) content.push(entry.prompt);
+          else if (entry.text) content.push(entry.text);
+          else {
+            // As a last resort, stringify a short representation
+            try {
+              const str = JSON.stringify(entry);
+              content.push(str.length > 200 ? str.slice(0, 200) + '...' : str);
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
+      });
+    }
+  });
+
+  const mapped = { title, layout, content };
+
+  // Preserve quiz/worksheet-specific arrays if present so downstream generators receive them
+  if (Array.isArray(item.structured_questions) && item.structured_questions.length > 0) {
+    mapped.structured_questions = item.structured_questions;
+  }
+
+  if (Array.isArray(item.exercises) && item.exercises.length > 0) {
+    mapped.exercises = item.exercises;
+  }
+
+  if (Array.isArray(item.structured_activities) && item.structured_activities.length > 0) {
+    mapped.structured_activities = item.structured_activities;
+  }
+
+  if (Array.isArray(item.questions) && item.questions.length > 0) {
+    mapped.questions = item.questions;
+  }
+
+  // Preserve teacher notes and other helpful arrays
+  if (Array.isArray(item.teacher_notes) && item.teacher_notes.length > 0) mapped.teacher_notes = item.teacher_notes;
+  if (Array.isArray(item.visual_elements) && item.visual_elements.length > 0) mapped.visual_elements = item.visual_elements;
+
+  return mapped;
+};

@@ -48,7 +48,8 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
-    resetForm
+    resetForm,
+    enhancedLoading
   } = useForm({
     token: user?.token,
     user,
@@ -557,6 +558,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                   generationsLeft: subscriptionState.generationsLeft,
                   resetTime: subscriptionState.resetTime
                 }}
+                enhancedLoading={enhancedLoading}
               />
             </Box>
 

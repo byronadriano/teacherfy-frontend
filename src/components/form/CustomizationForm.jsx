@@ -1,7 +1,9 @@
 // src/components/form/CustomizationForm.jsx
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress, Fade } from '@mui/material';
+import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress, Fade, Alert } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Rocket, Sparkles, AlertCircle, Clock } from 'lucide-react';
+import ProgressIndicator from '../loading/ProgressIndicator';
 
 const LimitReachedPopup = ({ show, resetTime }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -96,10 +98,15 @@ const CustomizationForm = ({
   error,
   rateLimitInfo = null,
   subscriptionState = { isPremium: false, generationsLeft: 5 },
-  resetTime = null
+  resetTime = null,
+  enhancedLoading = null
 }) => {
   const [showLimitPopup, setShowLimitPopup] = useState(false);
+  const [bgLoading, setBgLoading] = useState(false);
+  const [bgError, setBgError] = useState('');
+  const [bgSuccess, setBgSuccess] = useState('');
   const isLimitReached = !subscriptionState.isPremium && subscriptionState.generationsLeft <= 0;
+  const theme = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -337,6 +344,119 @@ const CustomizationForm = ({
         </Box>
       )}
 
+      {/* Enhanced Progress Indicator */}
+      {enhancedLoading?.isLoading && (
+        <Box sx={{ p: 2, borderTop: '1px solid #E2E8F0' }}>
+          {/* Offer email + background option when threshold passed */}
+          {enhancedLoading.showBackgroundOption && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+              <TextField
+                size="small"
+                placeholder="Email to notify when ready (optional)"
+                value={enhancedLoading.userEmail || ''}
+                onChange={(e) => enhancedLoading.setUserEmail?.(e.target.value)}
+                sx={{ minWidth: 280, backgroundColor: 'background.paper' }}
+                inputProps={{ autoComplete: 'email' }}
+              />
+
+              <Button
+                size="small"
+                variant="contained"
+                onClick={async () => {
+                  setBgError('');
+                  setBgSuccess('');
+                  const email = (enhancedLoading.userEmail || '').trim();
+                  if (!email) {
+                    setBgError('Please enter an email address to continue in background.');
+                    return;
+                  }
+                  setBgLoading(true);
+                  try {
+                    await enhancedLoading.handleRunInBackground?.(email);
+                    setBgSuccess('Background job started. We will email you when it is ready.');
+                  } catch (err) {
+                    setBgError(err?.message || 'Failed to start background job.');
+                  } finally {
+                    setBgLoading(false);
+                  }
+                }}
+                sx={(theme) => ({
+                  textTransform: 'none',
+                  backgroundColor: theme.palette.primary.main,
+                  color: '#FFFFFF',
+                  '&:hover': { backgroundColor: theme.palette.primary.light }
+                })}
+                disabled={bgLoading}
+              >
+                {bgLoading ? <CircularProgress size={16} color="inherit" /> : 'Continue in Background'}
+              </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={async () => {
+                  setBgError('');
+                  setBgSuccess('');
+                  try {
+                    await enhancedLoading.handleCancel?.();
+                    setBgSuccess('Operation cancelled.');
+                  } catch (err) {
+                    setBgError(err?.message || 'Failed to cancel operation.');
+                  }
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Cancel
+              </Button>
+            </Box>
+          )}
+
+          {/* Feedback messages for background actions */}
+          {bgError && (
+            <Alert severity="error" sx={{ mb: 1 }}>
+              {bgError}
+            </Alert>
+          )}
+
+          {bgSuccess && (
+            <Alert severity="success" sx={{ mb: 1 }}>
+              {bgSuccess}
+            </Alert>
+          )}
+
+          <ProgressIndicator
+            isLoading={enhancedLoading.isLoading}
+            progress={enhancedLoading.progress}
+            stage={enhancedLoading.stage}
+            estimatedTime={enhancedLoading.loadingState?.estimatedTime}
+            canCancel={enhancedLoading.loadingState?.canCancel}
+            canRunInBackground={enhancedLoading.loadingState?.canRunInBackground}
+            onCancel={() => {
+              enhancedLoading.handleCancel?.().catch(err => {
+                setBgError(err?.message || 'Failed to cancel operation');
+              });
+            }}
+            onRunInBackground={() => {
+              // If backend requires email, ensure user has entered one first
+              const email = enhancedLoading.userEmail?.trim();
+              if (!email) {
+                setBgError('Please enter an email address to continue in background.');
+                return;
+              }
+
+              setBgError('');
+              setBgSuccess('');
+              enhancedLoading.handleRunInBackground?.(email)
+                .then(() => setBgSuccess('Background job started. We will email you when it is ready.'))
+                .catch(err => setBgError(err?.message || 'Failed to start background job'));
+            }}
+            jobs={enhancedLoading.backgroundJobs}
+            compact={false}
+            accentColor={theme.palette.primary.main}
+          />
+        </Box>
+      )}
+
       <Box
         sx={{
           display: 'flex',
@@ -428,8 +548,8 @@ const CustomizationForm = ({
         </Button>
       </Box>
 
-      {/* Add keyframes for the shimmer effect */}
-      <style jsx>{`
+  {/* Add keyframes for the shimmer effect */}
+  <style>{`
         @keyframes loading-shimmer {
           0% {
             left: -100%;

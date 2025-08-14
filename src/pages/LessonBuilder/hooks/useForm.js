@@ -1,8 +1,9 @@
 // src/pages/LessonBuilder/hooks/useForm.js - FIXED state reset issue
-import { useState, useCallback } from "react";
-import { formatOutlineForDisplay } from "../../../utils/outlineFormatter";
+import { useState, useCallback, useEffect } from "react";
+import { formatOutlineForDisplay, normalizeStructuredItem } from "../../../utils/outlineFormatter";
 import { EXAMPLE_FORM_DATA } from "../../../utils/constants";
 import { outlineService } from "../../../services";
+import useEnhancedLoading from "../../../hooks/useEnhancedLoading";
 
 // Clean example outline structure
 const CLEAN_EXAMPLE_OUTLINE = {
@@ -30,7 +31,22 @@ const CLEAN_EXAMPLE_OUTLINE = {
   ]
 };
 
-export default function useForm({ setShowSignInPrompt, subscriptionState }) {
+export default function useForm({ setShowSignInPrompt, subscriptionState, user }) {
+  // Enhanced loading hook for better UX
+  const enhancedLoading = useEnhancedLoading({
+    enableBackgroundProcessing: true,
+    enableProgressTracking: true,
+    enableEmailNotifications: true,
+    autoMinimizeThreshold: 30000
+  });
+
+  // If a user is authenticated, populate the enhanced loading email so
+  // background processing can use it without requiring manual input.
+  useEffect(() => {
+    if (user && user.email && typeof enhancedLoading.setUserEmail === 'function') {
+      enhancedLoading.setUserEmail(user.email);
+    }
+  }, [user, enhancedLoading]);
   const [formState, setFormState] = useState({
     resourceType: [],
     gradeLevel: "",
@@ -61,6 +77,48 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
     structuredContent: [],
     generatedResources: {}
   });
+
+  // Helper: attempt to parse a markdown outline (finalOutline/outlineToConfirm)
+  // into the expected structured_content array when backend did not provide it.
+  const parseStructuredContentFromText = (text) => {
+    if (!text || typeof text !== 'string') return [];
+
+    const sections = text.split(/^##\s+/m).map(s => s.trim()).filter(Boolean);
+    const parsed = sections.map(sectionText => {
+      // First line is the title (until newline)
+      const firstNewline = sectionText.indexOf('\n');
+      const title = firstNewline > -1 ? sectionText.slice(0, firstNewline).trim() : sectionText;
+
+      // Find the Content block
+      const contentMatch = sectionText.match(/###\s*Content[\s\S]*?(?=(\n\n---|\n\n##|$))/i);
+      let contentBlock = '';
+      if (contentMatch) {
+        contentBlock = contentMatch[0];
+      } else {
+        // Fallback: take text after the title
+        contentBlock = firstNewline > -1 ? sectionText.slice(firstNewline + 1) : '';
+      }
+
+      // Extract bullet lines (• or -) or plain paragraphs
+      const lines = contentBlock.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const contentItems = [];
+      lines.forEach(l => {
+        const bullet = l.replace(/^•\s*/,'').replace(/^[-•]\s*/,'').trim();
+        if (bullet && !/^###/i.test(bullet) && bullet !== 'Content') {
+          // Avoid adding headings
+          contentItems.push(bullet);
+        }
+      });
+
+      return {
+        title: title.replace(/^#*/,'').trim(),
+        layout: 'TITLE_AND_CONTENT',
+        content: contentItems
+      };
+    });
+
+    return parsed;
+  };
 
   // FIXED: More comprehensive reset function
   const resetForm = useCallback(() => {
@@ -254,6 +312,9 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
       generateOutlineClicked: true
     }));
 
+    // Start enhanced loading with progress tracking
+    enhancedLoading.startLoading('outline_generation', 25);
+
     try {
       if (uiState.isExample) {
         console.log('Using clean example data - NOT counting against limits');
@@ -278,6 +339,8 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           isLoading: false
         }));
         
+        // Stop enhanced loading on success
+        enhancedLoading.stopLoading(true);
         return;
       }
       
@@ -364,16 +427,37 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           }
         }
         
-        if (!data.structured_content) {
-          throw new Error(`Invalid response format from server`);
+        // If structured_content is missing or empty, attempt a robust fallback.
+        let structuredContentFromApi = Array.isArray(data.structured_content) ? data.structured_content : [];
+
+        // If API returned structured_content but items are empty arrays, treat as empty as well
+        const hasNonEmptyItems = structuredContentFromApi.some(item => Array.isArray(item.content) && item.content.length > 0);
+
+        if (!structuredContentFromApi || structuredContentFromApi.length === 0 || !hasNonEmptyItems) {
+          console.warn('API returned empty or incomplete structured_content, attempting to parse from text fields');
+
+          // Try common fallback fields (finalOutline / final_outline / outlineToConfirm)
+          const fallbackText = data.finalOutline || data.final_outline || data.outlineToConfirm || data.outline_to_confirm || data.final_outline_text || data.finalOutlineText || '';
+
+          // If backend returned a single markdown string in data.finalOutline or data.outlineToConfirm, parse it
+          const parsed = parseStructuredContentFromText(fallbackText || data.finalOutline || data.outlineToConfirm || data.outline_to_confirm || data.generated_text || '');
+
+          if (parsed && parsed.length > 0) {
+            structuredContentFromApi = parsed;
+            console.log('Parsed structured content from fallback text; parsed sections:', parsed.length);
+          } else {
+            // As a last resort, try parsing data.finalOutline again using common alias fields
+            const altText = data.final_outline || data.outlineToConfirm || data.finalOutline || '';
+            const parsedAlt = parseStructuredContentFromText(altText);
+            if (parsedAlt && parsedAlt.length > 0) {
+              structuredContentFromApi = parsedAlt;
+              console.log('Parsed structured content from alternate fallback text; sections:', parsedAlt.length);
+            }
+          }
         }
 
-        // Clean the primary structured content
-        const cleanStructuredContent = data.structured_content.map(item => ({
-          title: item.title || 'Untitled',
-          layout: item.layout || 'TITLE_AND_CONTENT',
-          content: Array.isArray(item.content) ? item.content : []
-        }));
+  // Clean/normalize the primary structured content (supports quizzes/worksheets)
+  const cleanStructuredContent = structuredContentFromApi.map(item => normalizeStructuredItem(item));
 
         if (!cleanStructuredContent || cleanStructuredContent.length === 0) {
           throw new Error(`No valid content returned from the server`);
@@ -439,11 +523,16 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
           generatedResources
         });
         
+        // Automatically confirm the outline and keep the modal closed by default
         setUiState(prev => ({
           ...prev,
-          outlineModalOpen: true,
+          outlineConfirmed: true,
+          outlineModalOpen: false,
           isLoading: false
         }));
+        
+        // Stop enhanced loading on success
+        enhancedLoading.stopLoading(true);
         
       } catch (apiError) {
         console.error('API request failed:', apiError);
@@ -474,8 +563,11 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
         error: error.message || "Error generating outline. Please try again.",
         isLoading: false
       }));
+      
+      // Stop enhanced loading on error
+      enhancedLoading.stopLoading(false, error.message);
     }
-  }, [formState, uiState.isExample, subscriptionState]);
+  }, [formState, uiState.isExample, subscriptionState, enhancedLoading]);
 
 
   const handleRegenerateOutline = useCallback(async () => {
@@ -615,6 +707,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState }) {
     toggleExample,
     handleGenerateOutline,
     handleRegenerateOutline,
-    resetForm
+    resetForm,
+    enhancedLoading
   };
 }
