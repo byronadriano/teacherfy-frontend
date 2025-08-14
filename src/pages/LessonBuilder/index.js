@@ -394,9 +394,10 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       });
       
       // Filter out resources that are already successfully generated
-      const pendingResources = resourcesToGenerate.filter(type => 
-        resourceStatus[type]?.status !== 'success'
-      );
+      // BUT: if specificResourceTypes is provided, always generate those (user explicitly requested)
+      const pendingResources = specificResourceTypes 
+        ? resourcesToGenerate  // Generate exactly what was requested, don't filter
+        : resourcesToGenerate.filter(type => resourceStatus[type]?.status !== 'success');
       
       if (pendingResources.length === 0) {
         console.log('ℹ️ No new resources to generate, skipping API call');
@@ -692,7 +693,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                       isAuthenticated={isAuthenticated}
                       googleSlidesState={googleSlidesState}
                       resourceStatus={resourceStatus}
-                      onGeneratePresentation={() => handleGenerateResource()}
+                      onGeneratePresentation={(resourceType) => handleGenerateResource([resourceType])}
                       onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
                       onRegenerateOutline={() => setUiState(prev => ({ 
                         ...prev, 
@@ -751,7 +752,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
             setUiState={setUiState}
             setContentState={setContentState}
             handleRegenerateOutline={handleRegenerateOutline}
-            handleDownload={handleGenerateResource}
+            onGenerateResource={handleGenerateResource}
             onFinalize={trackLessonInHistory}
           />
         </Suspense>

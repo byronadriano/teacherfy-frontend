@@ -100,14 +100,22 @@ const ResourceManager = ({
   const handleGenerateResource = (resourceType) => {
     const now = Date.now();
     const last = cooldowns[resourceType] || 0;
-    if (now - last < 1200) { // 1.2s cooldown
-      return;
-    }
-    setCooldowns(prev => ({ ...prev, [resourceType]: now }));
-
+    
     const status = resourceStatus[resourceType]?.status;
     const blob = resourceStatus[resourceType]?.blob;
     const contentType = resourceStatus[resourceType]?.contentType || '';
+    
+    // For re-downloads of already generated resources, skip cooldown to allow immediate re-download
+    const isRedownload = status === 'success' && blob && blob.size > 0;
+    
+    if (!isRedownload && (now - last < 1200)) { // 1.2s cooldown only for new generations
+      return;
+    }
+    
+    // Update cooldown for new generations only
+    if (!isRedownload) {
+      setCooldowns(prev => ({ ...prev, [resourceType]: now }));
+    }
 
     // Block if at limit
     if (!isPremium && Number(downloadsRemaining) <= 0) {
@@ -123,7 +131,8 @@ const ResourceManager = ({
 
     // If we have a finished blob, trigger download
     if (status === 'success' && blob && blob.size > 0) {
-      console.log(`Resource ${resourceType} already generated, triggering download`);
+      console.log(`🔄 Resource ${resourceType} already generated, triggering re-download`);
+      console.log(`📊 Blob size: ${blob.size} bytes, Content-Type: ${contentType}`);
       analyticsService.trackActivity('resource_download', { resourceType });
       
       try {
