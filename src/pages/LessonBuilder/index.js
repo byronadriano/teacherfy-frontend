@@ -1,6 +1,6 @@
 // src/pages/LessonBuilder/index.js - OPTIMIZED with lazy loading for performance
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
 import FiltersBar from '../../components/filters/FiltersBar';
@@ -16,7 +16,7 @@ import Logo from '../../assets/images/Teacherfyoai.png';
 // Lazy load components that aren't immediately needed
 const ConfirmationModal = lazy(() => import('../../components/modals/ConfirmationModal'));
 const OutlineDisplay = lazy(() => import('./components/OutlineDisplay'));
-const ResourceManager = lazy(() => import('./components/resources/ResourceManager'));
+// ResourceManager removed - always show content (OutlineDisplay)
 const LoginModal = lazy(() => import('../../components/auth/LoginModal'));
 const DebugPanel = lazy(() => import('../../components/debug/DebugPanel'));
 
@@ -36,7 +36,6 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
-  const [showResourceManager, setShowResourceManager] = useState(false);
 
   const {
     formState,
@@ -84,7 +83,6 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     const idle = (cb) => (window.requestIdleCallback ? window.requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 500));
     idle(() => {
       import(/* webpackPrefetch: true */ './components/OutlineDisplay');
-      import(/* webpackPrefetch: true */ './components/resources/ResourceManager');
       import(/* webpackPrefetch: true */ '../../components/modals/ConfirmationModal');
     });
   }, []);
@@ -637,86 +635,43 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
             {/* Resource Manager and Content Display */}
             {contentState.structuredContent.length > 0 && (
               <>
-                {/* Toggle button between resources and content */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  mb: 3,
-                  gap: 2
-                }}>
-                  <Button 
-                    variant={showResourceManager ? "contained" : "outlined"}
-                    onClick={() => setShowResourceManager(true)}
-                    sx={{ 
-                      minWidth: '150px',
-                      textTransform: 'none'
-                    }}
-                  >
-                    Manage Resources
-                  </Button>
-                  <Button 
-                    variant={!showResourceManager ? "contained" : "outlined"}
-                    onClick={() => setShowResourceManager(false)}
-                    sx={{ 
-                      minWidth: '150px',
-                      textTransform: 'none'
-                    }}
-                  >
-                    View Content
-                  </Button>
-                </Box>
-
-                {/* Show either ResourceManager or OutlineDisplay based on state */}
+                {/* Always show content (OutlineDisplay) - ResourceManager removed */}
                 <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>}>
-                  {showResourceManager ? (
-                    <ResourceManager
-                      formState={formState}
-                      contentState={contentState}
-                      resourceStatus={resourceStatus}
-                      isLoading={presentationLoading}
-                      onGenerateResource={handleGenerateResource}
-                      isPremium={subscriptionState.isPremium}
-                      downloadLimit={subscriptionState.isPremium ? 999999 : 5}
-                      downloadsRemaining={subscriptionState.generationsLeft ?? 0}
-                      resetTime={subscriptionState.resetTime}
-                    />
-                  ) : (
-                    <OutlineDisplay
-                      contentState={contentState}
-                      uiState={{
-                        ...uiState,
-                        isLoading: presentationLoading
-                      }}
-                      subscriptionState={{
-                        isPremium: subscriptionState.isPremium,
-                        generationsLeft: subscriptionState.generationsLeft,
-                        resetTime: subscriptionState.resetTime
-                      }}
-                      isAuthenticated={isAuthenticated}
-                      googleSlidesState={googleSlidesState}
-                      resourceStatus={resourceStatus}
-                      onGeneratePresentation={(resourceType) => handleGenerateResource([resourceType])}
-                      onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
-                      onRegenerateOutline={() => setUiState(prev => ({ 
-                        ...prev, 
-                        outlineModalOpen: true,
-                        regenerationCount: prev.regenerationCount
-                      }))}
-                      onContentUpdate={(updatedResources, typeChanged) => {
-                        setContentState(prev => ({
+                  <OutlineDisplay
+                    contentState={contentState}
+                    uiState={{
+                      ...uiState,
+                      isLoading: presentationLoading
+                    }}
+                    subscriptionState={{
+                      isPremium: subscriptionState.isPremium,
+                      generationsLeft: subscriptionState.generationsLeft,
+                      resetTime: subscriptionState.resetTime
+                    }}
+                    isAuthenticated={isAuthenticated}
+                    googleSlidesState={googleSlidesState}
+                    resourceStatus={resourceStatus}
+                    onGeneratePresentation={(resourceType) => handleGenerateResource([resourceType])}
+                    onGenerateGoogleSlides={() => generateGoogleSlides(formState, contentState)}
+                    onRegenerateOutline={() => setUiState(prev => ({ 
+                      ...prev, 
+                      outlineModalOpen: true,
+                      regenerationCount: prev.regenerationCount
+                    }))}
+                    onContentUpdate={(updatedResources, typeChanged) => {
+                      setContentState(prev => ({
+                        ...prev,
+                        generatedResources: updatedResources,
+                        structuredContent: updatedResources?.[typeChanged] || prev.structuredContent
+                      }));
+                      if (typeChanged) {
+                        setResourceStatus(prev => ({
                           ...prev,
-                          generatedResources: updatedResources,
-                          structuredContent: updatedResources?.[typeChanged] || prev.structuredContent
+                          [typeChanged]: { status: 'pending', message: '' }
                         }));
-                        if (typeChanged) {
-                          setResourceStatus(prev => ({
-                            ...prev,
-                            [typeChanged]: { status: 'pending', message: '' }
-                          }));
-                        }
-                      }}
-                    />
-                  )}
+                      }
+                    }}
+                  />
                 </Suspense>
               </>
             )}
