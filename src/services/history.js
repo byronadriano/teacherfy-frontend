@@ -5,7 +5,7 @@ import { API } from '../utils/constants/api';
 let historyCache = {
   data: null,
   timestamp: 0,
-  expiresIn: 5000 // 5 seconds - shorter for development debugging
+  expiresIn: process.env.NODE_ENV === 'development' ? 1000 : 5000 // 1 second in dev for debugging
 };
 
 export const historyService = {
@@ -14,23 +14,39 @@ export const historyService = {
    */
   async getUserHistory() {
     try {
-      // Check cache first
+      // Check cache first - but be more aggressive about cache invalidation
       const now = Date.now();
       if (historyCache.data && (now - historyCache.timestamp < historyCache.expiresIn)) {
+        // For development, always return fresh data to help debug issues
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using cached history data');
+        }
         return historyCache.data;
       }
       
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Fetching history from:', `${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`);
+      }
+
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`, {
         method: 'GET',
         credentials: 'include',
         headers: API.HEADERS,
       });
       
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📡 History response status:', response.status);
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const responseData = await response.json();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📦 Raw history response:', responseData);
+      }
       
       // Cache successful response
       if (responseData && !responseData.error) {
@@ -96,15 +112,70 @@ export const historyService = {
   },
 
   /**
+   * Clean up duplicate entries from cache and local storage
+   */
+  cleanupDuplicates() {
+    try {
+      // Clean local storage
+      const localHistory = this.getLocalHistory();
+      const uniqueHistory = [];
+      const seenItems = new Set();
+      
+      localHistory.forEach(item => {
+        const key = `${item.title}_${item.lessonData?.lessonTopic}_${Math.floor((item.timestamp || 0) / 300000)}`;
+        if (!seenItems.has(key)) {
+          seenItems.add(key);
+          uniqueHistory.push(item);
+        }
+      });
+      
+      if (uniqueHistory.length !== localHistory.length) {
+        localStorage.setItem('anonymous_history', JSON.stringify(uniqueHistory));
+        console.log(`Cleaned up ${localHistory.length - uniqueHistory.length} duplicate local history items`);
+      }
+      
+      // Invalidate cache to force fresh fetch
+      this.invalidateCache();
+    } catch (error) {
+      console.error('Error cleaning up duplicates:', error);
+    }
+  },
+
+  /**
    * Saves a history item to the server with enhanced details
    */
   async saveHistoryItem(data) {
     try {
+      // Backend now handles duplicate detection with content hashing
+      
       // Create enhanced history item with more details
+      // Detect actual generated resource types from generatedResources
+      const getActualResourceTypes = () => {
+        if (data.generatedResources && typeof data.generatedResources === 'object') {
+          const generatedTypes = Object.keys(data.generatedResources).filter(key => 
+            data.generatedResources[key] && 
+            (Array.isArray(data.generatedResources[key]) ? data.generatedResources[key].length > 0 : true)
+          );
+          
+          if (generatedTypes.length > 0) {
+            // Capitalize first letter of each type
+            return generatedTypes.map(type => 
+              type.charAt(0).toUpperCase() + type.slice(1)
+            );
+          }
+        }
+        
+        // Fallback to original logic - support both resourceType and resourceTypes
+        if (data.resourceTypes && Array.isArray(data.resourceTypes)) {
+          return data.resourceTypes;
+        }
+        return Array.isArray(data.resourceType) ? data.resourceType : [data.resourceType || 'Presentation'];
+      };
+      
       const historyItem = {
         id: Date.now(),
         title: data.title || data.lessonTopic || 'Untitled Resource',
-        types: Array.isArray(data.resourceType) ? data.resourceType : [data.resourceType || 'Presentation'],
+        types: getActualResourceTypes(),
         date: new Date().toLocaleDateString(),
         timestamp: Date.now(),
         lessonData: {
@@ -131,9 +202,10 @@ export const historyService = {
 
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log('Saving history item:', {
+        console.log('💾 Attempting to save history item to backend:', {
           title: historyItem.title,
           types: historyItem.types,
+          endpoint: `${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`,
           lessonData: historyItem.lessonData
         });
       }
@@ -152,11 +224,23 @@ export const historyService = {
         body: JSON.stringify(historyItem)
       });
       
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📡 Save history response status:', response.status);
+      }
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        if (process.env.NODE_ENV === 'development') {
+          console.error('❌ Save history failed:', errorText);
+        }
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
       
       const serverResponse = await response.json();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Save history server response:', serverResponse);
+      }
       
       // Invalidate cache to force refresh
       this.invalidateCache();
@@ -228,39 +312,44 @@ export const historyService = {
                         formState.subjectFocus || 
                         'Untitled Lesson';
       
-      // Handle resource types properly
-      let resourceTypes = Array.isArray(formState.resourceType) 
-        ? formState.resourceType 
-        : formState.resourceType ? [formState.resourceType] : ['Presentation'];
+      // Handle resource types properly - support both resourceType and resourceTypes
+      let resourceTypes;
+      if (formState.resourceTypes && Array.isArray(formState.resourceTypes)) {
+        // Multi-resource request uses resourceTypes (plural)
+        resourceTypes = formState.resourceTypes;
+      } else if (formState.resourceType) {
+        // Single resource request uses resourceType (singular)
+        resourceTypes = Array.isArray(formState.resourceType) 
+          ? formState.resourceType 
+          : [formState.resourceType];
+      } else {
+        resourceTypes = ['Presentation'];
+      }
       
-      // Save each resource type separately
-      const historyPromises = resourceTypes.map(async (resourceType) => {
-        // Create the data structure that saveHistoryItem expects
-        const historyItemData = {
-          title: lessonTitle,
-          lessonTopic: formState.lessonTopic || lessonTitle,
-          resourceType: resourceType,
-          subjectFocus: formState.subjectFocus,
-          gradeLevel: formState.gradeLevel,
-          language: formState.language,
-          numSections: formState.numSlides || formState.numSections,
-          includeImages: formState.includeImages,
-          customPrompt: formState.customPrompt,
-          selectedStandards: formState.selectedStandards,
-          // Include structured content for preview generation
-          structuredContent: contentState.structuredContent || [],
-          structured_content: contentState.structuredContent || [], // alternate format
-          finalOutline: contentState.finalOutline || '',
-          generatedResources: contentState.generatedResources || {},
-          generatedTitle: contentState.title
-        };
-        
-        return await this.saveHistoryItem(historyItemData);
-      });
+      // Create single history item with all resource types
+      const historyItemData = {
+        title: lessonTitle,
+        lessonTopic: formState.lessonTopic || lessonTitle,
+        resourceType: resourceTypes, // Keep as array
+        subjectFocus: formState.subjectFocus,
+        gradeLevel: formState.gradeLevel,
+        language: formState.language,
+        numSections: formState.numSlides || formState.numSections,
+        includeImages: formState.includeImages,
+        customPrompt: formState.customPrompt,
+        selectedStandards: formState.selectedStandards,
+        // Include structured content for preview generation
+        structuredContent: contentState.structuredContent || [],
+        structured_content: contentState.structuredContent || [], // alternate format
+        finalOutline: contentState.finalOutline || '',
+        generatedResources: contentState.generatedResources || {},
+        generatedTitle: contentState.title
+      };
       
-      const results = await Promise.allSettled(historyPromises);
+      // Save single item instead of multiple
+      const result = await this.saveHistoryItem(historyItemData);
       
-      // Force invalidate cache after all saves
+      // Force invalidate cache after save
       this.invalidateCache();
       
       // Dispatch custom event to notify components to refresh
@@ -268,7 +357,7 @@ export const historyService = {
         window.dispatchEvent(new CustomEvent('historyUpdated'));
       }
       
-      return { success: true, results };
+      return { success: true, result };
     } catch (error) {
       console.error('Error tracking lesson generation:', error);
       return { success: false, error: error.message };
@@ -315,10 +404,10 @@ export const historyService = {
         }
       }
       
-      // Check for existing item
+      // Simple duplicate detection for local storage
       const existingIndex = history.findIndex(item => 
         item.title === historyItem.title && 
-        JSON.stringify(item.types) === JSON.stringify(historyItem.types)
+        item.lessonData?.lessonTopic === historyItem.lessonData?.lessonTopic
       );
       
       if (existingIndex >= 0) {

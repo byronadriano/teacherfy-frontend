@@ -1,5 +1,5 @@
 // src/components/sidebar/RecentsList.jsx - COMPLETE CLEANED VERSION
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Chip, CircularProgress, Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Presentation, BookOpen, FileQuestion, FileSpreadsheet, Files, Trash2 } from 'lucide-react';
 import { historyService } from '../../services/history';
@@ -82,24 +82,7 @@ const getResourceTypeInfo = (resourceType) => {
 };
 
 const RecentItem = ({ item, onClick }) => {
-  // Debug logging to see what data we're getting
-  if (process.env.NODE_ENV === 'development') {
-    console.log('RecentItem data:', {
-      item,
-      title: item.title,
-      lessonData: item.lessonData,
-      lessonTopic: item.lessonData?.lessonTopic,
-      subjectFocus: item.lessonData?.subjectFocus,
-      gradeLevel: item.lessonData?.gradeLevel
-    });
-  }
-
   const lessonData = item.lessonData || {};
-  const title = item.title || lessonData.generatedTitle || lessonData.lessonTopic || 'Untitled Lesson';
-  const subject = lessonData.subjectFocus || '';
-  const gradeLevel = lessonData.gradeLevel || '';
-  const language = lessonData.language || '';
-  const numSections = lessonData.numSections || lessonData.numSlides || lessonData.sectionsCount || item.sections?.length || 0;
   
   // Handle both string and array formats for types
   let types;
@@ -114,11 +97,89 @@ const RecentItem = ({ item, onClick }) => {
   } else {
     types = ['Presentation'];
   }
+
+  // ENHANCEMENT: Also check generatedResources to detect additional resource types
+  // This helps with items that were saved before multi-resource detection was implemented
+  if (lessonData.generatedResources && typeof lessonData.generatedResources === 'object') {
+    const generatedTypes = Object.keys(lessonData.generatedResources).filter(key => 
+      lessonData.generatedResources[key] && 
+      (Array.isArray(lessonData.generatedResources[key]) ? lessonData.generatedResources[key].length > 0 : true)
+    );
+    
+    if (generatedTypes.length > 0) {
+      // Capitalize first letter and add to types if not already present
+      const formattedGeneratedTypes = generatedTypes.map(type => 
+        type.charAt(0).toUpperCase() + type.slice(1)
+      );
+      
+      // Merge with existing types, avoiding duplicates (case-insensitive comparison)
+      const existingTypesLower = types.map(t => t.toLowerCase());
+      const newTypes = formattedGeneratedTypes.filter(type => 
+        !existingTypesLower.includes(type.toLowerCase())
+      );
+      
+      types = [...types, ...newTypes];
+    }
+  }
+
+  // Debug logging to see what data we're getting
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 RecentItem Debug:', {
+      title: item.title,
+      itemTypes: item.types,
+      lessonDataResourceType: item.lessonData?.resourceType,
+      derivedTypes: types,
+      typesLength: types.length,
+      willShowMultipleIcons: types.length > 1
+    });
+  }
   
+  // Enhanced title generation with specific content preview
+  const getEnhancedTitle = () => {
+    const baseTitle = item.title || lessonData.generatedTitle || lessonData.lessonTopic || 'Untitled Lesson';
+    
+    // Check if we have structured content or generated resources
+    const structuredContent = lessonData.structuredContent || [];
+    const generatedResources = lessonData.generatedResources || {};
+    
+    // For presentations: show second section title (first is usually "Learning Objectives")
+    if (types && types.some(t => t.toLowerCase().includes('presentation'))) {
+      if (structuredContent.length > 1 && structuredContent[1]?.title) {
+        return structuredContent[1].title;
+      }
+      if (generatedResources.presentation && generatedResources.presentation.length > 1) {
+        return generatedResources.presentation[1]?.title || baseTitle;
+      }
+      // Fallback to first section if only one exists
+      if (structuredContent.length > 0 && structuredContent[0]?.title) {
+        return structuredContent[0].title;
+      }
+      if (generatedResources.presentation && generatedResources.presentation.length > 0) {
+        return generatedResources.presentation[0]?.title || baseTitle;
+      }
+    }
+    
+    // For worksheets: show first worksheet section title
+    if (types && types.some(t => t.toLowerCase().includes('worksheet'))) {
+      if (generatedResources.worksheet && generatedResources.worksheet.length > 0) {
+        return generatedResources.worksheet[0]?.title || baseTitle;
+      }
+    }
+    
+    // For other resources: look for any structured content
+    if (structuredContent.length > 0 && structuredContent[0]?.title) {
+      return structuredContent[0].title;
+    }
+    
+    return baseTitle;
+  };
+  
+  const title = getEnhancedTitle();
+  const subject = lessonData.subjectFocus || '';
+  const gradeLevel = lessonData.gradeLevel || '';
+  const language = lessonData.language || '';
+  const numSections = lessonData.numSections || lessonData.numSlides || lessonData.sectionsCount || item.sections?.length || 0;
   const date = item.date || 'Today';
-  const primaryType = types[0] || 'Presentation';
-  const resourceType = getResourceTypeInfo(primaryType);
-  const Icon = resourceType.icon;
 
   // Generate a more descriptive subtitle with lesson details
   const getSubtitle = () => {
@@ -148,7 +209,42 @@ const RecentItem = ({ item, onClick }) => {
       }}
       onClick={() => onClick && onClick(item)}
     >
-      <Icon size={16} color={resourceType.color} />
+      {/* Show multiple icons if more than one resource type */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {types.slice(0, 3).map((type, index) => {
+          const typeInfo = getResourceTypeInfo(type);
+          const IconComponent = typeInfo.icon;
+          
+          // Debug each icon being rendered
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🎨 Rendering icon ${index + 1}/${types.length}: ${type}`, {
+              typeInfo,
+              iconName: IconComponent.name || IconComponent.displayName || 'Unknown'
+            });
+          }
+          
+          return (
+            <IconComponent 
+              key={index} 
+              size={16} 
+              color={typeInfo.color}
+              style={{ 
+                opacity: index === 0 ? 1 : 0.7,
+                marginLeft: index > 0 ? '-4px' : '0' // Slight overlap for multiple icons
+              }}
+            />
+          );
+        })}
+        {types.length > 3 && (
+          <Typography sx={{ 
+            fontSize: '0.6rem', 
+            color: '#6b7280',
+            ml: 0.5
+          }}>
+            +{types.length - 3}
+          </Typography>
+        )}
+      </Box>
       <Box sx={{ flex: 1 }}>
         <Typography sx={{ 
           fontSize: '0.8rem',
@@ -180,6 +276,9 @@ const RecentItem = ({ item, onClick }) => {
         }}>
           {types.map((type, index) => {
             const typeInfo = getResourceTypeInfo(type);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🎨 Rendering chip ${index + 1}/${types.length}: ${type}`, typeInfo);
+            }
             return (
               <Chip
                 key={index}
@@ -190,7 +289,8 @@ const RecentItem = ({ item, onClick }) => {
                   fontSize: '0.625rem',
                   backgroundColor: `${typeInfo.color}15`,
                   color: typeInfo.color,
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  border: `1px solid ${typeInfo.color}30` // Added border for better visibility
                 }}
               />
             );
@@ -218,8 +318,8 @@ const RecentsList = ({ onSelectItem }) => {
   const isMounted = useRef(true);
   const hasInitiallyFetched = useRef(false);
 
-  const fetchHistory = useCallback(async () => {
-    if (hasInitiallyFetched.current && !loading) {
+  const fetchHistory = useCallback(async (forceRefresh = false) => {
+    if (hasInitiallyFetched.current && !forceRefresh) {
       return;
     }
     
@@ -236,17 +336,9 @@ const RecentsList = ({ onSelectItem }) => {
       }
       
       if (response.history && Array.isArray(response.history)) {
-        // Debug logging to see what history items we're getting
+        // Backend now handles duplicates, so we can trust the data
         if (process.env.NODE_ENV === 'development') {
-          console.log('History items received:', response.history);
-          response.history.forEach((item, index) => {
-            console.log(`History item ${index}:`, {
-              title: item.title,
-              lessonData: item.lessonData,
-              types: item.types,
-              preview: item.preview
-            });
-          });
+          console.log(`Received ${response.history.length} history items from backend`);
         }
         setHistoryItems(response.history);
       } else if (!isAuthenticated) {
@@ -270,19 +362,20 @@ const RecentsList = ({ onSelectItem }) => {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, loading]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     isMounted.current = true;
     
-    if (!hasInitiallyFetched.current || loading) {
+    // Initial fetch
+    if (!hasInitiallyFetched.current) {
       fetchHistory();
     }
     
     // Listen for history updates
     const handleHistoryUpdate = () => {
       hasInitiallyFetched.current = false;
-      fetchHistory();
+      fetchHistory(true); // Force refresh
     };
     
     window.addEventListener('historyUpdated', handleHistoryUpdate);
@@ -291,7 +384,7 @@ const RecentsList = ({ onSelectItem }) => {
       isMounted.current = false;
       window.removeEventListener('historyUpdated', handleHistoryUpdate);
     };
-  }, [isAuthenticated, fetchHistory, loading]);
+  }, [isAuthenticated, fetchHistory]);
 
   const handleItemClick = (item) => {
     if (onSelectItem) {
@@ -306,7 +399,7 @@ const RecentsList = ({ onSelectItem }) => {
       await historyService.clearHistory();
       setHistoryItems([]);
       hasInitiallyFetched.current = false;
-      await fetchHistory();
+      await fetchHistory(true); // Force refresh
       setConfirmDialogOpen(false);
     } catch (error) {
       console.error('Error clearing history:', error);
@@ -317,16 +410,23 @@ const RecentsList = ({ onSelectItem }) => {
   };
 
   return (
-    <Box sx={{ px: 1 }}>
-      {/* Clear button positioned at top right */}
-      {historyItems.length > 0 && (
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          px: 1.5,
-          py: 1
+    <Box sx={{ px: 0 }}>
+      {/* Header with clear button */}
+      <Box sx={{ 
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        p: 2, 
+        backgroundColor: '#f8fafc'
+      }}>
+        <Typography sx={{ 
+          fontWeight: 600, 
+          fontSize: '0.875rem',
+          color: '#1e293b'
         }}>
+          Recent Resources
+        </Typography>
+        {historyItems.length > 0 && (
           <Button
             size="small"
             variant="text"
@@ -337,15 +437,18 @@ const RecentsList = ({ onSelectItem }) => {
             sx={{ 
               fontSize: '0.7rem',
               textTransform: 'none',
-              p: 0.5
+              p: 0.5,
+              minWidth: 'auto'
             }}
           >
             {isClearingHistory ? 'Clearing...' : 'Clear'}
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
       
-      {loading && (
+      {/* Content area */}
+      <Box sx={{ px: 1 }}>
+        {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress size={24} />
         </Box>
@@ -402,6 +505,7 @@ const RecentsList = ({ onSelectItem }) => {
             onClick={() => handleItemClick(item)}
           />
         ))}
+      </Box>
       </Box>
       
       {/* Confirmation Dialog */}

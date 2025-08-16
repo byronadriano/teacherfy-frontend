@@ -128,7 +128,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         console.log('💾 Saving lesson to history...');
         
         const cleanFormState = {
+          // Support both resourceType (singular) and resourceTypes (plural) for multi-resource
           resourceType: formState.resourceType,
+          resourceTypes: formState.resourceTypes,
           gradeLevel: formState.gradeLevel || '',
           subjectFocus: formState.subjectFocus || '',
           language: formState.language || '',

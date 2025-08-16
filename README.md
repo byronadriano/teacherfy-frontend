@@ -1,70 +1,142 @@
-# Getting Started with Create React App
+# Teacherfy.ai Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+AI-powered educational resource creator that helps K-12 teachers generate personalized learning materials with optional student data integration for learning gap analysis.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+Teacherfy.ai is a React-based web application that enables teachers to create customized educational content using artificial intelligence. The platform analyzes optional student performance data to identify learning gaps and generates targeted resources including presentations, worksheets, quizzes, and lesson plans.
 
-### `npm start`
+### Key Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **AI-Powered Resource Generation**: Create presentations, worksheets, quizzes, and lesson plans
+- **Learning Gap Analysis**: Optional student data input for personalized content targeting
+- **Multi-Format Export**: Download resources as PDF, PPTX, DOCX, and more
+- **Real-Time Preview**: Inline editing and preview capabilities
+- **Resource Library**: Save and organize generated materials
+- **Privacy-First Design**: Secure handling of optional student data with clear consent flows
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Technology Stack
 
-### `npm test`
+- **Frontend Framework**: React 18.3.1
+- **UI Library**: Material-UI (MUI) 6.3.0 with Emotion styling
+- **Routing**: React Router DOM 7.1.3
+- **Icons**: Lucide React & MUI Icons
+- **Build Tool**: Create React App 5.0.1
+- **Authentication**: Context-based auth system
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Getting Started
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Node.js (version 16 or higher)
+- npm or yarn package manager
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd teacherfy-frontend
+```
 
-### `npm run eject`
+2. Install dependencies:
+```bash
+npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. Start the development server:
+```bash
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The application will open at [http://localhost:3000](http://localhost:3000).
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Available Scripts
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- `npm start` - Runs the development server
+- `npm test` - Launches the test runner
+- `npm run build` - Builds the app for production
+- `npm run eject` - Ejects from Create React App (not recommended)
 
-## Learn More
+## Project Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+src/
+├── components/          # Reusable UI components
+│   ├── auth/           # Authentication components
+│   ├── background/     # Background job panels
+│   ├── common/         # Shared components
+│   ├── filters/        # Filter components
+│   ├── form/           # Form components
+│   ├── loading/        # Loading indicators
+│   ├── modals/         # Modal dialogs
+│   └── sidebar/        # Sidebar components
+├── contexts/           # React contexts
+├── hooks/              # Custom React hooks
+├── pages/              # Page components
+│   └── LessonBuilder/  # Main lesson builder interface
+├── services/           # API and business logic
+├── styles/             # Global styles and themes
+└── utils/              # Utility functions and constants
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Core Workflows
 
-### Code Splitting
+### 1. Resource Creation Flow
+Users select resource type → specify content details → optionally input student data → generate AI-powered content → preview and edit → download/save.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 2. Student Data Integration (Optional)
+Upload student performance data → system analyzes learning gaps → generates targeted content recommendations → creates personalized resources.
 
-### Analyzing the Bundle Size
+### 3. Resource Management
+Generated resources are saved to a personal library with preview, edit, and re-download capabilities.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Key Components
 
-### Making a Progressive Web App
+- **LessonBuilder** (`src/pages/LessonBuilder/`): Main interface for resource creation
+- **OutlineDisplay** (`src/pages/LessonBuilder/components/OutlineDisplay.jsx`): Displays and renders generated content
+- **CustomizationForm** (`src/components/form/CustomizationForm.jsx`): Resource customization interface
+- **AuthContext** (`src/contexts/AuthContext.js`): Authentication state management
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Services
 
-### Advanced Configuration
+- **presentation.js**: Handles AI resource generation API calls
+- **backgroundProcessor.js**: Manages asynchronous content processing
+- **outline.js**: Manages content outline operations
+- **analytics.js**: Tracks user interactions and performance
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Privacy & Security
 
-### Deployment
+- Optional student data usage with clear consent flows
+- Data anonymization options
+- Secure file upload handling
+- Clear data retention policies
+- GDPR-compliant data deletion workflows
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Development Guidelines
 
-### `npm run build` fails to minify
+### Code Organization
+- Edit existing files directly instead of creating copies
+- Use git for version control instead of backup files
+- Follow established React patterns and MUI conventions
+- Maintain responsive design for teacher workflow efficiency
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Prohibited Actions
+- Creating backup files with suffixes (`file_old.js`, `file_v2.js`)
+- Multiple file versions in working directory
+- Parallel file structures for similar functionality
+
+## Contributing
+
+1. Follow the existing code style and conventions
+2. Ensure responsive design compatibility
+3. Test with different resource types and data inputs
+4. Maintain privacy-conscious data handling practices
+
+## License
+
+This project is proprietary software for educational use.
+
+---
+
+For detailed technical documentation, see `CLAUDE.md` and `FRONTEND_INTEGRATION_GUIDE.md`.

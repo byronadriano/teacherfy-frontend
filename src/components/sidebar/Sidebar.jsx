@@ -94,21 +94,9 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
         }
       }}
     >
-      <Paper elevation={0} sx={{ p: 0 }}>
+      <Paper elevation={0} sx={{ p: 0, overflow: 'hidden' }}>
         <Box sx={{ 
-          p: 2, 
-          backgroundColor: '#f8fafc'
-        }}>
-          <Typography sx={{ 
-            fontWeight: 600, 
-            fontSize: '0.875rem',
-            color: '#1e293b'
-          }}>
-            Recent Resources
-          </Typography>
-        </Box>
-        <Box sx={{ 
-          maxHeight: '400px', 
+          maxHeight: '500px', 
           overflowY: 'auto',
           '&::-webkit-scrollbar': {
             width: '4px',
@@ -121,7 +109,7 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
             borderRadius: '4px',
           },
           '@media (max-width: 600px)': {
-            maxHeight: '50vh',
+            maxHeight: '60vh',
             '-webkit-overflow-scrolling': 'touch'
           }
         }}>
