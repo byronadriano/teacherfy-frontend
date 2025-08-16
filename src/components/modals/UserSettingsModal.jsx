@@ -11,22 +11,35 @@ import {
     Select,
     MenuItem,
     FormControlLabel,
-    Switch
+    Switch,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import { FORM } from '../../utils/constants/form';
+import { DEFAULT_SETTINGS } from '../../services/userSettings';
 
 const UserSettingsModal = ({ open, onClose, defaultSettings, onSave }) => {
-    const [settings, setSettings] = React.useState(defaultSettings || {
-        defaultGrade: '',
-        defaultSubject: '',
-        defaultLanguage: '',
-        defaultSlides: 5,
-        alwaysIncludeImages: false
-    });
+    const [settings, setSettings] = React.useState(defaultSettings || DEFAULT_SETTINGS);
+    const [showSuccess, setShowSuccess] = React.useState(false);
+
+    // Update settings when defaultSettings change
+    React.useEffect(() => {
+        if (defaultSettings) {
+            setSettings(defaultSettings);
+        }
+    }, [defaultSettings]);
 
     const handleSave = () => {
         onSave(settings);
-        onClose();
+        setShowSuccess(true);
+        setTimeout(() => {
+            setShowSuccess(false);
+            onClose();
+        }, 1500);
+    };
+
+    const handleReset = () => {
+        setSettings(DEFAULT_SETTINGS);
     };
 
     return (
@@ -114,10 +127,26 @@ const UserSettingsModal = ({ open, onClose, defaultSettings, onSave }) => {
                     />
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #E2E8F0' }}>
-                <Button onClick={onClose} variant="outlined">Cancel</Button>
-                <Button onClick={handleSave} variant="contained">Save Settings</Button>
+            <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #E2E8F0', justifyContent: 'space-between' }}>
+                <Button onClick={handleReset} variant="text" color="secondary">
+                    Reset to Defaults
+                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button onClick={onClose} variant="outlined">Cancel</Button>
+                    <Button onClick={handleSave} variant="contained">Save Settings</Button>
+                </Box>
             </DialogActions>
+            
+            {/* Success Snackbar */}
+            <Snackbar
+                open={showSuccess}
+                autoHideDuration={1500}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="success" variant="filled">
+                    Settings saved successfully! Defaults will be applied to new forms.
+                </Alert>
+            </Snackbar>
         </Dialog>
     );
 };

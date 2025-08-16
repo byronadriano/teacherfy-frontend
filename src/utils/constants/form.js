@@ -2,9 +2,9 @@
 export const FORM = {
   RESOURCE_TYPES: [
     "Presentation",
-    "Lesson Plan",
     "Worksheet",
-    "Quiz/Test"
+    "Quiz/Test",
+    "Lesson Plan"
   ],
   RESOURCE_OPTIONS: {
     Presentation: {
@@ -42,10 +42,11 @@ export const FORM = {
     "English language arts",
     "Holidays/seasonal",
     "Math",
+    "Physical Education",
     "Science",
     "Social studies",
-    "Specialty",
-    "World languages"
+    "World languages",
+    "Other (specify)"
   ],
   LANGUAGES: [
     "English",

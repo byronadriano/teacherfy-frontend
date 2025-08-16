@@ -31,7 +31,7 @@ const CLEAN_EXAMPLE_OUTLINE = {
   ]
 };
 
-export default function useForm({ setShowSignInPrompt, subscriptionState, user }) {
+export default function useForm({ setShowSignInPrompt, subscriptionState, user, userSettings }) {
   // Enhanced loading hook for better UX
   const enhancedLoading = useEnhancedLoading({
     enableBackgroundProcessing: true,
@@ -47,12 +47,26 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
       enhancedLoading.setUserEmail(user.email);
     }
   }, [user, enhancedLoading]);
+
+  // Apply user settings to form state when they change
+  useEffect(() => {
+    if (userSettings && Object.keys(userSettings).length > 0) {
+      setFormState(prev => ({
+        ...prev,
+        gradeLevel: userSettings.defaultGrade || prev.gradeLevel,
+        subjectFocus: userSettings.defaultSubject || prev.subjectFocus,
+        language: userSettings.defaultLanguage || prev.language,
+        numSlides: userSettings.defaultSlides || prev.numSlides,
+        includeImages: userSettings.alwaysIncludeImages || prev.includeImages
+      }));
+    }
+  }, [userSettings]);
   const [formState, setFormState] = useState({
     resourceType: [],
     gradeLevel: "",
     subjectFocus: "",
     selectedStandards: [],
-    language: "",
+    language: "English",
     lessonTopic: "",
     numSlides: 5,
     includeImages: false,
@@ -129,7 +143,7 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
       gradeLevel: "",
       subjectFocus: "",
       selectedStandards: [],
-      language: "",
+      language: "English",
       lessonTopic: "",
       numSlides: 5,
       includeImages: false,
@@ -183,9 +197,14 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
         error: "",
         regenerationCount: 0
       }));
+      
     }
     
     setFormState(prev => {
+      // Clear custom subject when changing to non-custom subject
+      if (field === 'subjectFocus' && value !== 'Other (specify)') {
+        return { ...prev, [field]: value, customSubject: '' };
+      }
       if (field === 'resourceType' && isMultiSelect) {
         let newResourceTypes;
         
@@ -274,18 +293,33 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
     }));
 
     // Validate required fields
+    const needsCustomSubject = formState.subjectFocus === 'Other (specify)' && !formState.customSubject?.trim();
+    const invalidCustomSubject = formState.subjectFocus === 'Other (specify)' && 
+      formState.customSubject?.trim() && 
+      !/^[a-zA-Z\s\-'&().]+$/.test(formState.customSubject.trim());
+    
     if (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0) || 
-        !formState.gradeLevel || !formState.subjectFocus || !formState.language) {
-      const missingFields = [
-        (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0)) && 'resource type',
-        !formState.gradeLevel && 'grade level',
-        !formState.subjectFocus && 'subject',
-        !formState.language && 'language'
-      ].filter(Boolean).join(', ');
+        !formState.gradeLevel || !formState.subjectFocus || !formState.language || needsCustomSubject || invalidCustomSubject) {
+      
+      let errorMessage = '';
+      
+      if (invalidCustomSubject) {
+        errorMessage = 'Custom subject can only contain letters, spaces, and basic punctuation (-, \', &, (, ), .).';
+      } else {
+        const missingFields = [
+          (!formState.resourceType || (Array.isArray(formState.resourceType) && formState.resourceType.length === 0)) && 'resource type',
+          !formState.gradeLevel && 'grade level',
+          !formState.subjectFocus && 'subject',
+          needsCustomSubject && 'custom subject',
+          !formState.language && 'language'
+        ].filter(Boolean).join(', ');
+        
+        errorMessage = `Please fill in all required fields: ${missingFields}.`;
+      }
 
       setUiState(prev => ({
         ...prev,
-        error: `Please fill in all required fields: ${missingFields}.`
+        error: errorMessage
       }));
       return;
     }
@@ -387,12 +421,16 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user }
         let generatedTitle = "";
         
         // Use new optimized approach for multiple resource types
+        const actualSubject = formState.subjectFocus === 'Other (specify)' 
+          ? (formState.customSubject || 'Custom Subject')
+          : formState.subjectFocus;
+        
         const requestData = {
           resourceType: resourceTypes,  // Pass all resource types
           gradeLevel: formState.gradeLevel,
-          subjectFocus: formState.subjectFocus,
+          subjectFocus: actualSubject,
           language: formState.language,
-          lessonTopic: formState.lessonTopic || formState.subjectFocus || "General Learning",
+          lessonTopic: formState.lessonTopic || actualSubject || "General Learning",
           custom_prompt: formState.customPrompt || '',
           selectedStandards: Array.isArray(formState.selectedStandards) 
             ? formState.selectedStandards 

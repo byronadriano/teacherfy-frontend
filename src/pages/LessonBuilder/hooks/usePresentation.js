@@ -1,6 +1,7 @@
 //src/pages/LessonBuilder/hooks/usePresentation.js
 import { useState, useEffect } from 'react';
 import { presentationService } from '../../../services';
+import { log, error as logError } from '../../../utils/logger';
 import { API } from '../../../utils/constants';
 
 const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) => {
@@ -53,14 +54,14 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
             resetTime: usageLimits.reset_time || null
           });
           
-          console.log('Updated subscription state:', {
+          log('Updated subscription state:', {
             isPremium: userInfo.is_premium || false,
             tier: userInfo.subscription_tier || 'free',
             generationsLeft: usageLimits.generations_left || (userInfo.is_premium ? 999999 : 10)
           });
         }
       } catch (error) {
-        console.error('Error fetching generation limits:', error);
+  logError('Error fetching generation limits:', error);
         // Default to free tier on error
         setSubscriptionState({
           isPremium: false,
@@ -94,7 +95,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
   const generatePresentation = async (formState, contentState) => {
     try {
       setIsLoading(true);
-      console.log('Generating presentation with:', {
+  log('Generating presentation with:', {
         baseUrl: API.BASE_URL,
         formState,
         contentState: {
@@ -105,7 +106,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
 
       // Log each slide's details for debugging.
       contentState.structuredContent.forEach((slide, index) => {
-        console.log(`Slide ${index + 1}:`, {
+  log(`Slide ${index + 1}:`, {
           title: slide.title,
           layout: slide.layout,
           contentLength: slide.content.length,
@@ -127,7 +128,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
 
       return { status: 'success' };
     } catch (error) {
-      console.error('Complete presentation generation error:', {
+  logError('Complete presentation generation error:', {
         name: error.name,
         message: error.message,
         stack: error.stack
@@ -157,7 +158,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       }
       
       // Log generation details
-      console.log('Generating resources with:', {
+  log('Generating resources with:', {
         originalResourceTypes: formState.resourceType,
         specificResourceTypes,
         contentState: {
@@ -172,7 +173,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       
       return results;
     } catch (error) {
-      console.error('Multi-resource generation error:', {
+  logError('Multi-resource generation error:', {
         name: error.name,
         message: error.message,
         stack: error.stack
@@ -196,7 +197,7 @@ const usePresentation = ({ token, user, isAuthenticated, setShowSignInPrompt }) 
       
       return { status: 'success' };
     } catch (error) {
-      console.error('Error generating Google Slides:', error);
+  logError('Error generating Google Slides:', error);
       
       return { 
         status: 'error',

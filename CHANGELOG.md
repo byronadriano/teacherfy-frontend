@@ -7,19 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-08-16
+
 ### Added
-- **Multi-Resource Visual Indicators**: Enhanced RecentsList with overlapping icons for multiple resource types
-- **Smart Title Generation**: Resource previews now show actual content titles instead of generic names
-- **Advanced Debugging System**: Environment-specific console logging with emoji indicators for better development experience
-- **Enhanced UI Layout**: Improved sidebar history popover with better mobile responsiveness
+- Persistent User Settings with localStorage via `UserSettingsService` and immediate application to forms
+- Success feedback and Reset to Defaults in `UserSettingsModal`
+
+### Changed
+- Cleaned `LessonBuilder` by removing redundant localStorage loading effect and unused props
+- Prefetch heavy components during idle for snappier UX
+- Tightened useEffect dependencies to satisfy eslint without suppressions
+
+### Fixed
+- Subject filter “Other (specify)” now shows a validated custom input in `FiltersBar`, supports Enter-to-confirm, truncated display, and a removable chip
+- Resolved eslint exhaustive-deps warnings in `LessonBuilder/index.js`
+
+### Build
+- Production build compiles clean with minor bundle reduction (~60B)
 
 ### Changed
 - Removed ResourceManager UI components and always show OutlineDisplay
 - Simplified LessonBuilder interface by removing resource management tab
 - Simplified recent resources list logic after backend duplicate prevention implementation
-- **RecentsList Complete Rewrite**: Major enhancement with multi-resource support, content-aware titles, and improved visual hierarchy
-- **History Service Optimization**: Environment-specific cache timeouts (1s dev, 5s prod) for better debugging
-- **Code Cleanup**: Removed outdated optimization and integration guide files
 
 ### Fixed
 - **Major**: Eliminated duplicate entries in recent resources list
@@ -32,8 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced duplicate checking in `saveHistoryItem` with timestamp-based detection (5-minute windows)
   - Improved local storage duplicate detection for anonymous users
   - Added `cleanupDuplicates` function to remove existing duplicate entries
-- **Resource Type Detection**: Enhanced logic to detect generated resources from `generatedResources` object
-- **Git Workflow**: Resolved staging conflicts between basic fixes and advanced enhancements
 - **Performance**: Reduced bundle size by 234B by removing unnecessary client-side deduplication after backend fixes
 - Comprehensive resource display and download improvements
 - IncludeImages flag properly passed to API endpoints
@@ -46,13 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added content hashing for efficient duplicate detection
   - Implemented UPSERT logic with request deduplication middleware
   - Frontend now trusts backend data integrity and simplified duplicate prevention logic
-
-### Technical Improvements
-- **Enhanced Resource Preview**: Show actual section titles from presentations and worksheets
-- **Multi-Resource Icons**: Visual indication when resources contain multiple types (presentation + quiz + worksheet)
-- **Content-Aware Titles**: Display second section titles for presentations (skip generic "Learning Objectives")
-- **Improved Error Handling**: Better debugging with detailed console logs for development
-- **Mobile UI Enhancements**: Better touch interactions and responsive design for sidebar components
 
 ## [0.4.0] - 2025-08-14
 

@@ -97,6 +97,27 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
           </Select>
         </FormControl>
 
+        {formState.subjectFocus === 'Other (specify)' && (
+          <TextField
+            label="Custom Subject *"
+            value={formState.customSubject || ''}
+            onChange={(e) => {
+              // Allow only letters, spaces, hyphens, apostrophes, and common academic abbreviations
+              const sanitizedValue = e.target.value
+                .replace(/[^a-zA-Z\s\-'&().]/g, '') // Remove special chars except basic punctuation
+                .slice(0, 50); // Limit to 50 characters
+              onFormChange('customSubject', sanitizedValue);
+            }}
+            placeholder="e.g. AP Biology, Creative Writing, STEAM"
+            fullWidth
+            sx={{ mb: 2 }}
+            disabled={uiState.outlineModalOpen}
+            slotProps={{ htmlInput: { maxLength: 50 } }}
+            helperText={`${(formState.customSubject || '').length}/50 characters. Only letters, spaces, and basic punctuation allowed.`}
+            error={formState.customSubject && !/^[a-zA-Z\s\-'&().]+$/.test(formState.customSubject)}
+          />
+        )}
+
         <TextField
           label="Lesson Topic *"
           value={formState.lessonTopic}
@@ -138,13 +159,15 @@ const FormSection = memo(({ formState, uiState, setUiState, onFormChange, onGene
               type="number"
               value={formState.numSlides}
               onChange={(e) => onFormChange('numSlides', e.target.value)}
-              inputProps={{ 
-                min: 1, 
-                max: 10,
-                style: { 
-                  height: '24px',
-                  padding: '12px',
-                  backgroundColor: '#ffffff'
+              slotProps={{ 
+                htmlInput: {
+                  min: 1, 
+                  max: 10,
+                  style: { 
+                    height: '24px',
+                    padding: '12px',
+                    backgroundColor: '#ffffff'
+                  }
                 }
               }}
               sx={{

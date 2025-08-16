@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { outlineService } from '../../../services/outline';
 // Import only the formatter functions that are used in this file.
 import { generateFullPrompt, generateRegenerationPrompt } from '../../../utils/outlineFormatter';
+import { log, error as logError } from '../../../utils/logger';
 
 const useOutline = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,11 +15,11 @@ const useOutline = () => {
     setError(null);
     
     try {
-      console.log('Generating outline with data:', formData);
+  log('Generating outline with data:', formData);
       
       // Generate a full detailed prompt using the formatter.
       const fullPrompt = generateFullPrompt(formData);
-      console.log('Generated full prompt:', fullPrompt);
+  log('Generated full prompt:', fullPrompt);
 
       // Build request data with the custom prompt.
       const requestData = {
@@ -36,7 +37,7 @@ const useOutline = () => {
       const data = await outlineService.generate(requestData);
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('🎯 Generated content structure:', {
+        log('🎯 Generated content structure:', {
           resourceType: formData.resourceType,
           sectionsCount: data.structured_content?.length,
           firstSectionFields: data.structured_content?.[0] ? Object.keys(data.structured_content[0]) : [],
@@ -82,7 +83,7 @@ const useOutline = () => {
         structured_content: validatedContent
       };
     } catch (err) {
-      console.error('Error generating outline:', err);
+  logError('Error generating outline:', err);
       setError(err.message || 'Failed to generate outline');
       throw err;
     } finally {
@@ -96,8 +97,8 @@ const useOutline = () => {
     
     try {
       // Generate a regeneration prompt using the formatter.
-      const regenPrompt = generateRegenerationPrompt(formData, modifiedPrompt);
-      console.log('Generated regeneration prompt:', regenPrompt);
+  const regenPrompt = generateRegenerationPrompt(formData, modifiedPrompt);
+  log('Generated regeneration prompt:', regenPrompt);
 
       const requestData = {
         grade_level: formData.gradeLevel,

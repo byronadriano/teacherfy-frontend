@@ -1,5 +1,5 @@
 // src/pages/LessonBuilder/index.js - OPTIMIZED with lazy loading for performance
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 
 import Sidebar from '../../components/sidebar/Sidebar';
@@ -11,7 +11,9 @@ import useForm from './hooks/useForm';
 import useOutline from './hooks/useOutline';
 import usePresentation from './hooks/usePresentation';
 import { historyService } from '../../services';
+import { UserSettingsService } from '../../services/userSettings';
 import Logo from '../../assets/images/Teacherfyoai.png';
+import { log, warn } from '../../utils/logger';
 
 // Lazy load components that aren't immediately needed
 const ConfirmationModal = lazy(() => import('../../components/modals/ConfirmationModal'));
@@ -20,19 +22,14 @@ const OutlineDisplay = lazy(() => import('./components/OutlineDisplay'));
 const LoginModal = lazy(() => import('../../components/auth/LoginModal'));
 const DebugPanel = lazy(() => import('../../components/debug/DebugPanel'));
 
-const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
+const LessonBuilder = () => {
   // Auth context and login modal state
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   // States
-  const [userSettings, setUserSettings] = useState({
-    defaultGrade: '',
-    defaultSubject: '',
-    defaultLanguage: '',
-    defaultSlides: 5,
-    alwaysIncludeImages: false
-  });
+  const [userSettings, setUserSettings] = useState(UserSettingsService.loadSettings());
+  const settingsAppliedRef = useRef(false);
   
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
@@ -52,6 +49,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   } = useForm({
     token: user?.token,
     user,
+    userSettings,
     setShowSignInPrompt: () => setShowLoginModal(true) // Show login modal when auth required
   });
 
@@ -70,13 +68,8 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     setShowSignInPrompt: () => setShowLoginModal(true) // Show login modal when auth required
   });
 
-  // Load user settings from session storage
-  useEffect(() => {
-    const savedSettings = sessionStorage.getItem('userSettings');
-    if (savedSettings) {
-      setUserSettings(JSON.parse(savedSettings));
-    }
-  }, []);
+  // Note: userSettings are initialized from UserSettingsService.loadSettings();
+  // Removed redundant localStorage loading effect.
 
   // Idle prefetch near-future chunks for faster interactions
   useEffect(() => {
@@ -88,9 +81,45 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   }, []);
 
   const handleSettingsChange = (newSettings) => {
-    setUserSettings(newSettings);
-    sessionStorage.setItem('userSettings', JSON.stringify(newSettings));
+    const success = UserSettingsService.saveSettings(newSettings);
+    if (success) {
+      setUserSettings(newSettings);
+      // Apply default settings immediately to the current form
+      UserSettingsService.applySettingsToForm(newSettings, formState, handleFormChange);
+    } else {
+  console.error('Failed to save user settings');
+    }
   };
+
+  // Wrapper for resetForm that also resets settings applied flag
+  const handleResetForm = useCallback(() => {
+    resetForm();
+    settingsAppliedRef.current = false;
+    // Reapply settings after reset
+    setTimeout(() => {
+      if (userSettings && UserSettingsService.hasSettings()) {
+        UserSettingsService.applySettingsToForm(userSettings, formState, handleFormChange);
+        settingsAppliedRef.current = true;
+      }
+    }, 100);
+  }, [resetForm, userSettings, formState, handleFormChange]);
+
+  // Destructure only the fields we need to avoid depending on the whole formState object
+  const { gradeLevel, subjectFocus, language, numSlides, includeImages } = formState || {};
+
+  // Apply default settings when form is ready and settings are loaded
+  useEffect(() => {
+    // Only apply settings once when the form is ready and we have settings
+    if (userSettings && handleFormChange && UserSettingsService.hasSettings() && !settingsAppliedRef.current) {
+      // Check if form fields are empty (indicating a fresh start)
+  const isFormEmpty = !gradeLevel && !subjectFocus && !language;
+      if (isFormEmpty) {
+    const snapshot = { gradeLevel, subjectFocus, language, numSlides, includeImages };
+    UserSettingsService.applySettingsToForm(userSettings, snapshot, handleFormChange);
+        settingsAppliedRef.current = true;
+      }
+    }
+  }, [userSettings, handleFormChange, gradeLevel, subjectFocus, language, numSlides, includeImages]);
 
   const handleInputChange = (e) => {
     handleFormChange('customPrompt', e.target.value);
@@ -125,7 +154,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
   const saveToHistory = useCallback(async () => {
     if (contentState.structuredContent?.length > 0) {
       try {
-        console.log('💾 Saving lesson to history...');
+  log('💾 Saving lesson to history...');
         
         const cleanFormState = {
           // Support both resourceType (singular) and resourceTypes (plural) for multi-resource
@@ -152,49 +181,21 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
                 layout: slide.layout || 'TITLE_AND_CONTENT'
               };
               
-              // Prioritize modern structure fields and avoid duplicates
-              // For worksheets: prefer structured_activities over content
-              if (slide.structured_activities && Array.isArray(slide.structured_activities) && slide.structured_activities.length > 0) {
-                cleanSlide.structured_activities = [...slide.structured_activities];
-              } else if (slide.exercises && Array.isArray(slide.exercises) && slide.exercises.length > 0) {
-                cleanSlide.exercises = [...slide.exercises];
-              } else if (!slide.structured_activities && !slide.exercises && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-                // Only save content if no modern worksheet fields exist
-                cleanSlide.content = [...slide.content];
-              }
+              // Save all meaningful content fields without aggressive filtering
+              // The download logic should handle field prioritization, not the saving logic
               
-              // For quizzes: prefer structured_questions over content
-              if (slide.structured_questions && Array.isArray(slide.structured_questions) && slide.structured_questions.length > 0) {
-                cleanSlide.structured_questions = [...slide.structured_questions];
-              } else if (!slide.structured_questions && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-                // Only save content if no structured_questions exist
-                cleanSlide.content = [...slide.content];
-              }
-              
-              // For lesson plans: save all relevant fields
-              if (slide.objectives && Array.isArray(slide.objectives) && slide.objectives.length > 0) {
-                cleanSlide.objectives = [...slide.objectives];
-              }
-              if (slide.procedures && Array.isArray(slide.procedures) && slide.procedures.length > 0) {
-                cleanSlide.procedures = [...slide.procedures];
-              }
-              if (slide.materials && Array.isArray(slide.materials) && slide.materials.length > 0) {
-                cleanSlide.materials = [...slide.materials];
-              }
-              if (slide.activities && Array.isArray(slide.activities) && slide.activities.length > 0) {
-                cleanSlide.activities = [...slide.activities];
-              }
-              
-              // For presentations and general content: save content if no other specific fields
-              if (!cleanSlide.structured_activities && !cleanSlide.structured_questions && !cleanSlide.objectives && 
-                  slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-                cleanSlide.content = [...slide.content];
-              }
-              
-              // Always save teacher notes
-              if (slide.teacher_notes && Array.isArray(slide.teacher_notes) && slide.teacher_notes.length > 0) {
-                cleanSlide.teacher_notes = [...slide.teacher_notes];
-              }
+              // Save all array fields that have content
+              Object.keys(slide).forEach(key => {
+                if (key !== 'title' && key !== 'layout') {
+                  if (Array.isArray(slide[key]) && slide[key].length > 0) {
+                    cleanSlide[key] = [...slide[key]];
+                  } else if (slide[key] !== undefined && slide[key] !== null && typeof slide[key] === 'string' && slide[key].trim()) {
+                    cleanSlide[key] = slide[key];
+                  } else if (typeof slide[key] === 'number' || typeof slide[key] === 'boolean') {
+                    cleanSlide[key] = slide[key];
+                  }
+                }
+              });
               
               return cleanSlide;
             });
@@ -208,49 +209,21 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
             layout: slide.layout || 'TITLE_AND_CONTENT'
           };
           
-          // Prioritize modern structure fields and avoid duplicates
-          // For worksheets: prefer structured_activities over content
-          if (slide.structured_activities && Array.isArray(slide.structured_activities) && slide.structured_activities.length > 0) {
-            cleanSlide.structured_activities = [...slide.structured_activities];
-          } else if (slide.exercises && Array.isArray(slide.exercises) && slide.exercises.length > 0) {
-            cleanSlide.exercises = [...slide.exercises];
-          } else if (!slide.structured_activities && !slide.exercises && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-            // Only save content if no modern worksheet fields exist
-            cleanSlide.content = [...slide.content];
-          }
+          // Save all meaningful content fields without aggressive filtering
+          // The download logic should handle field prioritization, not the saving logic
           
-          // For quizzes: prefer structured_questions over content
-          if (slide.structured_questions && Array.isArray(slide.structured_questions) && slide.structured_questions.length > 0) {
-            cleanSlide.structured_questions = [...slide.structured_questions];
-          } else if (!slide.structured_questions && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-            // Only save content if no structured_questions exist
-            cleanSlide.content = [...slide.content];
-          }
-          
-          // For lesson plans: save all relevant fields
-          if (slide.objectives && Array.isArray(slide.objectives) && slide.objectives.length > 0) {
-            cleanSlide.objectives = [...slide.objectives];
-          }
-          if (slide.procedures && Array.isArray(slide.procedures) && slide.procedures.length > 0) {
-            cleanSlide.procedures = [...slide.procedures];
-          }
-          if (slide.materials && Array.isArray(slide.materials) && slide.materials.length > 0) {
-            cleanSlide.materials = [...slide.materials];
-          }
-          if (slide.activities && Array.isArray(slide.activities) && slide.activities.length > 0) {
-            cleanSlide.activities = [...slide.activities];
-          }
-          
-          // For presentations and general content: save content if no other specific fields
-          if (!cleanSlide.structured_activities && !cleanSlide.structured_questions && !cleanSlide.objectives && 
-              slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
-            cleanSlide.content = [...slide.content];
-          }
-          
-          // Always save teacher notes
-          if (slide.teacher_notes && Array.isArray(slide.teacher_notes) && slide.teacher_notes.length > 0) {
-            cleanSlide.teacher_notes = [...slide.teacher_notes];
-          }
+          // Save all array fields that have content
+          Object.keys(slide).forEach(key => {
+            if (key !== 'title' && key !== 'layout') {
+              if (Array.isArray(slide[key]) && slide[key].length > 0) {
+                cleanSlide[key] = [...slide[key]];
+              } else if (slide[key] !== undefined && slide[key] !== null && typeof slide[key] === 'string' && slide[key].trim()) {
+                cleanSlide[key] = slide[key];
+              } else if (typeof slide[key] === 'number' || typeof slide[key] === 'boolean') {
+                cleanSlide[key] = slide[key];
+              }
+            }
+          });
           
           return cleanSlide;
         });
@@ -265,9 +238,9 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         const result = await historyService.trackLessonGeneration(cleanFormState, enhancedContentState);
         
         if (result.success) {
-          console.log('✅ Lesson successfully saved to history with title:', contentState.title);
+          log('✅ Lesson successfully saved to history with title:', contentState.title);
         } else {
-          console.log('⚠️ History save had issues but continued:', result.error);
+          warn('⚠️ History save had issues but continued:', result.error);
         }
       } catch (error) {
         console.error('❌ Error saving to history:', error);
@@ -294,7 +267,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           };
           
           historyService.saveLocalHistory(localHistoryItem);
-          console.log('💾 Lesson saved to local history as fallback with title:', lessonTitle);
+          log('💾 Lesson saved to local history as fallback with title:', lessonTitle);
         } catch (localError) {
           console.error('❌ Failed to save to local history:', localError);
         }
@@ -328,7 +301,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       return;
     }
     
-    console.log('📂 Loading lesson from history:', item.title);
+  log('📂 Loading lesson from history:', item.title);
     
     try {
       const { lessonData } = item;
@@ -341,11 +314,11 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         } else if (typeof lessonData.resourceType === 'string') {
           resourceType = [lessonData.resourceType];
         } else {
-          console.warn('⚠️ Unexpected resourceType format:', lessonData.resourceType);
+          warn('⚠️ Unexpected resourceType format:', lessonData.resourceType);
           resourceType = ['Presentation']; // Default fallback
         }
         
-        console.log('🔧 Setting resourceType to:', resourceType);
+  log('🔧 Setting resourceType to:', resourceType);
         handleFormChange('resourceType', resourceType);
       }
       
@@ -380,22 +353,22 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
               // Map content to structured_activities for worksheets that need it
               normalizedSection.structured_activities = [...section.content];
               delete normalizedSection.content; // Remove the duplicate content field
-              console.log(`✅ FIXED: Mapped Worksheet "${section.title}" content → structured_activities (${section.content.length} items)`);
+              log(`✅ FIXED: Mapped Worksheet "${section.title}" content → structured_activities (${section.content.length} items)`);
             } else if (section.structured_activities && section.content) {
               // Already has structured_activities, remove duplicate content field
               delete normalizedSection.content;
-              console.log(`🧹 CLEANED: Removed duplicate content field from Worksheet "${section.title}"`);
+              log(`🧹 CLEANED: Removed duplicate content field from Worksheet "${section.title}"`);
             }
           } else if (resourceType === 'Quiz/Test' || resourceType === 'Quiz') {
             if (section.content && !section.structured_questions) {
               // Map content to structured_questions for quizzes that need it
               normalizedSection.structured_questions = [...section.content];
               delete normalizedSection.content; // Remove the duplicate content field
-              console.log(`✅ FIXED: Mapped Quiz "${section.title}" content → structured_questions (${section.content.length} items)`);
+              log(`✅ FIXED: Mapped Quiz "${section.title}" content → structured_questions (${section.content.length} items)`);
             } else if (section.structured_questions && section.content) {
               // Already has structured_questions, remove duplicate content field
               delete normalizedSection.content;
-              console.log(`🧹 CLEANED: Removed duplicate content field from Quiz "${section.title}"`);
+              log(`🧹 CLEANED: Removed duplicate content field from Quiz "${section.title}"`);
             }
           }
           
@@ -457,7 +430,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         error: ''
       }));
       
-      console.log('✅ Lesson loaded from history with title:', contentUpdate.title);
+  log('✅ Lesson loaded from history with title:', contentUpdate.title);
     } catch (error) {
       console.error('❌ Error loading lesson from history:', error);
       setUiState(prev => ({
@@ -474,7 +447,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
     
     try {
       await historyService.trackLessonGeneration(formState, contentState);
-      console.log('✅ Lesson tracked in history');
+  log('✅ Lesson tracked in history');
     } catch (error) {
       console.error('❌ Failed to track lesson in history:', error);
     }
@@ -503,7 +476,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         } else if (typeof specificResourceTypes === 'string') {
           resourcesToGenerate = [specificResourceTypes];
         } else {
-          console.warn('⚠️ Unexpected specificResourceTypes format:', specificResourceTypes);
+          warn('⚠️ Unexpected specificResourceTypes format:', specificResourceTypes);
           resourcesToGenerate = ['Presentation'];
         }
       } else {
@@ -513,12 +486,12 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         } else if (typeof formState.resourceType === 'string') {
           resourcesToGenerate = [formState.resourceType];
         } else {
-          console.warn('⚠️ Unexpected formState.resourceType format:', formState.resourceType);
+          warn('⚠️ Unexpected formState.resourceType format:', formState.resourceType);
           resourcesToGenerate = ['Presentation'];
         }
       }
       
-      console.log('🔧 handleGenerateResource processing:', {
+  log('🔧 handleGenerateResource processing:', {
         specificResourceTypes,
         'formState.resourceType': formState.resourceType,
         'final resourcesToGenerate': resourcesToGenerate
@@ -637,7 +610,7 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
       <Sidebar
         defaultSettings={userSettings}
         onSettingsChange={handleSettingsChange}
-        onLogoReset={resetForm}
+        onLogoReset={handleResetForm}
         onHistoryItemSelect={handleHistoryItemSelect}
       />
 

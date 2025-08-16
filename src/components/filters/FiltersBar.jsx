@@ -1,6 +1,6 @@
 // src/components/filters/FiltersBar.jsx
 import React, { useState } from 'react';
-import { Box, Typography, Popover, Paper, Checkbox, FormControlLabel, Chip } from '@mui/material';
+import { Box, Typography, Popover, Paper, Checkbox, FormControlLabel, Chip, TextField } from '@mui/material';
 import { ChevronRight, ChevronDown, X } from 'lucide-react';
 import { FORM } from '../../utils/constants';
 import StandardsModal from '../modals/StandardsModal';
@@ -244,6 +244,18 @@ const FiltersBar = ({ formState, handleFormChange }) => {
                     }, 0);
                 }
             }
+        } else if (field === 'subjectFocus') {
+            handleFormChange(field, option);
+            
+            if (option === 'Other (specify)') {
+                // Clear any existing custom subject when "Other (specify)" is selected
+                handleFormChange('customSubject', '');
+                // Don't call handleClose() to keep the menu open for custom input
+            } else {
+                // Clear custom subject when selecting any other subject
+                handleFormChange('customSubject', '');
+                handleClose();
+            }
         } else {
             handleFormChange(field, option);
             handleClose();
@@ -287,7 +299,15 @@ return (
 
         {/* Subject Button */}
         <FilterButton
-            label={formState.subjectFocus || "Subject"}
+            label={(() => {
+                if (!formState.subjectFocus) return "Subject";
+                if (formState.subjectFocus === 'Other (specify)' && formState.customSubject?.trim()) {
+                    // Show custom subject with truncation
+                    const customSubject = formState.customSubject.trim();
+                    return customSubject.length > 15 ? `${customSubject.substring(0, 15)}...` : customSubject;
+                }
+                return formState.subjectFocus;
+            })()}
             isSelected={!!formState.subjectFocus}
             onClick={(e) => handleFilterClick(e, 'subjectFocus')}
         />
@@ -359,6 +379,41 @@ return (
                         deleteIcon={<X size={14} />}
                     />
                 ))}
+            </Box>
+        )}
+
+        {/* Custom Subject Chip */}
+        {formState.subjectFocus === 'Other (specify)' && formState.customSubject?.trim() && (
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                width: '100%',
+                mt: 1
+            }}>
+                <Chip
+                    label={`Custom Subject: ${formState.customSubject}`}
+                    onDelete={() => {
+                        handleFormChange('subjectFocus', '');
+                        handleFormChange('customSubject', '');
+                    }}
+                    size="small"
+                    sx={{
+                        bgcolor: 'rgba(34, 197, 94, 0.1)', // Light green background
+                        color: '#16a34a', // Green text
+                        fontWeight: '500',
+                        border: '1px solid rgba(34, 197, 94, 0.2)',
+                        '& .MuiChip-deleteIcon': {
+                            color: '#16a34a',
+                            '&:hover': {
+                                color: '#15803d'
+                            }
+                        },
+                        '&:hover': {
+                            bgcolor: 'rgba(34, 197, 94, 0.15)'
+                        }
+                    }}
+                    deleteIcon={<X size={14} />}
+                />
             </Box>
         )}
 
@@ -436,14 +491,78 @@ return (
                         />
                     ))}
 
-                    {activeFilter === 'subjectFocus' && FORM.SUBJECTS.map((subject) => (
-                        <MenuOption
-                            key={subject}
-                            label={subject}
-                            isSelected={formState.subjectFocus === subject}
-                            onClick={() => handleOptionSelect(subject)}
-                        />
-                    ))}
+                    {activeFilter === 'subjectFocus' && (
+                        <>
+                            {FORM.SUBJECTS.map((subject) => (
+                                <MenuOption
+                                    key={subject}
+                                    label={subject}
+                                    isSelected={formState.subjectFocus === subject}
+                                    onClick={() => handleOptionSelect(subject)}
+                                />
+                            ))}
+                            
+                            {/* Custom Subject Input */}
+                            {formState.subjectFocus === 'Other (specify)' && (
+                                <Box sx={{ px: 2, py: 1.5, borderTop: '1px solid #E2E8F0' }}>
+                                    <TextField
+                                        size="small"
+                                        fullWidth
+                                        placeholder="Enter custom subject, then press Enter..."
+                                        value={formState.customSubject || ''}
+                                        onChange={(e) => {
+                                            // Allow only letters, spaces, and basic punctuation
+                                            const sanitizedValue = e.target.value
+                                                .replace(/[^a-zA-Z\s\-'&().]/g, '')
+                                                .slice(0, 50);
+                                            handleFormChange('customSubject', sanitizedValue);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                if (formState.customSubject?.trim()) {
+                                                    // Brief success feedback before closing
+                                                    e.target.style.backgroundColor = '#dcfce7';
+                                                    e.target.style.borderColor = '#16a34a';
+                                                    setTimeout(() => {
+                                                        handleClose();
+                                                    }, 200);
+                                                }
+                                            }
+                                        }}
+                                        helperText={
+                                            (() => {
+                                                const length = (formState.customSubject || '').length;
+                                                const hasValidContent = formState.customSubject?.trim();
+                                                
+                                                if (hasValidContent) {
+                                                    return `${length}/50 characters • Press Enter to confirm ✓`;
+                                                } else if (length > 0) {
+                                                    return `${length}/50 characters • Enter at least one letter`;
+                                                } else {
+                                                    return `${length}/50 characters • e.g., "Robotics", "AP Biology"`;
+                                                }
+                                            })()
+                                        }
+                                        error={formState.customSubject && !/^[a-zA-Z\s\-'&().]+$/.test(formState.customSubject)}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                fontSize: '0.875rem',
+                                                backgroundColor: formState.customSubject?.trim() ? '#f0f9ff' : 'white',
+                                                borderColor: formState.customSubject?.trim() ? '#0ea5e9' : undefined,
+                                            },
+                                            '& .MuiFormHelperText-root': {
+                                                fontSize: '0.75rem',
+                                                margin: '4px 0 0 0',
+                                                color: formState.customSubject?.trim() ? '#0ea5e9' : undefined,
+                                            }
+                                        }}
+                                        autoFocus
+                                    />
+                                </Box>
+                            )}
+                        </>
+                    )}
 
                     {activeFilter === 'language' && FORM.LANGUAGES.map((language) => (
                         <MenuOption

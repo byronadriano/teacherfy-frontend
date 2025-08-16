@@ -1,5 +1,5 @@
 // src/pages/LessonBuilder/components/OutlineDisplay.jsx
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -218,7 +218,7 @@ const OutlineDisplay = ({
     debugLogged.current = true;
   }
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (_, newValue) => {
     setActiveTab(newValue);
   };
 
@@ -418,515 +418,104 @@ const OutlineDisplay = ({
                   }
                 }
 
-                // Helper function to check if any content was displayed - ENHANCED
-                const checkContentDisplayed = (resourceType, item) => {
-                  // First check if we have any array content at all
-                  const hasAnyArrayContent = Object.keys(item).some(key => 
-                    Array.isArray(item[key]) && item[key].length > 0 && key !== 'title'
-                  );
-                  
-                  // Removed verbose content check logging to reduce console noise
-                  
-                  switch(resourceType) {
-                    case 'Worksheet':
-                      return (item.instructions && item.instructions.length > 0) ||
-                             (item.structured_activities && item.structured_activities.length > 0) ||
-                             (item.exercises && item.exercises.length > 0) ||
-                             (item.problems && item.problems.length > 0) ||
-                             (item.content && item.content.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             hasAnyArrayContent; // Fallback: if we have any array content, show it
-                    case 'Quiz/Test':
-                      return (item.structured_questions && item.structured_questions.length > 0) ||
-                             (item.content && item.content.length > 0) ||
-                             (item.answers && item.answers.length > 0) ||
-                             (item.answer_key && item.answer_key.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             (item.differentiation_tips && item.differentiation_tips.length > 0) ||
-                             hasAnyArrayContent; // Fallback: if we have any array content, show it
-                    case 'Lesson Plan':
-                      return (item.objectives && item.objectives.length > 0) ||
-                             (item.materials && item.materials.length > 0) ||
-                             (item.procedures && item.procedures.length > 0) ||
-                             (item.procedure && item.procedure.length > 0) ||
-                             (item.activities && item.activities.length > 0) ||
-                             (item.assessment && item.assessment.length > 0) ||
-                             (item.homework && item.homework.length > 0) ||
-                             (item.standards && item.standards.length > 0) ||
-                             (item.content && item.content.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             hasAnyArrayContent; // Fallback: if we have any array content, show it
-                    default:
-                      return (item.content && item.content.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             (item.visual_elements && item.visual_elements.length > 0) ||
-                             hasAnyArrayContent; // Fallback: if we have any array content, show it
-                  }
-                };
+                // Removed old checkContentDisplayed function - now using universal content display
 
-                // Different display based on resource type
-                switch(activeResourceType) {
-                  case 'Worksheet': {
-                    const hasSpecificContent = checkContentDisplayed('Worksheet', item);
-                    
-                    if (hasSpecificContent) {
-                      return (
-                        <>
-                          {/* Instructions Section */}
-                          {(item.instructions && item.instructions.length > 0) && (
-                            <EditableContentSection
-                              title="Instructions"
-                              items={item.instructions}
-                              color="#0284c7"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="instructions"
-                            />
-                          )}
-                          
-                          {/* Structured Activities Section */}
-                          {(item.structured_activities && item.structured_activities.length > 0) && (
-                            <EditableContentSection
-                              title="Activities"
-                              items={item.structured_activities.map(activity => 
-                                typeof activity === 'string' ? activity : activity.prompt || activity.description || JSON.stringify(activity)
-                              )}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="structured_activities"
-                            />
-                          )}
-                          
-                          {/* Exercises Section */}
-                          {(item.exercises && item.exercises.length > 0) && (
-                            <EditableContentSection
-                              title="Exercises"
-                              items={item.exercises.map(exercise => 
-                                typeof exercise === 'string' ? exercise : exercise.prompt || exercise.question || JSON.stringify(exercise)
-                              )}
-                              color="#7c3aed"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="exercises"
-                            />
-                          )}
-                          
-                          {/* Problems Section */}
-                          {(item.problems && item.problems.length > 0) && (
-                            <EditableContentSection
-                              title="Problems"
-                              items={item.problems.map(problem => 
-                                typeof problem === 'string' ? problem : problem.prompt || problem.question || JSON.stringify(problem)
-                              )}
-                              color="#dc2626"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="problems"
-                            />
-                          )}
-                          
-                          {/* Main Content Section (fallback) */}
-                          {(item.content && item.content.length > 0) && (
-                            <EditableContentSection
-                              title="Content"
-                              items={item.content}
-                              color="#2563eb"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="content"
-                            />
-                          )}
-                          
-                          {/* Teacher Notes */}
-                          {(item.teacher_notes && item.teacher_notes.length > 0) && (
-                            <EditableContentSection
-                              title="Teacher Notes"
-                              items={item.teacher_notes}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="teacher_notes"
-                            />
-                          )}
-                        </>
-                      );
-                    } else {
-                      // FALLBACK for Worksheet: Display any array content we find
-                      const availableContent = Object.entries(item).filter(([key, value]) => 
-                        key !== 'title' && Array.isArray(value) && value.length > 0
-                      );
+                // Universal content display - automatically handles any JSON structure
+                const availableContent = Object.entries(item).filter(([key, value]) => 
+                  key !== 'title' && key !== 'layout' && Array.isArray(value) && value.length > 0
+                );
+                
+                // Define field priorities and colors for better presentation
+                const fieldConfig = {
+                  // Primary content fields
+                  'content': { title: 'Content', color: '#2563eb', priority: 1 },
+                  'structured_questions': { title: 'Questions', color: '#2563eb', priority: 1 },
+                  'structured_activities': { title: 'Activities', color: '#16a34a', priority: 1 },
+                  'exercises': { title: 'Exercises', color: '#7c3aed', priority: 1 },
+                  'problems': { title: 'Problems', color: '#dc2626', priority: 1 },
+                  
+                  // Learning structure fields
+                  'objectives': { title: 'Learning Objectives', color: '#2563eb', priority: 2 },
+                  'materials': { title: 'Materials Needed', color: '#dc2626', priority: 2 },
+                  'procedures': { title: 'Procedures', color: '#9333ea', priority: 2 },
+                  'procedure': { title: 'Procedure', color: '#9333ea', priority: 2 },
+                  'activities': { title: 'Activities', color: '#16a34a', priority: 2 },
+                  'assessment': { title: 'Assessment', color: '#f59e0b', priority: 2 },
+                  'homework': { title: 'Homework/Extensions', color: '#7c3aed', priority: 2 },
+                  'standards': { title: 'Standards Addressed', color: '#0284c7', priority: 2 },
+                  
+                  // Answer/response fields
+                  'answers': { title: 'Answers', color: '#16a34a', priority: 3 },
+                  'answer_key': { title: 'Answer Key', color: '#16a34a', priority: 3 },
+                  
+                  // Instructions and guidance
+                  'instructions': { title: 'Instructions', color: '#0284c7', priority: 4 },
+                  'teacher_notes': { title: 'Teacher Notes', color: '#16a34a', priority: 5 },
+                  'differentiation_tips': { title: 'Differentiation Tips', color: '#f59e0b', priority: 5 }
+                };
+                
+                // Sort content by priority and name
+                const sortedContent = availableContent.sort(([keyA], [keyB]) => {
+                  const priorityA = fieldConfig[keyA]?.priority || 99;
+                  const priorityB = fieldConfig[keyB]?.priority || 99;
+                  
+                  if (priorityA !== priorityB) {
+                    return priorityA - priorityB;
+                  }
+                  
+                  return keyA.localeCompare(keyB);
+                });
+                
+                if (sortedContent.length > 0) {
+                  return (
+                    <>
+                      {/* Duration if available */}
+                      {item.duration && (
+                        <Typography
+                          sx={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: '#7c3aed',
+                            mb: 2
+                          }}
+                        >
+                          Duration: {item.duration}
+                        </Typography>
+                      )}
                       
-                      if (availableContent.length > 0) {
-                        if (process.env.NODE_ENV === 'development') {
-                          console.log('🔄 FALLBACK: Worksheet content found in:', availableContent.map(([key]) => key).join(', '));
-                        }
+                      {/* Display all available content fields */}
+                      {sortedContent.map(([key, value]) => {
+                        const config = fieldConfig[key] || { 
+                          title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '), 
+                          color: '#6366f1' 
+                        };
+                        
+                        // Smart item processing - handle objects or strings
+                        const processedItems = value.map(v => {
+                          if (typeof v === 'string') {
+                            return v;
+                          } else if (typeof v === 'object' && v !== null) {
+                            // Extract meaningful content from objects
+                            return v.question || v.prompt || v.text || v.description || v.name || v.activity || JSON.stringify(v);
+                          } else {
+                            return String(v);
+                          }
+                        });
                         
                         return (
-                          <>
-                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
-                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
-                                ⚠️ Showing content in fallback mode (loaded from recents)
-                              </Typography>
-                            </Box>
-                            {availableContent.map(([key, value]) => (
-                              <EditableContentSection
-                                key={key}
-                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                items={value.map(v => typeof v === 'string' ? v : (v.question || v.prompt || v.description || JSON.stringify(v)))}
-                                color="#7c3aed"
-                                onUpdate={handleContentUpdate}
-                                sectionIndex={index}
-                                sectionKey={key}
-                              />
-                            ))}
-                          </>
-                        );
-                      }
-                    }
-                    break;
-                  }
-                    
-                  case 'Quiz/Test': {
-                    const hasSpecificContent = checkContentDisplayed('Quiz/Test', item);
-                    
-                    if (hasSpecificContent) {
-                      return (
-                        <>
-                          {/* Structured Questions Section */}
-                          {(item.structured_questions && item.structured_questions.length > 0) && (
-                            <EditableContentSection
-                              title="Questions"
-                              items={item.structured_questions.map(question => 
-                                typeof question === 'string' ? question : 
-                                question.question || question.prompt || question.text || JSON.stringify(question)
-                              )}
-                              color="#2563eb"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="structured_questions"
-                            />
-                          )}
-                          
-                          {/* Main Content Questions (fallback) */}
-                          {(item.content && item.content.length > 0) && (
-                            <EditableContentSection
-                              title="Questions"
-                              items={item.content}
-                              color="#2563eb"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="content"
-                            />
-                          )}
-                          
-                          {/* Answers Section */}
-                          {(item.answers && item.answers.length > 0) && (
-                            <EditableContentSection
-                              title="Answers"
-                              items={item.answers}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="answers"
-                            />
-                          )}
-                          
-                          {/* Answer Key Section */}
-                          {(item.answer_key && item.answer_key.length > 0) && (
-                            <EditableContentSection
-                              title="Answer Key"
-                              items={item.answer_key}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="answer_key"
-                            />
-                          )}
-                          
-                          {/* Teacher Notes */}
-                          {(item.teacher_notes && item.teacher_notes.length > 0) && (
-                            <EditableContentSection
-                              title="Teacher Notes"
-                              items={item.teacher_notes}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="teacher_notes"
-                            />
-                          )}
-                          
-                          {/* Differentiation Tips */}
-                          {(item.differentiation_tips && item.differentiation_tips.length > 0) && (
-                            <EditableContentSection
-                              title="Differentiation Tips"
-                              items={item.differentiation_tips}
-                              color="#f59e0b"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="differentiation_tips"
-                            />
-                          )}
-                        </>
-                      );
-                    } else {
-                      // FALLBACK for Quiz/Test: Display any array content we find
-                      const availableContent = Object.entries(item).filter(([key, value]) => 
-                        key !== 'title' && Array.isArray(value) && value.length > 0
-                      );
-                      
-                      if (availableContent.length > 0) {
-                        if (process.env.NODE_ENV === 'development') {
-                          console.log('🔄 FALLBACK: Quiz content found in:', availableContent.map(([key]) => key).join(', '));
-                        }
-                        
-                        return (
-                          <>
-                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
-                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
-                                ⚠️ Showing content in fallback mode (loaded from recents)
-                              </Typography>
-                            </Box>
-                            {availableContent.map(([key, value]) => (
-                              <EditableContentSection
-                                key={key}
-                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                items={value.map(v => typeof v === 'string' ? v : (v.question || v.prompt || v.text || v.answer || JSON.stringify(v)))}
-                                color="#dc2626"
-                                onUpdate={handleContentUpdate}
-                                sectionIndex={index}
-                                sectionKey={key}
-                              />
-                            ))}
-                          </>
-                        );
-                      }
-                    }
-                    break;
-                  }
-                    
-                  case 'Lesson Plan': {
-                    const hasSpecificContent = checkContentDisplayed('Lesson Plan', item);
-                    
-                    if (hasSpecificContent) {
-                      return (
-                        <>
-                          {/* Duration if available */}
-                          {item.duration && (
-                            <Typography
-                              sx={{
-                                fontSize: '0.875rem',
-                                fontWeight: 600,
-                                color: '#7c3aed',
-                                mb: 2
-                              }}
-                            >
-                              Duration: {item.duration}
-                            </Typography>
-                          )}
-                          
-                          {/* Learning Objectives */}
-                          {(item.objectives && item.objectives.length > 0) && (
-                            <EditableContentSection
-                              title="Learning Objectives"
-                              items={item.objectives}
-                              color="#2563eb"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="objectives"
-                            />
-                          )}
-                          
-                          {/* Materials */}
-                          {(item.materials && item.materials.length > 0) && (
-                            <EditableContentSection
-                              title="Materials Needed"
-                              items={item.materials}
-                              color="#dc2626"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="materials"
-                            />
-                          )}
-                          
-                          {/* Procedures */}
-                          {(item.procedures && item.procedures.length > 0) && (
-                            <EditableContentSection
-                              title="Procedures"
-                              items={item.procedures}
-                              color="#9333ea"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="procedures"
-                            />
-                          )}
-                          
-                          {/* Procedure (alternative field name) */}
-                          {(item.procedure && item.procedure.length > 0) && (
-                            <EditableContentSection
-                              title="Procedure"
-                              items={item.procedure}
-                              color="#9333ea"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="procedure"
-                            />
-                          )}
-                          
-                          {/* Activities */}
-                          {(item.activities && item.activities.length > 0) && (
-                            <EditableContentSection
-                              title="Activities"
-                              items={item.activities.map(activity => 
-                                typeof activity === 'string' ? activity : activity.description || activity.name || JSON.stringify(activity)
-                              )}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="activities"
-                            />
-                          )}
-                          
-                          {/* Assessment */}
-                          {(item.assessment && item.assessment.length > 0) && (
-                            <EditableContentSection
-                              title="Assessment"
-                              items={item.assessment}
-                              color="#f59e0b"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="assessment"
-                            />
-                          )}
-                          
-                          {/* Homework */}
-                          {(item.homework && item.homework.length > 0) && (
-                            <EditableContentSection
-                              title="Homework/Extensions"
-                              items={item.homework}
-                              color="#7c3aed"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="homework"
-                            />
-                          )}
-                          
-                          {/* Standards */}
-                          {(item.standards && item.standards.length > 0) && (
-                            <EditableContentSection
-                              title="Standards Addressed"
-                              items={item.standards}
-                              color="#0284c7"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="standards"
-                            />
-                          )}
-                          
-                          {/* Main Content Section (fallback) */}
-                          {(item.content && item.content.length > 0) && (
-                            <EditableContentSection
-                              title="Content"
-                              items={item.content}
-                              color="#2563eb"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="content"
-                            />
-                          )}
-                          
-                          {/* Teacher Notes Section */}
-                          {(item.teacher_notes && item.teacher_notes.length > 0) && (
-                            <EditableContentSection
-                              title="Teacher Notes"
-                              items={item.teacher_notes}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="teacher_notes"
-                            />
-                          )}
-                        </>
-                      );
-                    } else {
-                      // FALLBACK for Lesson Plan: Display any array content we find
-                      const availableContent = Object.entries(item).filter(([key, value]) => 
-                        key !== 'title' && Array.isArray(value) && value.length > 0
-                      );
-                      
-                      if (availableContent.length > 0) {
-                        if (process.env.NODE_ENV === 'development') {
-                          console.log('🔄 FALLBACK: Lesson Plan content found in:', availableContent.map(([key]) => key).join(', '));
-                        }
-                        
-                        return (
-                          <>
-                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
-                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
-                                ⚠️ Showing content in fallback mode (loaded from recents)
-                              </Typography>
-                            </Box>
-                            {availableContent.map(([key, value]) => (
-                              <EditableContentSection
-                                key={key}
-                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                items={value.map(v => typeof v === 'string' ? v : (v.description || v.name || v.activity || JSON.stringify(v)))}
-                                color="#059669"
-                                onUpdate={handleContentUpdate}
-                                sectionIndex={index}
-                                sectionKey={key}
-                              />
-                            ))}
-                          </>
-                        );
-                      }
-                    }
-                    break;
-                  }
-                    
-                  default: {
-                    const hasSpecificContent = checkContentDisplayed('default', item);
-                    
-                    if (hasSpecificContent) {
-                      return (
-                        <>
-                          {/* Content Section */}
                           <EditableContentSection
-                            title="Content"
-                            items={item.content}
-                            color="#2563eb"
+                            key={key}
+                            title={config.title}
+                            items={processedItems}
+                            color={config.color}
                             onUpdate={handleContentUpdate}
                             sectionIndex={index}
-                            sectionKey="content"
+                            sectionKey={key}
                           />
-                          
-                          {/* For backward compatibility */}
-                          {item.teacher_notes && item.teacher_notes.length > 0 && (
-                            <EditableContentSection
-                              title="Teacher Notes"
-                              items={item.teacher_notes}
-                              color="#16a34a"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="teacher_notes"
-                            />
-                          )}
-                          
-                          {item.visual_elements && item.visual_elements.length > 0 && (
-                            <EditableContentSection
-                              title="Visual Elements"
-                              items={item.visual_elements}
-                              color="#f59e0b"
-                              onUpdate={handleContentUpdate}
-                              sectionIndex={index}
-                              sectionKey="visual_elements"
-                            />
-                          )}
-                        </>
-                      );
-                    }
-                    break;
-                  }
+                        );
+                      })}
+                    </>
+                  );
                 }
                 
                 // Generic fallback content display if no specific content found
