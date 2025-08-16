@@ -110,7 +110,7 @@ const HistoryPopover = ({ open, anchorEl, onClose, onHistoryItemSelect }) => {
           },
           '@media (max-width: 600px)': {
             maxHeight: '60vh',
-            '-webkit-overflow-scrolling': 'touch'
+            WebkitOverflowScrolling: 'touch'
           }
         }}>
           <RecentsList onSelectItem={onHistoryItemSelect} />

@@ -34,22 +34,43 @@ const useOutline = () => {
       };
 
       const data = await outlineService.generate(requestData);
-      console.log('Received outline data:', data);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎯 Generated content structure:', {
+          resourceType: formData.resourceType,
+          sectionsCount: data.structured_content?.length,
+          firstSectionFields: data.structured_content?.[0] ? Object.keys(data.structured_content[0]) : [],
+          hasModernStructure: data.structured_content?.[0] ? 
+            ('structured_activities' in data.structured_content[0] || 
+             'structured_questions' in data.structured_content[0] ||
+             'objectives' in data.structured_content[0]) : false
+        });
+      }
       
       if (!data || !data.structured_content || !Array.isArray(data.structured_content)) {
         throw new Error('Invalid response format from server');
       }
       
-      // Validate each slide's structure.
-      const validatedContent = data.structured_content.map((slide, index) => ({
-        title: slide.title || `Slide ${index + 1}`,
-        layout: slide.layout || 'TITLE_AND_CONTENT',
-        content: Array.isArray(slide.content) ? slide.content : [],
-        teacher_notes: Array.isArray(slide.teacher_notes) ? slide.teacher_notes : [],
-        visual_elements: Array.isArray(slide.visual_elements) ? slide.visual_elements : [],
-        left_column: Array.isArray(slide.left_column) ? slide.left_column : [],
-        right_column: Array.isArray(slide.right_column) ? slide.right_column : []
-      }));
+      // Preserve the actual structure from the server response without forcing obsolete fields
+      const validatedContent = data.structured_content.map((slide, index) => {
+        const validSlide = {
+          title: slide.title || `Section ${index + 1}`,
+          layout: slide.layout || 'TITLE_AND_CONTENT'
+        };
+        
+        // Only include fields that actually exist in the response
+        Object.keys(slide).forEach(key => {
+          if (key !== 'title' && key !== 'layout') {
+            if (Array.isArray(slide[key])) {
+              validSlide[key] = [...slide[key]];
+            } else if (slide[key] !== undefined && slide[key] !== null) {
+              validSlide[key] = slide[key];
+            }
+          }
+        });
+        
+        return validSlide;
+      });
 
       setOutlineData({
         messages: Array.isArray(data.messages) ? data.messages : [],

@@ -1,5 +1,5 @@
 // src/pages/LessonBuilder/components/OutlineDisplay.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -185,6 +185,7 @@ const OutlineDisplay = ({
   onContentUpdate
 }) => {
   const [activeTab, setActiveTab] = useState(0);
+  const debugLogged = useRef(false);
   
   if (!uiState.outlineConfirmed) return null;
 
@@ -200,25 +201,21 @@ const OutlineDisplay = ({
   const activeContent = contentState.generatedResources?.[activeResourceType] || 
                        contentState.structuredContent;
 
-  // Debug logging to understand content structure
-  if (process.env.NODE_ENV === 'development' && activeContent && activeContent.length > 0) {
-    console.log(`📋 OutlineDisplay Debug - ${activeResourceType}:`, {
-      activeResourceType,
-      contentLength: activeContent.length,
-      firstItem: activeContent[0],
-      firstItemKeys: Object.keys(activeContent[0] || {}),
-      sampleStructure: activeContent[0] ? {
-        title: activeContent[0].title,
-        hasContent: !!activeContent[0].content,
-        hasInstructions: !!activeContent[0].instructions,
-        hasStructuredQuestions: !!activeContent[0].structured_questions,
-        hasStructuredActivities: !!activeContent[0].structured_activities,
-        hasExercises: !!activeContent[0].exercises,
-        hasObjectives: !!activeContent[0].objectives,
-        hasProcedures: !!activeContent[0].procedures,
-        allKeys: Object.keys(activeContent[0])
-      } : null
-    });
+  // Simplified debug logging - only show when loading problematic content
+  if (process.env.NODE_ENV === 'development' && activeContent && activeContent.length > 0 && !debugLogged.current) {
+    const hasExpectedStructure = activeResourceType === 'Worksheet' ? !!activeContent[0]?.structured_activities : 
+                                 activeResourceType === 'Quiz/Test' ? !!activeContent[0]?.structured_questions :
+                                 !!activeContent[0]?.content;
+    
+    // Only log if structure might be problematic
+    if (!hasExpectedStructure) {
+      console.log(`⚠️ ${activeResourceType} may need normalization:`, {
+        sections: activeContent.length,
+        firstSectionKeys: Object.keys(activeContent[0] || {}),
+        hasExpectedStructure
+      });
+    }
+    debugLogged.current = true;
   }
 
   const handleTabChange = (event, newValue) => {
@@ -408,8 +405,28 @@ const OutlineDisplay = ({
 
               {/* Resource-specific sections based on type */}
               {(() => {
-                // Helper function to check if any content was displayed
+                // Debug logging only for first section and when there are issues
+                if (process.env.NODE_ENV === 'development' && index === 0) {
+                  const hasExpectedContent = 
+                    (activeResourceType === 'Worksheet' && (item.structured_activities || item.exercises)) ||
+                    (activeResourceType === 'Quiz/Test' && (item.structured_questions || item.content)) ||
+                    (activeResourceType === 'Lesson Plan' && (item.objectives || item.procedures || item.content)) ||
+                    (item.content);
+                  
+                  if (!hasExpectedContent) {
+                    console.log(`⚠️ Missing expected content for ${activeResourceType}:`, Object.keys(item));
+                  }
+                }
+
+                // Helper function to check if any content was displayed - ENHANCED
                 const checkContentDisplayed = (resourceType, item) => {
+                  // First check if we have any array content at all
+                  const hasAnyArrayContent = Object.keys(item).some(key => 
+                    Array.isArray(item[key]) && item[key].length > 0 && key !== 'title'
+                  );
+                  
+                  // Removed verbose content check logging to reduce console noise
+                  
                   switch(resourceType) {
                     case 'Worksheet':
                       return (item.instructions && item.instructions.length > 0) ||
@@ -417,14 +434,16 @@ const OutlineDisplay = ({
                              (item.exercises && item.exercises.length > 0) ||
                              (item.problems && item.problems.length > 0) ||
                              (item.content && item.content.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0);
+                             (item.teacher_notes && item.teacher_notes.length > 0) ||
+                             hasAnyArrayContent; // Fallback: if we have any array content, show it
                     case 'Quiz/Test':
                       return (item.structured_questions && item.structured_questions.length > 0) ||
                              (item.content && item.content.length > 0) ||
                              (item.answers && item.answers.length > 0) ||
                              (item.answer_key && item.answer_key.length > 0) ||
                              (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             (item.differentiation_tips && item.differentiation_tips.length > 0);
+                             (item.differentiation_tips && item.differentiation_tips.length > 0) ||
+                             hasAnyArrayContent; // Fallback: if we have any array content, show it
                     case 'Lesson Plan':
                       return (item.objectives && item.objectives.length > 0) ||
                              (item.materials && item.materials.length > 0) ||
@@ -435,11 +454,13 @@ const OutlineDisplay = ({
                              (item.homework && item.homework.length > 0) ||
                              (item.standards && item.standards.length > 0) ||
                              (item.content && item.content.length > 0) ||
-                             (item.teacher_notes && item.teacher_notes.length > 0);
+                             (item.teacher_notes && item.teacher_notes.length > 0) ||
+                             hasAnyArrayContent; // Fallback: if we have any array content, show it
                     default:
                       return (item.content && item.content.length > 0) ||
                              (item.teacher_notes && item.teacher_notes.length > 0) ||
-                             (item.visual_elements && item.visual_elements.length > 0);
+                             (item.visual_elements && item.visual_elements.length > 0) ||
+                             hasAnyArrayContent; // Fallback: if we have any array content, show it
                   }
                 };
 
@@ -530,6 +551,38 @@ const OutlineDisplay = ({
                           )}
                         </>
                       );
+                    } else {
+                      // FALLBACK for Worksheet: Display any array content we find
+                      const availableContent = Object.entries(item).filter(([key, value]) => 
+                        key !== 'title' && Array.isArray(value) && value.length > 0
+                      );
+                      
+                      if (availableContent.length > 0) {
+                        if (process.env.NODE_ENV === 'development') {
+                          console.log('🔄 FALLBACK: Worksheet content found in:', availableContent.map(([key]) => key).join(', '));
+                        }
+                        
+                        return (
+                          <>
+                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
+                                ⚠️ Showing content in fallback mode (loaded from recents)
+                              </Typography>
+                            </Box>
+                            {availableContent.map(([key, value]) => (
+                              <EditableContentSection
+                                key={key}
+                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                items={value.map(v => typeof v === 'string' ? v : (v.question || v.prompt || v.description || JSON.stringify(v)))}
+                                color="#7c3aed"
+                                onUpdate={handleContentUpdate}
+                                sectionIndex={index}
+                                sectionKey={key}
+                              />
+                            ))}
+                          </>
+                        );
+                      }
                     }
                     break;
                   }
@@ -616,6 +669,38 @@ const OutlineDisplay = ({
                           )}
                         </>
                       );
+                    } else {
+                      // FALLBACK for Quiz/Test: Display any array content we find
+                      const availableContent = Object.entries(item).filter(([key, value]) => 
+                        key !== 'title' && Array.isArray(value) && value.length > 0
+                      );
+                      
+                      if (availableContent.length > 0) {
+                        if (process.env.NODE_ENV === 'development') {
+                          console.log('🔄 FALLBACK: Quiz content found in:', availableContent.map(([key]) => key).join(', '));
+                        }
+                        
+                        return (
+                          <>
+                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
+                                ⚠️ Showing content in fallback mode (loaded from recents)
+                              </Typography>
+                            </Box>
+                            {availableContent.map(([key, value]) => (
+                              <EditableContentSection
+                                key={key}
+                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                items={value.map(v => typeof v === 'string' ? v : (v.question || v.prompt || v.text || v.answer || JSON.stringify(v)))}
+                                color="#dc2626"
+                                onUpdate={handleContentUpdate}
+                                sectionIndex={index}
+                                sectionKey={key}
+                              />
+                            ))}
+                          </>
+                        );
+                      }
                     }
                     break;
                   }
@@ -763,6 +848,38 @@ const OutlineDisplay = ({
                           )}
                         </>
                       );
+                    } else {
+                      // FALLBACK for Lesson Plan: Display any array content we find
+                      const availableContent = Object.entries(item).filter(([key, value]) => 
+                        key !== 'title' && Array.isArray(value) && value.length > 0
+                      );
+                      
+                      if (availableContent.length > 0) {
+                        if (process.env.NODE_ENV === 'development') {
+                          console.log('🔄 FALLBACK: Lesson Plan content found in:', availableContent.map(([key]) => key).join(', '));
+                        }
+                        
+                        return (
+                          <>
+                            <Box sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b', mb: 2 }}>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 600 }}>
+                                ⚠️ Showing content in fallback mode (loaded from recents)
+                              </Typography>
+                            </Box>
+                            {availableContent.map(([key, value]) => (
+                              <EditableContentSection
+                                key={key}
+                                title={key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                items={value.map(v => typeof v === 'string' ? v : (v.description || v.name || v.activity || JSON.stringify(v)))}
+                                color="#059669"
+                                onUpdate={handleContentUpdate}
+                                sectionIndex={index}
+                                sectionKey={key}
+                              />
+                            ))}
+                          </>
+                        );
+                      }
                     }
                     break;
                   }

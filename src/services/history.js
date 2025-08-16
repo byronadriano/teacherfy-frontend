@@ -24,9 +24,7 @@ export const historyService = {
         return historyCache.data;
       }
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Fetching history from:', `${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`);
-      }
+      // Fetch logging removed to reduce noise
 
       const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.USER_HISTORY}`, {
         method: 'GET',
@@ -34,9 +32,7 @@ export const historyService = {
         headers: API.HEADERS,
       });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📡 History response status:', response.status);
-      }
+      // Response status logging removed to reduce noise
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -44,9 +40,7 @@ export const historyService = {
       
       const responseData = await response.json();
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📦 Raw history response:', responseData);
-      }
+      // Raw response logging removed to reduce noise
       
       // Cache successful response
       if (responseData && !responseData.error) {

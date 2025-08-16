@@ -122,17 +122,7 @@ const RecentItem = ({ item, onClick }) => {
     }
   }
 
-  // Debug logging to see what data we're getting
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 RecentItem Debug:', {
-      title: item.title,
-      itemTypes: item.types,
-      lessonDataResourceType: item.lessonData?.resourceType,
-      derivedTypes: types,
-      typesLength: types.length,
-      willShowMultipleIcons: types.length > 1
-    });
-  }
+  // Debug logging removed to reduce console noise
   
   // Enhanced title generation with specific content preview
   const getEnhancedTitle = () => {
@@ -215,13 +205,7 @@ const RecentItem = ({ item, onClick }) => {
           const typeInfo = getResourceTypeInfo(type);
           const IconComponent = typeInfo.icon;
           
-          // Debug each icon being rendered
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`🎨 Rendering icon ${index + 1}/${types.length}: ${type}`, {
-              typeInfo,
-              iconName: IconComponent.name || IconComponent.displayName || 'Unknown'
-            });
-          }
+          // Removed verbose icon rendering debug logs
           
           return (
             <IconComponent 
@@ -276,9 +260,7 @@ const RecentItem = ({ item, onClick }) => {
         }}>
           {types.map((type, index) => {
             const typeInfo = getResourceTypeInfo(type);
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`🎨 Rendering chip ${index + 1}/${types.length}: ${type}`, typeInfo);
-            }
+            // Removed verbose chip rendering debug logs
             return (
               <Chip
                 key={index}
@@ -337,9 +319,7 @@ const RecentsList = ({ onSelectItem }) => {
       
       if (response.history && Array.isArray(response.history)) {
         // Backend now handles duplicates, so we can trust the data
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Received ${response.history.length} history items from backend`);
-        }
+        // History count logging removed to reduce noise
         setHistoryItems(response.history);
       } else if (!isAuthenticated) {
         const localHistory = historyService.getLocalHistory();

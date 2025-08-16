@@ -145,27 +145,115 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         
         if (contentState.generatedResources) {
           Object.entries(contentState.generatedResources).forEach(([type, content]) => {
-            cleanGeneratedResources[type] = content.map(slide => ({
-              title: slide.title || 'Untitled Slide',
-              layout: slide.layout || 'TITLE_AND_CONTENT',
-              content: Array.isArray(slide.content) ? [...slide.content] : [],
-              teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
-              visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
-              left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
-              right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-            }));
+            cleanGeneratedResources[type] = content.map(slide => {
+              // Only save fields that actually exist and have content
+              const cleanSlide = {
+                title: slide.title || 'Untitled Slide',
+                layout: slide.layout || 'TITLE_AND_CONTENT'
+              };
+              
+              // Prioritize modern structure fields and avoid duplicates
+              // For worksheets: prefer structured_activities over content
+              if (slide.structured_activities && Array.isArray(slide.structured_activities) && slide.structured_activities.length > 0) {
+                cleanSlide.structured_activities = [...slide.structured_activities];
+              } else if (slide.exercises && Array.isArray(slide.exercises) && slide.exercises.length > 0) {
+                cleanSlide.exercises = [...slide.exercises];
+              } else if (!slide.structured_activities && !slide.exercises && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+                // Only save content if no modern worksheet fields exist
+                cleanSlide.content = [...slide.content];
+              }
+              
+              // For quizzes: prefer structured_questions over content
+              if (slide.structured_questions && Array.isArray(slide.structured_questions) && slide.structured_questions.length > 0) {
+                cleanSlide.structured_questions = [...slide.structured_questions];
+              } else if (!slide.structured_questions && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+                // Only save content if no structured_questions exist
+                cleanSlide.content = [...slide.content];
+              }
+              
+              // For lesson plans: save all relevant fields
+              if (slide.objectives && Array.isArray(slide.objectives) && slide.objectives.length > 0) {
+                cleanSlide.objectives = [...slide.objectives];
+              }
+              if (slide.procedures && Array.isArray(slide.procedures) && slide.procedures.length > 0) {
+                cleanSlide.procedures = [...slide.procedures];
+              }
+              if (slide.materials && Array.isArray(slide.materials) && slide.materials.length > 0) {
+                cleanSlide.materials = [...slide.materials];
+              }
+              if (slide.activities && Array.isArray(slide.activities) && slide.activities.length > 0) {
+                cleanSlide.activities = [...slide.activities];
+              }
+              
+              // For presentations and general content: save content if no other specific fields
+              if (!cleanSlide.structured_activities && !cleanSlide.structured_questions && !cleanSlide.objectives && 
+                  slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+                cleanSlide.content = [...slide.content];
+              }
+              
+              // Always save teacher notes
+              if (slide.teacher_notes && Array.isArray(slide.teacher_notes) && slide.teacher_notes.length > 0) {
+                cleanSlide.teacher_notes = [...slide.teacher_notes];
+              }
+              
+              return cleanSlide;
+            });
           });
         }
         
-        const cleanStructuredContent = contentState.structuredContent.map(slide => ({
-          title: slide.title || 'Untitled Slide',
-          layout: slide.layout || 'TITLE_AND_CONTENT',
-          content: Array.isArray(slide.content) ? [...slide.content] : [],
-          teacher_notes: Array.isArray(slide.teacher_notes) ? [...slide.teacher_notes] : [],
-          visual_elements: Array.isArray(slide.visual_elements) ? [...slide.visual_elements] : [],
-          left_column: Array.isArray(slide.left_column) ? [...slide.left_column] : [],
-          right_column: Array.isArray(slide.right_column) ? [...slide.right_column] : []
-        }));
+        const cleanStructuredContent = contentState.structuredContent.map(slide => {
+          // Only save fields that actually exist and have content, prioritizing modern structure
+          const cleanSlide = {
+            title: slide.title || 'Untitled Slide',
+            layout: slide.layout || 'TITLE_AND_CONTENT'
+          };
+          
+          // Prioritize modern structure fields and avoid duplicates
+          // For worksheets: prefer structured_activities over content
+          if (slide.structured_activities && Array.isArray(slide.structured_activities) && slide.structured_activities.length > 0) {
+            cleanSlide.structured_activities = [...slide.structured_activities];
+          } else if (slide.exercises && Array.isArray(slide.exercises) && slide.exercises.length > 0) {
+            cleanSlide.exercises = [...slide.exercises];
+          } else if (!slide.structured_activities && !slide.exercises && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+            // Only save content if no modern worksheet fields exist
+            cleanSlide.content = [...slide.content];
+          }
+          
+          // For quizzes: prefer structured_questions over content
+          if (slide.structured_questions && Array.isArray(slide.structured_questions) && slide.structured_questions.length > 0) {
+            cleanSlide.structured_questions = [...slide.structured_questions];
+          } else if (!slide.structured_questions && slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+            // Only save content if no structured_questions exist
+            cleanSlide.content = [...slide.content];
+          }
+          
+          // For lesson plans: save all relevant fields
+          if (slide.objectives && Array.isArray(slide.objectives) && slide.objectives.length > 0) {
+            cleanSlide.objectives = [...slide.objectives];
+          }
+          if (slide.procedures && Array.isArray(slide.procedures) && slide.procedures.length > 0) {
+            cleanSlide.procedures = [...slide.procedures];
+          }
+          if (slide.materials && Array.isArray(slide.materials) && slide.materials.length > 0) {
+            cleanSlide.materials = [...slide.materials];
+          }
+          if (slide.activities && Array.isArray(slide.activities) && slide.activities.length > 0) {
+            cleanSlide.activities = [...slide.activities];
+          }
+          
+          // For presentations and general content: save content if no other specific fields
+          if (!cleanSlide.structured_activities && !cleanSlide.structured_questions && !cleanSlide.objectives && 
+              slide.content && Array.isArray(slide.content) && slide.content.length > 0) {
+            cleanSlide.content = [...slide.content];
+          }
+          
+          // Always save teacher notes
+          if (slide.teacher_notes && Array.isArray(slide.teacher_notes) && slide.teacher_notes.length > 0) {
+            cleanSlide.teacher_notes = [...slide.teacher_notes];
+          }
+          
+          return cleanSlide;
+        });
         
         const enhancedContentState = {
           title: contentState.title,
@@ -279,17 +367,65 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
         finalOutline: lessonData.finalOutline || ''
       };
       
+      // Helper function to normalize content structure for different resource types
+      const normalizeContentStructure = (content, resourceType) => {
+        if (!Array.isArray(content)) return content;
+        
+        return content.map(section => {
+          const normalizedSection = { ...section };
+          
+          // Handle content field normalization for different resource types
+          if (resourceType === 'Worksheet') {
+            if (section.content && !section.structured_activities && !section.exercises) {
+              // Map content to structured_activities for worksheets that need it
+              normalizedSection.structured_activities = [...section.content];
+              delete normalizedSection.content; // Remove the duplicate content field
+              console.log(`✅ FIXED: Mapped Worksheet "${section.title}" content → structured_activities (${section.content.length} items)`);
+            } else if (section.structured_activities && section.content) {
+              // Already has structured_activities, remove duplicate content field
+              delete normalizedSection.content;
+              console.log(`🧹 CLEANED: Removed duplicate content field from Worksheet "${section.title}"`);
+            }
+          } else if (resourceType === 'Quiz/Test' || resourceType === 'Quiz') {
+            if (section.content && !section.structured_questions) {
+              // Map content to structured_questions for quizzes that need it
+              normalizedSection.structured_questions = [...section.content];
+              delete normalizedSection.content; // Remove the duplicate content field
+              console.log(`✅ FIXED: Mapped Quiz "${section.title}" content → structured_questions (${section.content.length} items)`);
+            } else if (section.structured_questions && section.content) {
+              // Already has structured_questions, remove duplicate content field
+              delete normalizedSection.content;
+              console.log(`🧹 CLEANED: Removed duplicate content field from Quiz "${section.title}"`);
+            }
+          }
+          
+          // Remove obsolete empty arrays that shouldn't exist
+          const obsoleteFields = ['left_column', 'right_column', 'visual_elements'];
+          obsoleteFields.forEach(field => {
+            if (Array.isArray(normalizedSection[field]) && normalizedSection[field].length === 0) {
+              delete normalizedSection[field];
+            }
+          });
+          
+          return normalizedSection;
+        });
+      };
+
       // Handle generated resources
       if (lessonData.generatedResources && typeof lessonData.generatedResources === 'object') {
-        contentUpdate.generatedResources = lessonData.generatedResources;
+        // Normalize each resource type's content
+        const normalizedResources = {};
+        Object.entries(lessonData.generatedResources).forEach(([resourceType, content]) => {
+          normalizedResources[resourceType] = normalizeContentStructure(content, resourceType);
+        });
         
-        const primaryType = Object.keys(lessonData.generatedResources)[0];
+        contentUpdate.generatedResources = normalizedResources;
+        
+        const primaryType = Object.keys(normalizedResources)[0];
         if (primaryType) {
-          contentUpdate.structuredContent = lessonData.generatedResources[primaryType];
+          contentUpdate.structuredContent = normalizedResources[primaryType];
         }
       } else if (lessonData.structuredContent && Array.isArray(lessonData.structuredContent)) {
-        contentUpdate.structuredContent = lessonData.structuredContent;
-        
         // FIXED: Get resource type for backwards compatibility
         let resourceTypeForContent = 'Presentation'; // Default
         if (Array.isArray(lessonData.resourceType)) {
@@ -298,8 +434,12 @@ const LessonBuilder = ({ onSidebarToggle, sidebarCollapsed }) => {
           resourceTypeForContent = lessonData.resourceType;
         }
         
+        // Normalize the structured content
+        const normalizedContent = normalizeContentStructure(lessonData.structuredContent, resourceTypeForContent);
+        contentUpdate.structuredContent = normalizedContent;
+        
         contentUpdate.generatedResources = {
-          [resourceTypeForContent]: lessonData.structuredContent
+          [resourceTypeForContent]: normalizedContent
         };
       }
       
