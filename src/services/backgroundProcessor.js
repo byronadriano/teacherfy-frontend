@@ -25,6 +25,7 @@ class BackgroundProcessor {
         resource_types: jobData.resource_types,
         email: options.email,
         include_images: Boolean(jobData.form_state?.includeImages || jobData.include_images),
+        structured_content_length: jobData.structured_content?.length || 0,
         form_state: jobData.form_state
       });
       
@@ -287,9 +288,13 @@ class BackgroundProcessor {
 
       if (response.ok) {
         this.updateJobStatus(jobId, { status: 'cancelled' });
+        
+        // Stop polling for this job
+        this.triggerCallbacks(jobId, { status: 'cancelled', message: 'Job cancelled by user' });
         return true;
+      } else {
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Error cancelling job:', error);
       return false;

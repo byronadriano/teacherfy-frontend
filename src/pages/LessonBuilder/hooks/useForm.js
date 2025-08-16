@@ -447,7 +447,9 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user, 
           requestData
         });
         
-        const data = await outlineService.generate(requestData);
+        // Get abort signal for request cancellation
+        const abortSignal = enhancedLoading.getAbortSignal?.();
+        const data = await outlineService.generate(requestData, { signal: abortSignal });
         
         // DEBUG: Log the response
         console.log(`📊 API Response received:`, {
@@ -617,7 +619,11 @@ export default function useForm({ setShowSignInPrompt, subscriptionState, user, 
         
         let errorMessage = 'Error generating outline: ';
         
-        if (apiError.status === 403) {
+        // Handle user cancellation gracefully
+        if (apiError.message === 'Operation cancelled by user') {
+          // Cancellation already handled by handleCancel, just return silently
+          return;
+        } else if (apiError.status === 403) {
           errorMessage += 'You have reached your generation limit.';
         } else if (apiError.status === 405) {
           errorMessage += 'Server configuration error. Try the example instead.';

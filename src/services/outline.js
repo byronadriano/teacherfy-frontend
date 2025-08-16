@@ -3,7 +3,7 @@ import { API, handleApiError } from '../utils/constants/api';
 import { validateQuizWorksheetFlow } from '../utils/validationHelper';
 
 export const outlineService = {
-  async generate(formData) {
+  async generate(formData, options = {}) {
     try {
       console.log('Sending outline request with data:', formData);
       
@@ -13,7 +13,7 @@ export const outlineService = {
       if (isMultiResource) {
         // Use the sophisticated multi-resource endpoint
         console.log('🚀 Multi-resource detected, using sophisticated endpoint');
-        return this.generateMultipleResources(formData);
+        return this.generateMultipleResources(formData, options);
       }
       
       // Single resource - create a clean request body with proper field naming
@@ -44,13 +44,18 @@ export const outlineService = {
 
       console.log('Cleaned request body:', requestBody);
 
-      const controller = new AbortController();
+      // Use provided abort signal or create a new one for timeout
+      const userController = options.signal ? null : new AbortController();
+      const controller = options.signal ? { signal: options.signal } : userController;
+      
       const timeout = API.TIMEOUT || 120000;
       console.log(`Setting request timeout to ${timeout/1000} seconds`);
       
       const timeoutId = setTimeout(() => {
         console.warn(`Request timed out after ${timeout/1000} seconds`);
-        controller.abort();
+        if (userController) {
+          userController.abort();
+        }
       }, timeout);
 
       try {
@@ -231,7 +236,12 @@ export const outlineService = {
         console.error('Fetch error:', fetchError);
         
         if (fetchError.name === 'AbortError') {
-          throw new Error('Request timeout - the server is taking too long to respond. This may be because the OpenAI API is slow. Try using the example feature instead.');
+          // Check if this was a user-initiated cancellation vs timeout
+          if (options.signal && options.signal.aborted) {
+            throw new Error('Operation cancelled by user');
+          } else {
+            throw new Error('Request timeout - the server is taking too long to respond. This may be because the OpenAI API is slow. Try using the example feature instead.');
+          }
         }
         
         throw fetchError;
@@ -249,7 +259,7 @@ export const outlineService = {
     }
   },
   
-  async generateMultipleResources(formData) {
+  async generateMultipleResources(formData, options = {}) {
     try {
       console.log('🚀 Using multi-resource endpoint for:', formData.resourceType);
       
@@ -279,13 +289,18 @@ export const outlineService = {
       
       console.log('📤 Multi-resource request body:', requestBody);
 
-      const controller = new AbortController();
+      // Use provided abort signal or create a new one for timeout
+      const userController = options.signal ? null : new AbortController();
+      const controller = options.signal ? { signal: options.signal } : userController;
+      
       const timeout = 300000; // 5 minutes for sophisticated multi-resource generation
       console.log(`Setting sophisticated multi-resource timeout to ${timeout/1000} seconds`);
       
       const timeoutId = setTimeout(() => {
         console.warn(`Sophisticated multi-resource request timed out after ${timeout/1000} seconds`);
-        controller.abort();
+        if (userController) {
+          userController.abort();
+        }
       }, timeout);
 
       try {
@@ -477,7 +492,12 @@ export const outlineService = {
         console.error('Multi-resource fetch error:', fetchError);
         
         if (fetchError.name === 'AbortError') {
-          throw new Error('Sophisticated multi-resource generation timed out after 5 minutes. The system is creating aligned content across multiple resource types, which requires more processing time. Please try again or reduce the number of resource types.');
+          // Check if this was a user-initiated cancellation vs timeout
+          if (options.signal && options.signal.aborted) {
+            throw new Error('Operation cancelled by user');
+          } else {
+            throw new Error('Sophisticated multi-resource generation timed out after 5 minutes. The system is creating aligned content across multiple resource types, which requires more processing time. Please try again or reduce the number of resource types.');
+          }
         }
         
         throw fetchError;

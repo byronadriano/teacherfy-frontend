@@ -92,10 +92,10 @@ export default function SleekProgress({
   return (
     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 2.5, bgcolor: '#fff' }}>
       {/* Header row with time left and actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="body2" sx={{ color: '#0f172a', fontWeight: 500 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+        <Typography variant="body2" sx={{ color: '#0f172a', fontWeight: 500, flex: 1, mr: 2 }}>
           {isBackground ? (
-            <>Running in background · <span style={{ color: '#64748b' }}>We’ll email you when it’s ready</span></>
+            <>Running in background · <span style={{ color: '#64748b' }}>We'll email you when it's ready</span></>
           ) : remaining !== null ? (
             <>
               {formatRemaining(remaining)} · <span style={{ color: '#64748b' }}>{currentStage}</span>
@@ -107,15 +107,18 @@ export default function SleekProgress({
           )}
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {/* TEMPORARILY DISABLED: Notify me functionality needs backend work */}
-          {false && !isBackground && (
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {/* Re-enabled: Notify me functionality now has backend support */}
+          {!isBackground && onRunInBackground && (
             <Button
               size="small"
               variant="outlined"
               onClick={() => setNotifyOpen((v) => !v)}
               startIcon={<EmailIcon />}
-              sx={{ textTransform: 'none' }}
+              sx={{ 
+                textTransform: 'none',
+                fontSize: '0.875rem'
+              }}
             >
               Notify me
             </Button>
@@ -154,8 +157,8 @@ export default function SleekProgress({
         )}
       </Typography>
 
-      {/* Background notify entry (only when not yet backgrounded) - TEMPORARILY DISABLED */}
-      {false && !isBackground && (
+      {/* Background notify entry (only when not yet backgrounded) - Re-enabled */}
+      {!isBackground && onRunInBackground && (
         <Collapse in={notifyOpen}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2, flexWrap: 'wrap' }}>
             <TextField

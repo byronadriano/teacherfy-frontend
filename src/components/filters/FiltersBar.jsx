@@ -460,9 +460,9 @@ return (
                 <Paper elevation={0} sx={{ py: 0.5 }}>
                     {activeFilter === 'resourceType' && [
                         { label: 'Presentation', type: 'presentation', hasSubmenu: true, disabled: false },
-                        { label: 'Lesson Plan', type: 'lessonPlan', disabled: false },
                         { label: 'Worksheet', type: 'worksheet', disabled: false },
-                        { label: 'Quiz/Test', type: 'quiz', disabled: false }
+                        { label: 'Quiz/Test', type: 'quiz', disabled: false },
+                        { label: 'Lesson Plan', type: 'lessonPlan', disabled: false },
                     ].map((option) => {
                         // Check if this option is selected in the array
                         const isSelected = Array.isArray(formState.resourceType) 

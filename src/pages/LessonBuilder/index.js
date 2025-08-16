@@ -33,6 +33,7 @@ const LessonBuilder = () => {
   
   // Resource status tracking
   const [resourceStatus, setResourceStatus] = useState({});
+  
 
   const {
     formState,
@@ -70,6 +71,7 @@ const LessonBuilder = () => {
 
   // Note: userSettings are initialized from UserSettingsService.loadSettings();
   // Removed redundant localStorage loading effect.
+
 
   // Idle prefetch near-future chunks for faster interactions
   useEffect(() => {
@@ -159,7 +161,7 @@ const LessonBuilder = () => {
         const cleanFormState = {
           // Support both resourceType (singular) and resourceTypes (plural) for multi-resource
           resourceType: formState.resourceType,
-          resourceTypes: formState.resourceTypes,
+          resourceTypes: formState.resourceType,
           gradeLevel: formState.gradeLevel || '',
           subjectFocus: formState.subjectFocus || '',
           language: formState.language || '',
@@ -452,6 +454,7 @@ const LessonBuilder = () => {
       console.error('❌ Failed to track lesson in history:', error);
     }
   };
+
 
   const handleGenerateResource = async (specificResourceTypes = null) => {
     try {

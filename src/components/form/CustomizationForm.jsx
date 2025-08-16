@@ -1,9 +1,9 @@
 // src/components/form/CustomizationForm.jsx
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Switch, Paper, Button, Typography, CircularProgress, Fade, Alert } from '@mui/material';
+import { Box, TextField, Switch, Paper, Button, Typography, Fade, Alert, IconButton, Tooltip } from '@mui/material';
 import SleekProgress from '../loading/SleekProgress';
 import { useTheme } from '@mui/material/styles';
-import { Rocket, Sparkles, AlertCircle, Clock, Calendar, TrendingUp } from 'lucide-react';
+import { Rocket, Sparkles, AlertCircle, Clock, Calendar, TrendingUp, X } from 'lucide-react';
 // Removed old ProgressIndicator to avoid duplicate progress UIs; SleekProgress is the single source of truth now.
 
 const LimitReachedPopup = ({ show, resetTime }) => {
@@ -623,7 +623,7 @@ const CustomizationForm = ({
               setBgLoading(true);
               try {
                 await enhancedLoading.handleRunInBackground?.(email);
-                setBgSuccess('Background job started. We will email you when it is ready.');
+                setBgSuccess('Job moved to background. You will receive an email when it completes.');
               } catch (err) {
                 setBgError(err?.message || 'Failed to start background job.');
               } finally {
@@ -694,69 +694,61 @@ const CustomizationForm = ({
           />
         </Box>
 
-        <Button 
-          type="submit"
-          disabled={isLoading || (isLimitReached && !isExample)}
-          variant="contained"
-          endIcon={!isLoading && <Rocket size={20} />}
-          sx={{
-            backgroundColor: isLimitReached && !isExample ? '#94A3B8' : '#035073',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-            textTransform: 'none',
-            fontWeight: 500,
-            padding: isLoading ? '6px 20px' : '6px 16px',
-            minWidth: '120px',
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'all 0.15s ease-in-out',
-            '&:hover': {
-              backgroundColor: isLimitReached && !isExample ? '#94A3B8' : 'rgb(45, 147, 249)',
-              transform: isLimitReached && !isExample ? 'none' : 'translateY(-2px)',
-              boxShadow: isLimitReached && !isExample ? 'none' : '0 4px 12px rgba(69, 162, 244, 0.1)'
-            },
-            '&.Mui-disabled': {
-              backgroundColor: isLoading ? '#035073' : '#94A3B8',
+        {/* Dynamic button: Create/Cancel based on loading state */}
+        {enhancedLoading?.isLoading && enhancedLoading?.handleCancel ? (
+          <Tooltip title="Cancel operation" placement="top">
+            <IconButton
+              onClick={enhancedLoading.handleCancel}
+              sx={{
+                color: '#64748b',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                width: '40px',
+                height: '40px',
+                '&:hover': {
+                  backgroundColor: '#fef2f2',
+                  borderColor: '#fecaca',
+                  color: '#dc2626'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <X size={18} />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button 
+            type="submit"
+            disabled={enhancedLoading?.isLoading || (isLimitReached && !isExample)}
+            variant="contained"
+            endIcon={<Rocket size={20} />}
+            sx={{
+              backgroundColor: isLimitReached && !isExample ? '#94A3B8' : '#035073',
               color: '#FFFFFF',
-              boxShadow: 'none',
-              transform: 'none'
-            },
-            '&::after': isLoading ? {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: '-100%',
-              width: '200%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-              animation: 'loading-shimmer 1.5s infinite'
-            } : {}
-          }}
-        >
-          {isLoading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={20} color="inherit" />
-              <span>Creating...</span>
-            </Box>
-          ) : isLimitReached && !isExample ? (
-            'Limit Reached'
-          ) : (
-            'Create'
-          )}
-        </Button>
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              padding: '6px 16px',
+              minWidth: '120px',
+              transition: 'all 0.15s ease-in-out',
+              '&:hover': {
+                backgroundColor: isLimitReached && !isExample ? '#94A3B8' : 'rgb(45, 147, 249)',
+                transform: isLimitReached && !isExample ? 'none' : 'translateY(-2px)',
+                boxShadow: isLimitReached && !isExample ? 'none' : '0 4px 12px rgba(69, 162, 244, 0.1)'
+              },
+              '&.Mui-disabled': {
+                backgroundColor: '#94A3B8',
+                color: '#FFFFFF',
+                boxShadow: 'none',
+                transform: 'none'
+              }
+            }}
+          >
+            {isLimitReached && !isExample ? 'Limit Reached' : 'Create'}
+          </Button>
+        )}
       </Box>
-
-  {/* Add keyframes for the shimmer effect */}
-  <style>{`
-        @keyframes loading-shimmer {
-          0% {
-            left: -100%;
-          }
-          100% {
-            left: 100%;
-          }
-        }
-      `}</style>
     </Paper>
   );
 };

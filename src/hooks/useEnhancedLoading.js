@@ -90,12 +90,16 @@ const useEnhancedLoading = (options = {}) => {
       retryCount: 0
     });
 
+    // Create AbortController for request cancellation
+    const abortController = new AbortController();
+    
     // Store current operation for progress tracking
     currentOperationRef.current = {
       type: operationType,
       startTime,
       estimatedDuration,
-      context
+      context,
+      abortController
     };
 
     // Start progress simulation if enabled
@@ -134,11 +138,27 @@ const useEnhancedLoading = (options = {}) => {
   }, []);
 
   // Handle cancellation
-  const handleCancel = useCallback(() => {
-    if (currentOperationRef.current && currentOperationRef.current.backgroundJobId) {
-      backgroundProcessor.cancelJob(currentOperationRef.current.backgroundJobId);
+  const handleCancel = useCallback(async () => {
+    const operation = currentOperationRef.current;
+    
+    if (operation) {
+      // If it's a background job, cancel it with the backend
+      if (operation.backgroundJobId) {
+        try {
+          await backgroundProcessor.cancelJob(operation.backgroundJobId);
+        } catch (error) {
+          console.error('Error cancelling background job:', error);
+        }
+      }
+      
+      // For regular operations, abort the ongoing request
+      if (operation.abortController) {
+        operation.abortController.abort();
+      }
     }
     
+    // Clear the operation reference immediately to prevent further processing
+    currentOperationRef.current = null;
     stopLoading(false, 'Operation cancelled by user');
   }, [stopLoading]);
 
@@ -151,6 +171,15 @@ const useEnhancedLoading = (options = {}) => {
       
       if (!emailToUse && enableEmailNotifications) {
         throw new Error('Email address required for background processing');
+      }
+
+      // Validate that there's actual work to do
+      const context = currentOperationRef.current.context;
+      const hasStructuredContent = context?.structured_content?.length > 0;
+      const isOutlineGeneration = currentOperationRef.current.type === 'outline_generation';
+      
+      if (!hasStructuredContent && !isOutlineGeneration) {
+        throw new Error('No content available for background processing');
       }
 
       // Move current operation to background
@@ -247,7 +276,9 @@ const useEnhancedLoading = (options = {}) => {
     stage: loadingState.stage,
     error: loadingState.error,
     canRetry: enableRetry && loadingState.retryCount < maxRetries && !!loadingState.error,
-    backgroundJobs: loadingState.backgroundJobs
+    backgroundJobs: loadingState.backgroundJobs,
+    // Expose abort signal for request cancellation
+    getAbortSignal: () => currentOperationRef.current?.abortController?.signal
   };
 };
 
